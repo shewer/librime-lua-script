@@ -1,5 +1,41 @@
 # librime-lua-tools
-## anotifier.lua -- 
+## rime_api.lua 擴充接口
+
+## list.lua List tools
+```lua
+local List=require 'tools/list'
+l=List(1,2)
+l:push(3)
+l:push(4)
+l:each( function(elm) print(elm) end ) 
+l:each(print)
+l:map(string.upper)
+l:map( tostring) 
+l:map( function(elm) return elm * elm end ) 
+l:reduce( function(elm,org) return elm+ org end , 0)  -- sum
+
+```
+## pattern.lua 
+```lua
+make_pattern_func= require'tools/pattern'
+List= require 'tools/list'
+conver_func= make_pattern("xit|abcd|sxyz|")
+conver_func("afdc") --> "sfzy"
+
+local projection = List( 
+   "xit|abcd|sxyz|",
+   "xit|efgh|ijkl|"
+   "xit|zl|ZL|"
+   ):map(make_pattern)  -- pattern_func of list
+
+function projection:apply(str) 
+   return self:reduce(
+      function(pattern_func,org) return pattern_func(org) end , 
+      str or "" ) 
+end 
+projection:apply("abc") 
+
+```
 ## wordninja.lua -- wordninja_word
 ```lua
 wordninja=require("wordninja")
@@ -23,92 +59,18 @@ obj instance    Word:New()._name
     	selfr._word=word -- object instance
     	self._info=word
     	return self
-    end
+    end## mfilter.lua 反查  lua_filter  以  property "multi_reverse" = name_space 
+## completion.lua  未完碼 filter   option "completion"  on/off    :  排除 candidate.type == "completion" 
+## multiswitch.lua   主副字典 name_space list 
+## keybind_cfg.lua  keybind 設定
     function Word:info()
     	return self._info
     end
     ```
-
-## loadmodule -- load librime-lua module to global value
-
-	```lua
-	loadmodule= require 'tools/loadmodule'
-	-- 第一參數等同  local tab= require('english')(argv3....)    { processor={ func=func, init=func,fini=func} , filter={..} , ...}
-	-- 第二參數等同  local name= 'english'
-	--               for  key,component in next tab do
-	--                  _G[name .. "_" .. key ]= component
-	--               end
-	-- 第三參數以後 爲 module 參數
-	
-	--  argv1   requier('lua/engilsh/init.lua')
-	--  argv2   create  table in global of tag name  english_ .. (processor , filter ,translator, segmentor)
-	--  argv3 ... dictfile name    module args
-	--
-	loadmodule('english','english','english_tw.txt')
-	--  argv1   requier('lua/muti_reverse/init.lua')
-	--  argv2   create  table in global of tag name  mutirever_ .. (processor , filter ,translator, segmentor)
-	--  argv3 ... filter  pattern  use  preedit_format      module args
-	loadmodule('muti_reverse' ,'mutirever' ,'preedit_format')
-	
-	
-	```
-
-
-## schema_func.lua
-   ```lua
-      get_data(env.engine.schema.config, path , datatype )
-      get_data(env.engine.schema.config, path , datatype , list)
-	  set_data(env.engine.schema.config, path , data, datatype)   int double string
-	  set_data(env.engine.schema.config, path , table, datatype)  list of datatype
-	  load_user_data(env.engine.schema.config, data_table)
-	  --   data_table = { engine ={
-	
-   ```
-
-## notifier.lua:   Notifier class
-  ```lua
-     Notyfier=require 'tools/notifier'
-	 function init(env)
-	 	env.notifier=Notifier(env)
-		env.notifier:commit( function(ctx)  end ) -- context.commit_notifier:connect(func)
-		env.notifier:update( function(ctx) end )  -- context.update_notifier:connect(func)
-		env.notifier:select( function(ctx) end )  -- context.select_notifier:connect(func)
-		env.notifier:delete( function(ctx) end )  -- context.delete_notifier:connect(func)
-		env.notifier:option( function(ctx,name) end )  -- context.option_update_notifier:connect(func)
-		env.notifier:property( function(ctx,name) end )  -- context.property_update_notifier:connect(func)
-		env.notifier:unhandled_key( function(ctx,keyevent ) end )  -- context.unhandled_key_notifier:connect(func)
-		
-		
-	end
-	function fini(env)
-	    env.notifier:disconnect()  --  disconnect() for all connection()
-	end
-```
-## metatable.lua:    string   table  擴充函式
-table:each
-table:push
-table:pop
-table:shift
-table:unshift
-table:each
-tabel:map
-table:find
-table:reduce
-table:find_all
-
-string:split()  -- support utf-8
-
-## debug_info.lua:   get current file name  __FILE__(level:default 2) __LINE__()   __FUNC__()
-```lua
--- t.lua
-local bug_info= require 'tools/debug_info'
-
-
-function test()
-     print(bug_info.__FILE__() , bug_info.__FUNC__() , bug_info.__LINE__() ) -- @t.lua  test   6
-end
-test()
-```
-	
+    
+## 其他 copy from luarocks
+* json.lua
+* inspect.lua
+* luaunit.lua
 
 
