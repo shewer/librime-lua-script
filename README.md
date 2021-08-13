@@ -1,0 +1,34 @@
+# librime-lua-script
+## multi_reverse 主副字典反查(新版)  支持 librime-lua(新舊版)
+自動導入 engine/translators/   script_translator table_translator   反查 lua_filter
+### 反查字典切換
+* Ctrl+6 反查開關
+* ctrl+7 反查碼顯示最短碼開關
+* ctrl+8 未完成碼上屏開關 
+* Ctrl+9 反查碼filter 切換(正) 
+* Ctrl+0 反查碼filter 切換(負)
+### 安裝
+* rime.lua
+```lua
+require 'tools/rime_api'   -- 擴充 rime_api table 接口 
+require 'multi_reverse'    -- 載入 multi_reverse_processor multi_reverse_filter
+assert( multi_reverse_processor) 
+```
+* schema_id.custom.yaml 
+``` 
+patch: 
+   engine/processors/@after 0: lua_processor@multi_reverse_processor
+```
+
+## tools 常用工具
+* list.lua 提供 each map reduce select ... 
+* rime_api.lua 擴充 rime_api 
+* key_binder.lua 類 keybind 提供 lua_processor 熱鍵
+* pattern.lua librime-lua 舊版  preedit_format commit_format 轉換 tools
+* inspect.lua -- 源自 luarocks 安裝 
+* json.lua  -- 源自 luarocks 安裝
+* luaunit.lua testunit  -- 源自 luarocks 安裝
+     
+## test luaunit 測試資料夾
+
+
