@@ -15,121 +15,122 @@
 -- ex2: setmetatable in env
 --     setmetatable(env,{__index= require('tools/rime_api') })
 --     table env:status()
---     bool env:get_option(name) 
---     bool env:set_option(name,bool)  bool default true 
+--     bool env:get_option(name)
+--     bool env:set_option(name,bool)  bool default true
 --     bool env:set_option(name)
---     bool env:toggle_option(name) 
+--     bool env:toggle_option(name)
 --     string env:set_property(name,string)
---     string env:get_property(name) 
+--     string env:get_property(name)
 --
---    
+--
 
 local List = require'tools/list'
-local M=rime_api 
+local M=rime_api
 
 -- 取得 librime 狀態 tab { always=true ....}
 function M.get_status(ctx)
-	--local ctx= env.engine.context
-    local stat={}
-    local comp= ctx.composition
-    stat.always=true
-    stat.composing= ctx:is_composing()
-    stat.empty= not stat.composing
-    stat.has_menu= ctx:has_menu()
-    stat.paging= not comp:empty() and comp:back():has_tag("paging")
-    return stat
+  --local ctx= env.engine.context
+  local stat={}
+  local comp= ctx.composition
+  stat.always=true
+  stat.composing= ctx:is_composing()
+  stat.empty= not stat.composing
+  stat.has_menu= ctx:has_menu()
+  stat.paging= not comp:empty() and comp:back():has_tag("paging")
+  return stat
 end
 function M.get_option(env,name)
-	return env.engine.context:get_option(name)
-end 
+  return env.engine.context:get_option(name)
+end
 function M.set_option(env,name,bool)
-	bool = bool and true or false  
-	env.engine.context:set_option(name,bool)
-	return true
+  bool = bool and true or false
+  env.engine.context:set_option(name,bool)
+  return true
 end
 function M.unset_option(env,name)
-	env.engine.context:set_option(name,false)
-	return false 
-end 
+  env.engine.context:set_option(name,false)
+  return false
+end
 function M.toggle_option(env,name)
-	local bool = env.engine.context:get_option(name) 
-	env.engine.context:set_option(name , not bool )
-	return not bool 
-end 
+  local bool = env.engine.context:get_option(name)
+  env.engine.context:set_option(name , not bool )
+  return not bool
+end
 function M.set_property(env,name,string)
-	string = string or "" 
-	if type(name) == "string" then 
-		env.engine.context:set_property(name,string) 
-		return string 
-	else
-		return false 
-	end 
-end 
+  string = string or ""
+  if type(name) == "string" then
+    env.engine.context:set_property(name,string)
+    return string
+  else
+    return false
+  end
+end
 
 function M.get_property(env,name)
-	return type(name) == "string" and 
-		env.engine.context:get_property(name) or 
-		nil
-end 
+  return type(name) == "string" and
+    env.engine.context:get_property(name) or
+    nil
+end
 --  filter tools
 function M.load_reversedb(dict_name)
   -- loaded  ReverseDb
-  local reverse_filename = "build/"  ..  dict_name .. ".reverse.bin" 
+  local reverse_filename = "build/"  ..  dict_name .. ".reverse.bin"
   local reversedb= ReverseDb( reverse_filename )
-  if not reversedb then 
+  if not reversedb then
     log.warning( env.name_space .. ": can't load  Reversedb : " .. reverse_filename )
-  end 
-  return reversedb 
-end 
+  end
+  return reversedb
+end
 
--- clone ConfigList of string to List 
+-- clone ConfigList of string to List
 
-function M.clone_configlist(config,path) 
+function M.clone_configlist(config,path)
   assert( config:is_list(path) )
   local list=List()
-  for i=0, config:get_list_size(path)-1 do 
-	list:push( config:get_string( path .. "/@" .. i ) )
-  end 
+  for i=0, config:get_list_size(path)-1 do
+    list:push( config:get_string( path .. "/@" .. i ) )
+  end
   return list
 end
 -- List write to Config
 function M.write_configlist(config,path,list)
-	list:each_with_index(
-		function(config_string,i) 
-			config:set_string( path .. "/@" .. i-1 , config_string)
-		end 
-	)
-	return #list
-end 
+  list:each_with_index(
+  function(config_string,i)
+    config:set_string( path .. "/@" .. i-1 , config_string)
+  end )
+  return #list
+end
 
 --  舊的版本 使用 lua_function  轉換  且 模擬 :apply(str) 接口
 function M.old_load_projection(config,path)
-	local patterns=clone_configlist(config,path)
-	local make_pattern=require 'tools/pattern'
-	local projection = patterns:map(function(pattern) return make_pattern(pattorn) end )
-	function projection:apply(str)
-		return self:reduce(
-			function(pattern_func,org) return pattern_func(org) end , str )
-	end 
-	return projection 
-end 
+  local patterns=clone_configlist(config,path)
+  local make_pattern=require 'tools/pattern'
+  local projection = patterns:map(function(pattern) return make_pattern(pattorn) end )
+  function projection:apply(str)
+    return self:reduce(
+    function(pattern_func,org) return pattern_func(org) end , str )
+  end
+  return projection
+end
 
-function M.load_projection( config, path) 
-  --  old version 
-  if not Projection  then 
-	  return M.old_projection(config,path)
-  end 
+-- 
+function M.load_projection( config, path)
+  --  old version
+  if not Projection  then
+    return M.old_projection(config,path)
+  end
+
   local comment_format= config:get_list( path )
   local projection= Projection()
-  if  comment_format then 
+  if  comment_format then
     projection:load(comment_format)
-  else 
-    log.warning( "lua_filter: " .. path  .. 
-      " projection of comment_format could not loaded. comment_format type: " .. 
-      tostring(comment_format) ) 
-  end 
+  else
+    log.warning( "lua_filter: " .. path  ..
+      " projection of comment_format could not loaded. comment_format type: " ..
+      tostring(comment_format) )
+  end
   return projection
-end 
+end
 
 
-return M   
+return M
