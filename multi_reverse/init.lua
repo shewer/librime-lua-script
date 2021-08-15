@@ -23,15 +23,14 @@ local function get_trans_namespace(config)
   local list= rime_api.clone_configlist(config,path)
   local ms=MultiSwitch("translator")
   return list:reduce(
-  function(tran,org)
-    local  tran_ns= tran:match( "^[ts].*_translator@([%a_][%w_]*)$")
-    --  escape  nil  and "vcode"
-    return  (tran_ns and tran_ns ~= "vcode") and
-    org:push(tran_ns) or
-    org
-  end  , ms   )
+    function(tran,org)
+      local  tran_ns= tran:match( "^[ts].*_translator@([%a_][%w_]*)$")
+      --  escape  nil  and "vcode"
+      return  (tran_ns and tran_ns ~= "vcode") and
+	org:push(tran_ns) or
+	org
+    end  , ms   )
 end
-
 
 
 local M={}
@@ -47,17 +46,17 @@ function M.init(env)
   local schema_id= env.engine.schema.schema_id
   _schema[ schema_id ] = _schema[schema_id] or {}
   _schema[schema_id].filters=
-  _schema0[schema_id].filters or
-  rime_api.clone_configlist(config,"engine/filters")
+    _schema[schema_id].filters or
+    rime_api.clone_configlist(config,"engine/filters")
 
   -- add completion multi_reverse filter to "engine/filters"
   local new_filter_list =
-  List( "lua_filter@completion_filter") +
-  _schema[schema_id].filters +
-  env.trans_namespace:map(
-  function(name_space)
-    return ("lua_filter@%s@%s"):format( module_name , name_space )
-  end )
+    List( "lua_filter@completion_filter") +
+    _schema[schema_id].filters +
+    env.trans_namespace:map(
+      function(name_space)
+	return ("lua_filter@%s@%s"):format( module_name , name_space )
+    end )
   rime_api.write_configlist(config,"engine/filters", new_filter_list)
 
   -- load key_binder file
