@@ -8,4 +8,6 @@
 lu=require 'tools/luaunit'
 TestList= require 'test/list_test'
 TestMS= require 'test/multiswitch_test'
+TestPT= require 'test/pattern_test'
+
 os.exit( lu.LuaUnit.run() )
