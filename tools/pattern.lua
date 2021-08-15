@@ -27,9 +27,12 @@
 --        PFilter.Make_pattern( "xlit|abcd|ABCD|" )
 --
 --
-require 'tools/metatable'
+require 'tools/string'
+
+local List=require 'tools/list'
+
 local function make_xlit(str1,str2)
-  local tab1=str1:split("")
+  local tab1=List(str1:split(""))
   local tab2=str2:split("")
   --  如果 字串長度不一 return str str
   if   #tab1 ~= #tab2 then
@@ -37,12 +40,12 @@ local function make_xlit(str1,str2)
   end
   local strar={}
 
-  tab1:eachi(function(v,i) strar[v] = tab2[i] end  )
+  tab1:each_with_index(function(v,i) strar[v] = tab2[i] end  )
 
   --  xlit 主要轉檔程式
   local function  xlit_pattern(str)
     str= str or ""
-    return str:split(""):map(
+    return List(str:split("")):map(
       function(v)
 	return strar[v] or v
 			    end )
@@ -56,24 +59,20 @@ local function token(__str)
   if "string" ~= type(__str)  then
     return "","",""
   end
-  local word,chr,substr
-  word,chr,substr= string.gsub(
-    __str,  "[$\\]([0-9acdlpsuwxz])" , "%%%1")
+  local word,chr,substr= __str:gsub( "[$\\]([0-9acdlpsuwxz])", "%%%1")
     :gsub("[$\\]U","%%u")
     :match("%s*(%w*)(.)(.*[^%s])%s*")
   if substr  then
     --return word,substr:match("(.*)" .. chr .."(.*)")
-    local str1,str2 = substr:split(chr):unpack()
+    local str1,str2 = table.unpack( substr:split(chr) )
     return word, str1 or "", str2 or ""
-  else
-    return "" ,"",""
   end
+  return "" ,"",""
 end
 
 
 local function make_pattern_func( pattern_str)
   local word,str1,str2 = token(pattern_str)
-  print( string.format("token :--%s--%s--%s--",word,str1,str2) )
   local func
   if word == "xform" then
     func= function (str)
@@ -93,6 +92,7 @@ local function make_pattern_func( pattern_str)
     -- 未完成
     --func= loadstring(func_table[str] .."()")
   end
+
   if  func then
     return func,false,nil
   else
