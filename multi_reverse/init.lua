@@ -38,7 +38,6 @@ function M.init(env)
   local Rejected, Accepted, Noop = 0,1,2
   local config=env.engine.schema.config
   local context=env.engine.context
-
   -- namespace switch
   env.trans_namespace= get_trans_namespace(config)
 
@@ -49,14 +48,24 @@ function M.init(env)
     _schema[schema_id].filters or
     rime_api.clone_configlist(config,"engine/filters")
 
+  -- chcek filter module
+  assert( _G[Multi_reverse .. "_filter"])
+  assert( _G[Completion .. "_filter"])
   -- add completion multi_reverse filter to "engine/filters"
   local new_filter_list =
-    List( "lua_filter@completion_filter") +
+    List( ("lua_filter@%s_filter"):format(Completion) ) +
     _schema[schema_id].filters +
     env.trans_namespace:map(
       function(name_space)
-	return ("lua_filter@%s@%s"):format( module_name , name_space )
-    end )
+	return ("lua_filter@%s_filter@%s"):format( Multi_reverse , name_space )
+      end
+    )
+
+  new_filter_list:each_with_index(
+    function(elm,i)
+      log.info( ("new engine/filters list of (%s): %s "):format( i , elm ) )
+    end
+  )
   rime_api.write_configlist(config,"engine/filters", new_filter_list)
 
   -- load key_binder file
@@ -64,7 +73,7 @@ function M.init(env)
   assert(env.keybind_tab)
 
   -- initialize option  and property  of multi_reverse
-  context:set_option(Multi_reverse,false)
+  context:set_option(Multi_reverse,true)
   context:set_option(Completion,true)
   context:set_option("qcode", true)
   context:set_property(Multi_reverse, env.trans_namespace:status() )
@@ -86,8 +95,6 @@ end
 _G[Completion .. "_filter"] = require'multi_reverse/completion'
 _G[Multi_reverse .. "_filter"]=require'multi_reverse/mfilter'
 _G[Multi_reverse .. "_processor"] = M
-
-
 assert( multi_reverse_processor and multi_reverse_filter and completion_filter )
 
 return multi_reverse_processor and multi_reverse_filter and completion_filter
