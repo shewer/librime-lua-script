@@ -20,11 +20,11 @@ patch:
    engine/processors/@after 0: lua_processor@multi_reverse_processor
 ```
 
-## tools 常用工具
+## [tools 常用工具](https://github.com/shewer/librime-lua-script/tools/README.md)
 * list.lua 提供 each map reduce select ... 
 * rime_api.lua 擴充 rime_api 
 * key_binder.lua 類 keybind 提供 lua_processor 熱鍵
-* pattern.lua librime-lua 舊版  preedit_format commit_format 轉換 tools
+* pattern.lua librime-lua 舊版無支援 ProjectionReg 改由 lua 實現 pattern 轉換   preedit_format commit_format
 * inspect.lua -- 源自 luarocks 安裝 
 * json.lua  -- 源自 luarocks 安裝
 * luaunit.lua testunit  -- 源自 luarocks 安裝

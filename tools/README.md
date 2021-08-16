@@ -78,8 +78,8 @@ obj instance    Word:New()._name
 	str:split(" ") -- {"abc","abc","abc"}
 	```
 ## 其他 copy from luarocks
-* json.lua
-* inspect.lua
-* luaunit.lua
+* [json.lua github](https://github.com/rxi/json.lua)
+* [inspect.lua github](https://github.com/kikito/inspect.lua)
+* [luaunit.lua decument](https://luaunit.readthedocs.io/en/luaunit_v3_2_1/)
 
 
