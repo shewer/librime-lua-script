@@ -67,7 +67,15 @@ obj instance    Word:New()._name
     	return self._info
     end
     ```
-    
+## string.lua
+	string.split(str,sp,sp1)
+	```lua
+	local str="abczzabeuzzabezz"
+	str:split("zz") -- { "abc", "abeu", "abe" }
+	str="abc abc abc"
+	str:split() -- {"abc","abc","abc"}
+	str:split(" ") -- {"abc","abc","abc"}
+	```
 ## 其他 copy from luarocks
 * json.lua
 * inspect.lua
