@@ -28,6 +28,7 @@ local List = require'tools/list'
 local M=rime_api
 
 -- 取得 librime 狀態 tab { always=true ....}
+-- 須要 新舊版 差異  comp.empty() -->  comp:empty() 
 function M.get_status(ctx)
   --local ctx= env.engine.context
   local stat={}
@@ -36,9 +37,14 @@ function M.get_status(ctx)
   stat.composing= ctx:is_composing()
   stat.empty= not stat.composing
   stat.has_menu= ctx:has_menu()
-  stat.paging= not comp:empty() and comp:back():has_tag("paging")
+  -- old version 
+  local ok,empty = pcall(comp.empty)
+
+  empty=  ok  and empty or comp:empty() --  empty=  ( ok ) ? empty : comp:empty() 
+  stat.paging= not empty and comp:back():has_tag("paging")
   return stat
 end
+
 function M.get_option(env,name)
   return env.engine.context:get_option(name)
 end
