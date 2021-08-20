@@ -76,22 +76,27 @@ end
 local map_null_func=function(elm) return elm end 
 function M:map(func, ...)
   func= func or map_null_func 
-  local tab = {} 
+  local tab = self:class()()  -- {} 
   for i,v in ipairs(self) do 
-    table.insert(tab, func(v, ...) ) 
+    tab:push( func(v,...) )
+    --table.insert(tab, func(v, ...) ) 
   end 
-  return self:class()(tab) 
+  return tab 
+  --return self:class()(tab) 
 end 
 
 function M:map_with_index(func, ...)
   func= func or map_null_func 
-  local tab={} 
+  --local tab={} 
+  local tab = self:class()()  -- {} 
   for i,v in ipairs(self) do 
-    table.insert(tab, func(v, i, ...) ) 
+    tab:push( func(v, v, ...) )
+    --table.insert(tab, func(v, i, ...) ) 
   end 
   --setmetatable(tab,M) 
   --return tab
-  return self:class()(tab) 
+  return tab
+  --return self:class()(tab) 
 end 
 
 function M:select(func, ...)
