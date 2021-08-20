@@ -49,8 +49,8 @@ function M.init(env)
     rime_api.clone_configlist(config,"engine/filters")
 
   -- chcek filter module
-  assert( _G[Multi_reverse .. "_filter"])
-  assert( _G[Completion .. "_filter"])
+  assert( _G[Multi_reverse .. "_filter"], Multi_reverse .. "_filter" .. " table not appear in global." )
+  assert( _G[Completion .. "_filter"],  Completion .. "_filter" .. " table not appear in global." )
   -- add completion multi_reverse filter to "engine/filters"
   local new_filter_list =
     List( ("lua_filter@%s_filter"):format(Completion) ) +
@@ -95,6 +95,6 @@ end
 _G[Completion .. "_filter"] = require'multi_reverse/completion'
 _G[Multi_reverse .. "_filter"]=require'multi_reverse/mfilter'
 _G[Multi_reverse .. "_processor"] = M
-assert( multi_reverse_processor and multi_reverse_filter and completion_filter )
+assert( multi_reverse_processor and multi_reverse_filter and completion_filter, Multi_reverse .. "module require failed." )
 
 return multi_reverse_processor and multi_reverse_filter and completion_filter

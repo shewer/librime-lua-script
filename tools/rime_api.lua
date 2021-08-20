@@ -120,14 +120,14 @@ function M.load_projection( config, path)
     return M.old_projection(config,path)
   end
 
-  local comment_format= config:get_list( path )
+  local patterns= config:get_list( path )
   local projection= Projection()
-  if  comment_format then
-    projection:load(comment_format)
+  if  patterns then
+    projection:load(patterns)
   else
     log.warning( "lua_filter: " .. path  ..
       " projection of comment_format could not loaded. comment_format type: " ..
-      tostring(comment_format) )
+      tostring(patterns) )
   end
   return projection
 end
