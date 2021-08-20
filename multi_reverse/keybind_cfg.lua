@@ -28,11 +28,16 @@ local function mprev(action,env)
 	  Multi_reverse, 
 	  env.trans_namespace:prev())
 end 
+local function mtoggle(action,env)
+  update_property(  env.engine.context,
+    Multi_reverse,
+    env.trans_namespace:toggle())
+end 
 -- keybinders 
 local keybinder_tab=  {
     {when= "always" ,accept= "Control+9" ,call_func=mnext},
     {when= "always" ,accept= "Control+0" ,call_func= mprev}, -- ret default Accepted
-    {when= "always" ,accept= "Control+6" ,toggle= Multi_reverse ,ret=Accepted}, -- 1 == Accepted
+    {when= "always" ,accept= "Control+6" ,call_func= mtoggle,ret=Accepted}, -- 1 == Accepted
     {when= "always" ,accept= "Control+7" , toggle= "qcode" },
     {when= "always" ,accept= "Control+8" , toggle= Completion },
   }
