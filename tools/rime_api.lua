@@ -24,11 +24,14 @@
 --
 --
 
+local function chk_newver()
+  return Projection and true or false
+end
 local List = require'tools/list'
 local M=rime_api
 
 -- 取得 librime 狀態 tab { always=true ....}
--- 須要 新舊版 差異  comp.empty() -->  comp:empty() 
+-- 須要 新舊版 差異  comp.empty() -->  comp:empty()
 function M.get_status(ctx)
   --local ctx= env.engine.context
   local stat={}
@@ -37,10 +40,14 @@ function M.get_status(ctx)
   stat.composing= ctx:is_composing()
   stat.empty= not stat.composing
   stat.has_menu= ctx:has_menu()
-  -- old version 
-  local ok,empty = pcall(comp.empty)
-
-  empty=  ok  and empty or comp:empty() --  empty=  ( ok ) ? empty : comp:empty() 
+  -- old version check ( Projection userdata)
+  local ok,empty
+  if not chk_newver() then
+    ok,empty = pcall(comp.empty)
+    empty=  ok  and empty or comp:empty() --  empty=  ( ok ) ? empty : comp:empty()
+  else
+    empty = comp:empty()
+  end
   stat.paging= not empty and comp:back():has_tag("paging")
   return stat
 end
@@ -90,8 +97,11 @@ end
 
 -- clone ConfigList of string to List
 
-function M.clone_configlist(config,path)
-  assert( config:is_list(path) )
+function M.clone_configlist(config,path) if not config:is_list(path) then
+    log.warning( "clone_configlist: ( " .. path  ..  " ) was not a ConfigList " )
+    return nil
+  end
+
   local list=List()
   for i=0, config:get_list_size(path)-1 do
     list:push( config:get_string( path .. "/@" .. i ) )
@@ -112,6 +122,7 @@ function M.old_load_projection(config,path)
   local patterns=clone_configlist(config,path)
   local make_pattern=require 'tools/pattern'
   local projection = patterns:map(function(pattern) return make_pattern(pattorn) end )
+  -- signtone
   function projection:apply(str)
     return self:reduce(
     function(pattern_func,org) return pattern_func(org) end , str )
@@ -119,10 +130,10 @@ function M.old_load_projection(config,path)
   return projection
 end
 
--- 
+--
 function M.load_projection( config, path)
   --  old version
-  if not Projection  then
+  if not chk_newver() then
     return M.old_projection(config,path)
   end
 
@@ -137,6 +148,5 @@ function M.load_projection( config, path)
   end
   return projection
 end
-
 
 return M
