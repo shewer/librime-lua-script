@@ -55,9 +55,7 @@ Multi_reverse="multi_reverse"
 --if not _tags_match(env.tags ,segment) then  return false end
 -- 以 name_space 作爲開關
 function M.tags_match(segment,env)
-  if not env.reverdb then return false end
-
-  return  env.engine.context:get_option(Multi_reverse)
+  return  env.reverdb 
     and env.engine.context:get_property(Multi_reverse) == env.name_space
     or false
 end
@@ -85,10 +83,10 @@ local function func(input,env)
 end
 
 local function old_func(input,env)
-  if not env.reverdb  or  env.engine.context:get_property( Multi_reverse ) ~=  env.name_space then
-    for cand in input:iter() do  yield(cand)  end   -- bypass
-  else
+  if env.reverdb  and  env.engine.context:get_property( Multi_reverse ) ==  env.name_space then
     func(input, env)
+  else
+    for cand in input:iter() do  yield(cand)  end   -- bypass
   end
 end
 

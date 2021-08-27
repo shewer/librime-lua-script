@@ -16,7 +16,11 @@ local Completion ="completion"
 --   keybinder function 
 local function update_property(ctx,name,data)
   ctx:set_property( name , data)
-  ctx:refresh_non_confirmed_composition()
+  if ctx:has_menu() then 
+    local si=ctx.composition:back().selected_index
+    ctx:refresh_non_confirmed_composition()
+    ctx.composition:back().selected_index=si 
+  end 
 end 
 local function mnext(action,env)
   update_property( env.engine.context,
