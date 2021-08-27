@@ -37,12 +37,23 @@ local function mtoggle(action,env)
     Multi_reverse,
     env.trans_namespace:toggle())
 end 
+local function toggle_qcode(action,env)
+  local ctx= env.engine.context
+  if ctx:has_menu() then 
+    local si= ctx:has_menu() and ctx.composition:back().selected_index 
+    ctx:set_option("qcode" , not ctx:get_option("qcode"))
+    ctx.composition:back().selected_index=si 
+  else
+    ctx:set_option("qcode" , not ctx:get_option("qcode"))
+  end 
+end 
+   
 -- keybinders 
 local keybinder_tab=  {
     {when= "always" ,accept= "Control+9" ,call_func=mnext},
     {when= "always" ,accept= "Control+0" ,call_func= mprev}, -- ret default Accepted
     {when= "always" ,accept= "Control+6" ,call_func= mtoggle,ret=Accepted}, -- 1 == Accepted
-    {when= "always" ,accept= "Control+7" , toggle= "qcode" },
+    {when= "always" ,accept= "Control+7" ,call_func= toggle_qcode },
     {when= "always" ,accept= "Control+8" , toggle= Completion },
   }
 
