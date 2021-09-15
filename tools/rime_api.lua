@@ -32,7 +32,7 @@ local M=rime_api
 
 -- 取得 librime 狀態 tab { always=true ....}
 -- 須要 新舊版 差異  comp.empty() -->  comp:empty()
-function M.get_status(ctx)
+function M.get_status(env)
   --local ctx= env.engine.context
   local stat={}
   local comp= ctx.composition
