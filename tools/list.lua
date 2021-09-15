@@ -114,7 +114,22 @@ function M:select_with_index(func, ...)
   return self:class()(tab)
 end 
 
-
+local function def_find(elm,argv)
+    return elm == argv 
+end 
+function M:find(func,...)
+  local argv=... 
+  if type(func)~= "function" then 
+    func,argv = def_find, func
+  end 
+  print("-----find --------------------", func,argv)
+  for i,v in ipairs(self) do 
+    if func(v,argv) then 
+      return v
+    end 
+  end 
+  return nil
+end 
 
 
 -- not use  
