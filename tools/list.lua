@@ -158,6 +158,10 @@ function M:size()
   return #self
 end 
 
+function M:empty()
+  return #self == 0 
+end 
+
 
 function M:clear()  
   for i=1,#self do 
