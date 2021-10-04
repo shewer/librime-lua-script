@@ -33,7 +33,7 @@ local M=rime_api
 -- 取得 librime 狀態 tab { always=true ....}
 -- 須要 新舊版 差異  comp.empty() -->  comp:empty()
 function M.get_status(env)
-  --local ctx= env.engine.context
+  local ctx= env.engine.context
   local stat={}
   local comp= ctx.composition
   stat.always=true
@@ -97,7 +97,8 @@ end
 
 -- clone ConfigList of string to List
 
-function M.clone_configlist(config,path) if not config:is_list(path) then
+function M.clone_configlist(config,path)
+  if not config:is_list(path) then
     log.warning( "clone_configlist: ( " .. path  ..  " ) was not a ConfigList " )
     return nil
   end
