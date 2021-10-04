@@ -57,7 +57,8 @@ function M:reduce(func, org, ...)
 end 
 function M:each(func, ...)
   for i,v in ipairs(self) do 
-    func(v, ...)
+    local res=func(v,...)
+    if res then return res end 
   end 
 end 
 
