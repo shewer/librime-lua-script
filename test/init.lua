@@ -7,6 +7,8 @@
 --
 lu=require 'tools/luaunit'
 TestList= require 'test/list_test'
+TestObject= require 'test/object_test'
+--TestListNEW= require 'test/list_new_test'
 TestMS= require 'test/multiswitch_test'
 TestPT= require 'test/pattern_test'
 
