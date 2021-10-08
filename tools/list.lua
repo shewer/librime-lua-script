@@ -42,6 +42,24 @@
 
 local M={}
 M.__index=M
+function M:New(...)
+  local obj={...}
+  if #obj==1 and type(obj[1]) =="table" then
+	obj = {}
+	for i,v in ipairs(...) do
+      table.insert(obj,v)
+	end
+  end
+  obj=setmetatable(obj,self)
+  return obj:_init(...)
+end
+function M:_init(...)
+	return self
+end
+
+--setmetatable(M,{__index=table, __call=init})
+setmetatable(M,{ __call=M.New})
+
 -- local metatab={__index=M}
 
 
@@ -234,23 +252,6 @@ end
 
 
 
-function M:New(...)
-  local obj={...}
-  if #obj==1 and type(obj[1]) =="table" then
-	obj = {}
-	for i,v in ipairs(...) do
-      table.insert(obj,v)
-	end
-  end
-  obj=setmetatable(obj,self)
-  return obj:_init(...)
-end
-function M:_init(...)
-	return self
-end
-
---setmetatable(M,{__index=table, __call=init})
-setmetatable(M,{ __call=M.New})
 
 
 
