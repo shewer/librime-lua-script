@@ -24,8 +24,8 @@ patch:
 利用 commit_notifier & update_notifier & engine.process_key 重送 KeyEvent(Z),下隊`讓lua_translator@conjunctive 產生聯想詞彙
 ```
 -- copy file  to user_data_dir/lua  
-lua/tools/lua/list.lua  -- list module 
-lua/tools/lua/ditc.lua  -- 聯想詞彙 module 
+lua/tools/list.lua  -- list module 
+lua/tools/ditc.lua  -- 聯想詞彙 module 
 lua/conjunctive.lua  -- 主程式
 
 --- rime.lua
