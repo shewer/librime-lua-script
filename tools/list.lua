@@ -229,7 +229,14 @@ function M:clone()
 	   self:map()
 	)
 end
-
+function M:sort_self(func,...)
+  table.sort(self,func)
+  return self
+end 
+function M:sort(func,...)
+  return self:clone():sort_self()
+end 
+  
 
 
 

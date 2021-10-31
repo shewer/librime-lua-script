@@ -19,6 +19,22 @@ assert( multi_reverse_processor)
 patch: 
    engine/processors/@after 0: lua_processor@multi_reverse_processor
 ```
+## 聯想詞彙 conjunctive.lua 
+自動載入參數據( lua_translator@conjunctive and module )
+利用 commit_notifier & update_notifier & engine.process_key 重送 KeyEvent(Z),下隊`讓lua_translator@conjunctive 產生聯想詞彙
+```
+-- copy file  to user_data_dir/lua  
+lua/tools/lua/list.lua  -- list module 
+lua/tools/lua/ditc.lua  -- 聯想詞彙 module 
+lua/conjunctive.lua  -- 主程式
+
+--- rime.lua
+conjunctive_proc= require('conjunctive')
+---  custom.yaml
+patch:
+  engine/processors/@after 0: lua_processor@conjunctive_proc
+
+```
 
 ## [tools 常用工具](https://github.com/shewer/librime-lua-script/tools/README.md)
 * list.lua 提供 each map reduce select ... 
