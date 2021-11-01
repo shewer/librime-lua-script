@@ -17,7 +17,10 @@ end
 
 local function load_essay(filename)
   local fn=io.open(filename) 
-  if not fn then return end
+  if not fn then 
+    _ = log and log.warning("not exist file: " .. filename )
+    return 
+  end
 
   words={}
   for line in fn:lines() do 
