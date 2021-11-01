@@ -20,8 +20,15 @@ patch:
    engine/processors/@after 0: lua_processor@multi_reverse_processor
 ```
 ## 聯想詞彙 conjunctive.lua 
-自動載入參數據( lua_translator@conjunctive and module )
-利用 commit_notifier & update_notifier & engine.process_key 重送 KeyEvent(Z),下隊`讓lua_translator@conjunctive 產生聯想詞彙
+
+
+利用 commit_notifier & update_notifier & engine.process_key 重送 KeyEvent(~), 觸發 lua_translator@conjunctive 產生聯想詞彙
+
+增加聯想開關(F11) 
+
+自動載入參數據( lua_translator@conjunctive and module ) 插入 echo_translator後   punct_translator前
+
+
 ```
 -- copy file  to user_data_dir/lua  
 lua/tools/list.lua  -- list module 
@@ -33,6 +40,15 @@ conjunctive_proc= require('conjunctive')
 ---  custom.yaml
 patch:
   engine/processors/@after 0: lua_processor@conjunctive_proc
+
+```
+```lua
+-- conjunctive.lua 設定參數
+-- user define data
+local pattern_str="~"  -- 聯想觸發 keyevent
+local lua_tran_ns="conjunctive" 
+local dict_file= 'essay.txt'
+local switch_key="F11" -- 聯想詞開闢 預設 0  on  1 off , keybinder {when:always,accept: F11, toggle: conjunctive}
 
 ```
 
