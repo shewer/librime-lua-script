@@ -19,15 +19,13 @@ assert( multi_reverse_processor)
 patch: 
    engine/processors/@after 0: lua_processor@multi_reverse_processor
 ```
-## 聯想詞彙 conjunctive.lua 
+## 聯想詞彙 conjunctive.lua (支援librime-lua Commits on Oct 11, 2020 版本)
 
-
-利用 commit_notifier & update_notifier & engine.process_key 重送 KeyEvent(~), 觸發 lua_translator@conjunctive 產生聯想詞彙
+利用 commit_notifier & update_notifier & engine.process_key context.input(~ ~)  ~~重送 KeyEvent(~)~~ , 觸發 lua_translator@conjunctive 產生聯想詞彙
 
 增加聯想開關(F11) 
 
 自動載入參數據( lua_translator@conjunctive and module ) 插入 echo_translator後   punct_translator前
-
 
 ```
 -- copy file  to user_data_dir/lua  
@@ -54,7 +52,8 @@ local switch_key="F11" -- 聯想詞開闢 預設 0  on  1 off , keybinder {when:
 
 ## [tools 常用工具](https://github.com/shewer/librime-lua-script/tools/README.md)
 * list.lua 提供 each map reduce select ... 
-* rime_api.lua 擴充 rime_api 
+* rime_api.lua 擴充 rime_api   
+* dict.lua 聯想詞查表 
 * key_binder.lua 類 keybind 提供 lua_processor 熱鍵
 * pattern.lua librime-lua 舊版無支援 ProjectionReg 改由 lua 實現 pattern 轉換   preedit_format commit_format
 * inspect.lua -- 源自 luarocks 安裝 
