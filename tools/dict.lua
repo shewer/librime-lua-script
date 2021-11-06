@@ -82,6 +82,8 @@ return M
 --- example
 
 --[[
-words= load_essay("essay.txt")
-find_word(words,"一天")
+local Dict=require 'tools/dict'
+local dict= Dict(filename)  --essay.txt 
+dict:find_words("一天") -- return List ; dict:select(function(word) return word:match("^一天") end )
+dict:reduce_find_word("一天") -- return List ;  find_word("一天") + find_word("天")
 --]]
