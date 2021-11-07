@@ -27,6 +27,7 @@ patch:
 
 自動載入參數據( lua_translator@conjunctive and module ) 插入 echo_translator後   punct_translator前
 
+### 安裝
 ```
 -- copy file  to user_data_dir/lua  
 lua/tools/list.lua  -- list module 
@@ -40,6 +41,7 @@ patch:
   engine/processors/@after 0: lua_processor@conjunctive_proc
 
 ```
+### 設定值
 ```lua
 -- conjunctive.lua 設定參數
 -- user define data
