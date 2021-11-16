@@ -76,7 +76,8 @@ local switch_key="F11" -- 聯想詞開闢 預設 0  on  1 off , keybinder {when:
 
 ## [tools 常用工具](https://github.com/shewer/librime-lua-script/tools/README.md)
 * list.lua 提供 each map reduce select ... 
-* rime_api.lua 擴充 rime_api   
+* string 擴充 utf8.sub string.split string.utf8_sub string.utf8_len string.utf8_offset 
+* rime_api.lua 擴充 rime_api globl function Env(env) Init_projection(config,path)
 * dict.lua 聯想詞查表 
 * key_binder.lua 類 keybind 提供 lua_processor 熱鍵
 * pattern.lua librime-lua 舊版無支援 ProjectionReg 改由 lua 實現 pattern 轉換   preedit_format commit_format

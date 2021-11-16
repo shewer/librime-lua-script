@@ -141,7 +141,6 @@ function M:find(func,...)
   if type(func)~= "function" then
     func,argv = def_find, func
   end
-  print("-----find --------------------", func,argv)
   for i,v in ipairs(self) do
     if func(v,argv) then
       return v
