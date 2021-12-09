@@ -42,12 +42,12 @@ local _HISTORY=List{
 
 -- user define data
 local pattern_str ="~~"
-local rec_pattern = ("^%s%s$"):format(pattern_str,"[A-Z<>~]*") 
+local rec_pattern = ("^%s%s$"):format(pattern_str,"[A-Z<>~]*$") 
 local lua_tran_ns = "conjunctive"
 local dict_file = 'essay.txt'
 --dict_file= '/usr/share/rime-data/essay.txt'  -- debug
 local switch_key ="F11"
-
+local escape_key = "%.%-"
 local path_ch= package.config:sub(1,1)
 
 local Dict = require 'tools/dict'
@@ -77,9 +77,9 @@ function M.init(env)
       env.history = cand.comment:match("^(.*)[-][-].*$") or env.history
     end
 
-    local update_commit = ctx.input ~= ctx:get_commit_text()
-    if update_commit then
-      env.history = env.history .. ctx:get_commit_text() or ""
+    local commit_text= ctx:get_commit_text()
+    if  #commit_text>0 and  ctx.input ~= commit_text then  
+      env.history = env.history .. commit_text 
       env.history = env.history:utf8_sub(-10)
       --print( env.history, ctx.input , ctx:get_commit_text() )
 
@@ -155,7 +155,15 @@ local function print_config(config)
   :map(function(elm) return "engine/" .. elm end )
   :each(function(elm) list_print(config,elm) end)
 
-  local pattern_p= "recognizer/patterns/" .. lua_tran_ns
+  local pattern_p= "recognizer/patterns" 
+  local config_map=config:get_map( pattern_p)
+  List( config_map:keys() ):each(function(elm) 
+    puts( pattern_p .. "/" .. elm .. ":\t" ..  config_map:get_value(elm).value ) 
+  end )
+
+
+
+
   puts ( pattern_p .. ":\t" .. ( config:get_string(pattern_p ) or "") )
 end
 
@@ -226,6 +234,7 @@ local function get_tags(config,path)
 end
 
 -- lua_filter@uniquifier
+--[[
 local F={}
 function F.init(env)
   local context=env.engine.context
@@ -257,6 +266,8 @@ function F.func(tran,env)
     end
   end
 end
+--]]
+F= require 'component/uniquifier' 
 
 -- add lua_translator@conjunctive , lua_filter@uniquifier 
 --
@@ -309,9 +320,15 @@ end
 
 function P.init(env)
   local config= env.engine.schema.config
+  env.commit_select= ("^[ %s%s%s]$"):format(
+     "%<%>CBHi%~", config:get_string("menu/alternative_select_keys") or "%d", escape_key )
   components(env)
   -- set alphabet string
   env.alphabet= config:get_string("speller/alphabet") or "zyxwvutsrqponmlkjihgfedcba"
+
+
+  env.key_press=false
+
 end
 
 function P.fini(env)
@@ -337,10 +354,9 @@ function P.func(key, env)
   end 
   -- 中斷聯想
   if  context.input:match("^" .. pattern_str) then
-    if ascii:match("^[" .. env.alphabet .. "]$" ) then
+    if #ascii >0 and not ascii:match(env.commit_select) then 
       context:clear()
-      return Noop
-    end
+    end 
   end
   return Noop
 end
