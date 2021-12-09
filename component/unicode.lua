@@ -61,7 +61,7 @@ end
 -- Ucode
 -- patterns:
 --    unicode: "U([a-h0-9]+)"
-local function func2(input,seg,env)
+local function func2(input,env)
   if seg:has_tag("unicode") then
     local ucodestr=  input:sub( seg.start+1+1, seg._end) -- lua index=1 , skip "U"
     local comment= string.format("%s,%d,%d",ucodestr,seg.start,seg._end)

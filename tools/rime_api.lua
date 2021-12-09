@@ -103,6 +103,7 @@ local CN={}
 -- clone ConfigList of string to List
 
 function CN.clone_configlist(config,path)
+  print("=======>>>OOOO<<<<<<<<",__FILE__(),__LINE__(),__FUNC__())
   if not config:is_list(path) then
     log.warning( "clone_configlist: ( " .. path  ..  " ) was not a ConfigList " )
     return nil
@@ -122,8 +123,79 @@ function CN.write_configlist(config,path,list)
   end )
   return #list
 end
+function CN.find_index(config,path,str)
+  print("===============>>>>bug<<===================",__FILE__(),__FUNC__(),__LINE__(),config,path,str)
+  print("--->",__FILE__(),__FUNC__(),__LINE__(), config:is_list(path))
+  if not config:is_list(path) or 1 > config:get_list_size(path)   then 
+  print("--->",__FILE__(),__FUNC__(),__LINE__(), config,path,str  )
+    return 
+  end 
 
+  print("--->",__FILE__(),__FUNC__(),__LINE__(), config,path,str  )
+  local size = config:get_list_size(path)
+  for i=0,size -1 do
+    local ipath= path .. "/@" .. i
+    if config:is_value(ipath) and  config:get_string(ipath ):match(str) then 
+      return i 
+    end 
+  end 
+end 
+-- just for list of string for now
+function CN.config_list_insert(config,path,obj,index)
+  if config:is_null(path) then 
+    local clist= ConfigList()
+    clist:append( ConfigValue(str).element )
+    config:set( path, clist.element )
+    return true 
+  end 
+  if not config:is_list(path) then return end 
+  local size = config:get_list_size(path) 
+  index = index and index <= size and index or size
+  local ipath = path .. "/@before " ..index
+  local ctype= type(obj) 
+  if type(obj) == "string" then 
+    config:set_string(ipath , obj ) 
+    return true
+  end 
+  return false
+end 
 
+function CN.config_list_append(config ,path, str) 
+
+  if config:is_null(path) then 
+    local clist= ConfigList()
+    clist:append( ConfigValue(str).element )
+    config:set_item( path, clist.element )
+    return true 
+  end 
+  local list = assert( config:get_list(path) , ("%s:%s: %s not a List"):format( __FUNC__(),__LINE__(), path))
+  print("--->",__FILE__(),__FUNC__(),__LINE__(), config:is_null(path),config:get_list(path) )
+  if list and not index then 
+      list:append( ConfigValue(str).element )
+      return true
+  else 
+      return false
+  end 
+end 
+
+function CN.config_list_replace(config,path, target, replace )
+  print("--->",__FILE__(),__FUNC__(),__LINE__(), index,config,config.find_index,path, target ,replace)
+  --local index=config:find_index( path, target)
+  print("--->",__FILE__(),__FUNC__(),__LINE__(), index,config,config.find_index,path, target ,replace)
+  local size= config:is_list(path) and config:get_list_size(path) 
+  print("--->",__FILE__(),__FUNC__(),__LINE__(), index,size,config,config.find_index,path, target ,replace)
+  for i = 0,size - 1 do 
+    local ipath= path .. "/@" .. i 
+    local l_str= config:get_string( ipath ) 
+  print("--->",__FILE__(),__FUNC__(),__LINE__(), i,l_str,size,config,config.find_index,path, target ,replace)
+    if l_str and l_str:match(target) then
+      config:set_string(ipath, replace )
+  print("--->",__FILE__(),__FUNC__(),__LINE__(), i,l_str,size,config,config.find_index,path, target ,replace)
+      return true
+    end 
+  end 
+  return false
+end 
 
 --  filter tools
 function M.load_reversedb(dict_name)
@@ -135,37 +207,36 @@ function M.load_reversedb(dict_name)
   end
   return reversedb
 end
-
+local function Wrap(obj,name,tab)
+  local mt=getmetatable(obj)
+  for k,v in next,tab do 
+    mt[name][k]=v
+  end 
+  return obj
+end 
 function M.wrap_context(env)
     local context=env.engine.context
-    local meta=getmetatable(context)
-    for k,v in pairs(C) do
-      meta.methods[k]=v
-    end
-    return context
+    return Wrap(context,"methods",C)
 end
 
 function M.wrap_config(env)
     local config=env.engine.schema.config
-    local meta=getmetatable(config)
-    for k,v in pairs(CN) do
-      meta.methods[k]=v
-    end
-    return config
+    return Wrap(config,"methods",CN)
 end
 
 -- env metatable
 local E={}
 --
-function E:context()
+function E:Context()
   return rime_api.wrap_context(self)
 end
-function E:config()
+function E:Config()
   return rime_api.wrap_config(self)
 end
 -- 取得 librime 狀態 tab { always=true ....}
 -- 須要 新舊版 差異  comp.empty() -->  comp:empty()
 function E:get_status()
+  print("---------",__FILE__(), __LINE__(),env )
   local ctx= self.engine.context
   local stat={}
   local comp= ctx.composition
