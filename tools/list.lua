@@ -205,7 +205,8 @@ function M:push(elm)
   return self:insert_at(#self+1, elm)
 end
 M.append=M.push
-
+M.unpack=table.unpack
+M.concat=table.concat
 function M:unshift(elm)
   return self:insert_at(1,elm)
 end
