@@ -35,9 +35,13 @@
 -- 2021.4 支援 ConfigList ListItem ConfigValue ConfigMap Projection Memory
 --
 List = require'tools/list'
+local puts = require 'tools/debugtool'
+
+
 function Version()
   return Projection and "20210417"  or "20210125"
 end
+
 --  舊的版本 使用 lua_function  轉換  且 模擬 :apply(str) 接口
 local function old_Init_projection(config,path)
   local patterns=List()
@@ -103,7 +107,6 @@ local CN={}
 -- clone ConfigList of string to List
 
 function CN.clone_configlist(config,path)
-  print("=======>>>OOOO<<<<<<<<",__FILE__(),__LINE__(),__FUNC__())
   if not config:is_list(path) then
     log.warning( "clone_configlist: ( " .. path  ..  " ) was not a ConfigList " )
     return nil
@@ -123,15 +126,11 @@ function CN.write_configlist(config,path,list)
   end )
   return #list
 end
+-- 
 function CN.find_index(config,path,str)
-  print("===============>>>>bug<<===================",__FILE__(),__FUNC__(),__LINE__(),config,path,str)
-  print("--->",__FILE__(),__FUNC__(),__LINE__(), config:is_list(path))
   if not config:is_list(path) or 1 > config:get_list_size(path)   then 
-  print("--->",__FILE__(),__FUNC__(),__LINE__(), config,path,str  )
     return 
   end 
-
-  print("--->",__FILE__(),__FUNC__(),__LINE__(), config,path,str  )
   local size = config:get_list_size(path)
   for i=0,size -1 do
     local ipath= path .. "/@" .. i
@@ -169,7 +168,6 @@ function CN.config_list_append(config ,path, str)
     return true 
   end 
   local list = assert( config:get_list(path) , ("%s:%s: %s not a List"):format( __FUNC__(),__LINE__(), path))
-  print("--->",__FILE__(),__FUNC__(),__LINE__(), config:is_null(path),config:get_list(path) )
   if list and not index then 
       list:append( ConfigValue(str).element )
       return true
@@ -179,18 +177,13 @@ function CN.config_list_append(config ,path, str)
 end 
 
 function CN.config_list_replace(config,path, target, replace )
-  print("--->",__FILE__(),__FUNC__(),__LINE__(), index,config,config.find_index,path, target ,replace)
   --local index=config:find_index( path, target)
-  print("--->",__FILE__(),__FUNC__(),__LINE__(), index,config,config.find_index,path, target ,replace)
   local size= config:is_list(path) and config:get_list_size(path) 
-  print("--->",__FILE__(),__FUNC__(),__LINE__(), index,size,config,config.find_index,path, target ,replace)
   for i = 0,size - 1 do 
     local ipath= path .. "/@" .. i 
     local l_str= config:get_string( ipath ) 
-  print("--->",__FILE__(),__FUNC__(),__LINE__(), i,l_str,size,config,config.find_index,path, target ,replace)
     if l_str and l_str:match(target) then
       config:set_string(ipath, replace )
-  print("--->",__FILE__(),__FUNC__(),__LINE__(), i,l_str,size,config,config.find_index,path, target ,replace)
       return true
     end 
   end 
@@ -236,7 +229,6 @@ end
 -- 取得 librime 狀態 tab { always=true ....}
 -- 須要 新舊版 差異  comp.empty() -->  comp:empty()
 function E:get_status()
-  print("---------",__FILE__(), __LINE__(),env )
   local ctx= self.engine.context
   local stat={}
   local comp= ctx.composition
@@ -255,6 +247,20 @@ function E:get_status()
   stat.paging= not empty and comp:back():has_tag("paging")
   return stat
 end
+function E:print_components()
+  local config= self:Config()
+  local function list_print(conf,path)
+  puts( "log","-----" .. path .. " --------")
+    for i=0, conf:get_list_size(path) -1 do
+      path_i= path .. "/@" .. i
+      puts("log", path_i ..":\t" .. conf:get_string(path_i) )
+    end
+  end
+  List({"processors","segmentors","translators","filters"})
+  :map(function(elm) return "engine/" .. elm end )
+  :each(function(elm) list_print(config,elm) end)
+end
+
 
 E.__index=E
 
