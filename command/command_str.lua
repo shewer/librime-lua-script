@@ -5,7 +5,10 @@
 --
 -- Distributed under terms of the MIT license.
 --
+--
+require 'tools/string'
 local puts = require 'tools/debugtool'
+DEBUG="trace"
 local function New(self, ... ) 
   local obj = {}
   setmetatable(obj,self)
@@ -339,9 +342,10 @@ function Command:execute(str)
 end 
 
 function Command:iter(str)
+  puts("trace",__FILE__(),__LINE__(),self,str )
   local cmd_key,name,value= table.unpack(str:split(":"))
+  puts("trace",__FILE__(),__LINE__(),self,self[cmd_key], cmd_key, name,value )
 
-  puts("---->",__FILE__(),__LINE__(),self,self[cmd_key], cmd_key, name,value )
   return  self[cmd_key]:iter(str) 
 end 
 
