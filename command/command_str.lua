@@ -5,6 +5,7 @@
 --
 -- Distributed under terms of the MIT license.
 --
+local puts = require 'tools/debugtool'
 local function New(self, ... ) 
   local obj = {}
   setmetatable(obj,self)
@@ -134,7 +135,7 @@ function Base1.__index(obj,key)
   return obj:get(key) 
 end
 function Base1.__newindex(obj,key,value)
-  print("******>", __FILE__(),__LINE__(),obj,key,value)
+  puts("******>", __FILE__(),__LINE__(),obj,key,value)
   obj:set(key,value)
 end 
 function Base1:exec(str)
@@ -144,9 +145,9 @@ end
 Base1.__call=New
 
 local function option_iter(self,str)
-  print("******>", __FILE__(),__LINE__(),self,str,type(str))
+  puts("******>", __FILE__(),__LINE__(),self,str,type(str))
   local key,name,value = table.unpack(str:split(":") )
-  print("******>", __FILE__(),__LINE__(),self,str,type(str),key,name,value)
+  puts("******>", __FILE__(),__LINE__(),self,str,type(str),key,name,value)
   return coroutine.wrap(function() 
   --if not name:match("^[%a_]+") then return end 
   local status= self.vars[name]
@@ -157,16 +158,16 @@ local function option_iter(self,str)
       ("%s:%s:%s--(%s)"):format(key,k,not v,"toggle") )
   end 
   else
-  print("******>", __FILE__(),__LINE__(),value,type(value) ,status,type(status) ) 
+  puts("******>", __FILE__(),__LINE__(),value,type(value) ,status,type(status) ) 
   --if (value and not status ) then 
   --if (value and true ) then 
-  print("******>", __FILE__(),__LINE__(),self,str,type(str),key,name,value)
+  puts("******>", __FILE__(),__LINE__(),self,str,type(str),key,name,value)
     --coroutine.yield( 
     --("%s:%s:%s--(%s)"):format(key, name, not status, "toggle"  ) )
     value = value or ""
     for i,elm in next,{not status ,true,false} do
-  print("******>", __FILE__(),__LINE__(),self,str,type(str),key,name,value)
-       print(("%s:%s:%s--(%s)"):format( key,name,elm, i==1 and "toggle" or elm and "set" or "unset" ) )
+  puts("******>", __FILE__(),__LINE__(),self,str,type(str),key,name,value)
+       puts(("%s:%s:%s--(%s)"):format( key,name,elm, i==1 and "toggle" or elm and "set" or "unset" ) )
         coroutine.yield( 
         ("%s:%s:%s--(%s)"):format( key,name,elm, i==1 and "toggle" or elm and "set" or "unset" ) )
     end
@@ -198,9 +199,9 @@ local function Option(ref,vars)
     return self.obj:get_option(name) 
   end 
   function obj:set(name,value) 
-    print("=======>",__FILE__(),__LINE__() , self, self.obj,self.set,name,value,type(value),obj.vars[name] )
+    puts("=======>",__FILE__(),__LINE__() , self, self.obj,self.set,name,value,type(value),obj.vars[name] )
     self.obj:set_option( name, value == "true") 
-    print("=======>",__FILE__(),__LINE__() , self, self.obj,self.set,name,value,type(value) )
+    puts("=======>",__FILE__(),__LINE__() , self, self.obj,self.set,name,value,type(value) )
 
   end 
   obj.execute= obj.set
@@ -217,9 +218,9 @@ local function Property(ref,vars)
     return self.obj:get_option(name) 
   end 
   function obj:set(name,value) 
-    print("=======>",__FILE__(),__LINE__() , self, self.obj,self.set,name,value )
+    puts("=======>",__FILE__(),__LINE__() , self, self.obj,self.set,name,value )
     if  value and #value >0 and value ~= self.vars[name] then 
-    print("=======>",__FILE__(),__LINE__() , self, self.obj,self.set,name,value )
+    puts("=======>",__FILE__(),__LINE__() , self, self.obj,self.set,name,value )
       self.obj:set_property( name, value) 
     end 
   end 
@@ -228,16 +229,16 @@ local function Property(ref,vars)
   return obj
 end 
 local function get_configs(self,path)
-  print("------get_configs-->",__FILE__(),__LINE__(),self,path )
+  puts("------get_configs-->",__FILE__(),__LINE__(),self,path )
 
   local item= self:get_item(path or "" ) 
-  print("------get_configs-->",__FILE__(),__LINE__(),self,path,item)
+  puts("------get_configs-->",__FILE__(),__LINE__(),self,path,item)
   local list_c=List() 
   if item then 
-    print("------get_configs-->",__FILE__(),__LINE__(),self,path,item,item.type)
+    puts("------get_configs-->",__FILE__(),__LINE__(),self,path,item,item.type)
     if item.type== "kScalar" then 
       list_c:push( { path , item:get_value().value} ) 
-      print("------get_configs-->",__FILE__(),__LINE__(),self,path,item:get_value().value ,item,item.value,item.type,#list_c, list_c[1][1],list_c[1][2])
+      puts("------get_configs-->",__FILE__(),__LINE__(),self,path,item:get_value().value ,item,item.value,item.type,#list_c, list_c[1][1],list_c[1][2])
       
     elseif item.type== "kList" then 
         local list= item:get_list() 
@@ -254,7 +255,7 @@ local function get_configs(self,path)
     end 
   else 
     local h,l = path:match("^([%a%.%/_%d]+)%/?(%/.*)$")
-      print("------get_configs-->",__FILE__(),__LINE__(),self,path,h,l )
+      puts("------get_configs-->",__FILE__(),__LINE__(),self,path,h,l )
       local list_l = get_configs(self,h or "")
       list_c = list_l and list_l:select(function(elm) return elm[1]:match("^".. path ) end ) 
   end 
@@ -276,9 +277,9 @@ local function config_iter(self,str)
     coroutine.yield( ("m%s--(%s)"):format(str,item_str))
     ------------------------------
   elseif item.type == m then 
-  print("---->",__FILE_a_(),__LINE__(), self,self.obj, key,path, value )
+  puts("---->",__FILE_a_(),__LINE__(), self,self.obj, key,path, value )
     self:get_config(path):each(function(elm)
-      print("---->",__FILE__(),__LINE__(), self,self.obj, key,path, value or "" , #config,elm[1],elm[2] )
+      puts("---->",__FILE__(),__LINE__(), self,self.obj, key,path, value or "" , #config,elm[1],elm[2] )
       coroutine.yield( ("%s%s--(%s)"):format(str,elm[1],elm[2]))
     end)
 
@@ -296,7 +297,7 @@ local function _Config(ref,vars)
   end 
   function obj:set(name,value) 
 
-    print("=======>",__FILE__(),__LINE__() , self, self.obj,self.set )
+    puts("=======>",__FILE__(),__LINE__() , self, self.obj,self.set )
     name = name:gsub("/+$","")
     --local config= self.obj
     if value and self.obj:get_item( name ).type == "kScalar" then 
@@ -316,7 +317,7 @@ local function Func(obj,vars)
   end 
   function obj:set(name,value) 
 
-    print("=======>",__FILE__(),__LINE__() , self, self.obj,self.set )
+    puts("=======>",__FILE__(),__LINE__() , self, self.obj,self.set )
     name = name:gsub("/+$","")
     --local config= self.obj
     if value and self.obj:get_item( name ).type == "kScalar" then 
@@ -340,13 +341,13 @@ end
 function Command:iter(str)
   local cmd_key,name,value= table.unpack(str:split(":"))
 
-  print("---->",__FILE__(),__LINE__(),self,self[cmd_key], cmd_key, name,value )
+  puts("---->",__FILE__(),__LINE__(),self,self[cmd_key], cmd_key, name,value )
   return  self[cmd_key]:iter(str) 
 end 
 
 function Command:append(key,obj, m_name, set)
   
-  print("---->",__FILE__(),__LINE__(), key,obj,m_name,set,name_of_set )
+  puts("---->",__FILE__(),__LINE__(), key,obj,m_name,set,name_of_set )
   if m_name == "option" then 
     self[key] = Option(obj,set) 
   elseif m_name == "property" then 
