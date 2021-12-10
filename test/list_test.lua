@@ -379,6 +379,25 @@ function TestList:testEditdata()
 
 end
 
+function TestList:testFind()
+  local l1=List(1,2,3,4)
+  lu.assertEquals( l1:find(3),3)
+  lu.assertEquals( l1:find(5),nil)
+  lu.assertEquals( l1:find(function(elm,arg) return elm == arg end , 4), 4)
+  local l1=List({1,2},{3,4},{5,6})
+  lu.assertEquals( l1:find(function(elm,arg) return elm[1] == arg[1] and elm[2]==arg[2] end ,
+      {3,4} ),{3,4} )
+  -- test List.__eq 
+  local l1=List(List(1,2),List(3,4),List(5,6))
+  lu.assertEquals( l1:find(function(elm,arg) return elm==arg end ,
+      {3,4} ),{3,4} )
+  lu.assertEquals( l1:find({3,4}), {3,4})
+
+  
+
+  
+
+end
 
 
 assert(  lu.LuaUnit )

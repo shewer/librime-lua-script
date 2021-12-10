@@ -7,7 +7,7 @@
 --
 require 'tools/metatable'
 
-function __FILE__(n) n=n or 1 return debug.getinfo(n,'S').soruce end
+function __FILE__(n) n=n or 2 return debug.getinfo(n,'S').soruce end
 function __LINE__(n) n=n or 2 return debug.getinfo(n, 'l').currentline end
 function __FUNC__(n) n=n or 2 return debug.getinfo(n, 'n').name end
 local type_org=type
