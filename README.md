@@ -1,5 +1,77 @@
+# 增加 init_processor.lua 
+  使用了 tags_match() and ConfigMap:keys() 只支援 librime-lua #131 以上版本 window版本rime.dll 可從 https://github.com/shewer/librime-lua/releases 下載
+  可由 yaml name_space 或 rime.lua 載入模組(以 yaml name_space 爲優先)
+  
+  由 init_processor 導入模組
+  可用模組 english(包含wordninja) conjunctive command
+  化簡繁複 custom.yaml rime.lua 編輯
+  ## conjunctive 聯想詞模組
+    * 中文上屏後觸發
+    * 上屏字母串編輯 ~< 字尾刪除 > 字頭刪除
+    * ~~H  自定字串  ~~C 清除  ~~B 還原
+  ## command 命令模組 顯示 設定 執行 命令 支援 Tab 補齊功能
+   可擴充 config func 設定 達到線上重載功能，後續再增加
+   
+    * /<opcf>:<name>:<value>  o: option p:property c:config f:funcs
+    * /o: option 顯示/設定 true/false /o:<name>:<true/false>  (toggle/set/unset)
+    * /p: property 顯示/設定字串 /p:<name>:value
+    * /f: function 顯示 執行 /f:<name>:<argv1,argv2,....>
+    * /c: config 顯示 設定字串 /c:<path>:value  分隔符 / 
+    * 範例
+       * /o:as{Tab}:t{Space} --> /o:ascii-mode:t
+       * /o:abcd:t --> 設定新值 option abcd= true
+       * /p:test:test{Space} 設定新值 property test= "test"
+       * /c:me{Tab}/p{Tab}:9{Space} 設定 menu/page_size 
+       * /f:re(Tab}{Space} 重載   /f:reload execute 
+       * /f:me{Tab}:5{Space} 設定meun/page_size 井重載 /f:menu_size:5
+       
+  ## english 英文字典模組 支援 Tab 補齊功能 及 wordninja
+    * 英打模式 待增
+
+  ## 安裝
+  ```
+  git clone https://github.com/shewer/librime-lua-script <userdata>/lua
+  cp  lua/example/processor.yaml <userdata>
+  ```
+  
+ ### 由 yaml module1/modules 載入
+  ```yaml
+  custom.yaml
+  patch: 
+    __include: processor_plugin:/patch
+    # patch:
+    #   engine/processors/@after 0: lua_processor@init_processor@module1
+    #     module1/modules:
+    #       - { module: 'command'    , module_name: "cammand_proc"    , name_space: "command" }
+    #       - { module: 'english'    , module_name: "english_proc"    , name_space: "english" }
+    #       - { module: "conjunctive", module_name: "conjunctive_proc", name_space: "conjunctive" }
+    
+  ```
+  ```lua
+  --rime.lua
+  init_processor= require('init_processor')
+  ```
+  ### 由 rime.lua module2 載入 
+  ```yaml
+  custom.yaml
+  patch:
+    engine/processors/@after 0: lua_processor@init_processor@module2 
+  ```
+  ```lua
+  ---rime.lua
+
+  module2={
+  {module='command', module_name="cammand_proc",name_space="command" },
+  {module='english', module_name="english_proc",name_space="english" },
+  {module="conjunctive", odule_name = "conjunctive_proc",name_space="conjunctive"},
+}
+  init_processor=requrie('init_processor')
+    
+  ```
+
+  
 # librime-lua-script
-## multi_reverse 主副字典反查(新版)  支持 librime-lua(新舊版)
+## ~~multi_reverse 主副字典反查(新版)  支持 librime-lua(新舊版)~~  新架構可能造成失效待修正
 自動導入 engine/translators/   script_translator table_translator   反查 lua_filter
 ### 反查字典切換
 * Ctrl+6 反查開關
