@@ -46,9 +46,10 @@
 
 require 'tools/rime_api'
 local List = require 'tools/list'
---DEBUG="^trace"
 INFO = "^log"
---CONSOLE="trace"
+--DEBUG="^trace"
+-- INFO = "^log"
+--CONSOLE="^log"
 --CONSOLE="log"
 local puts=require'tools/debugtool'
 

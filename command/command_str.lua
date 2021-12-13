@@ -8,7 +8,6 @@
 --
 require 'tools/string'
 local puts = require 'tools/debugtool'
-DEBUG="trace"
 local function New(self, ... ) 
   local obj = {}
   setmetatable(obj,self)
@@ -148,50 +147,24 @@ end
 Base1.__call=New
 
 local function option_iter(self,str)
-  puts("******>", __FILE__(),__LINE__(),self,str,type(str))
   local key,name,value = table.unpack(str:split(":") )
-  puts("******>", __FILE__(),__LINE__(),self,str,type(str),key,name,value)
   return coroutine.wrap(function() 
-  --if not name:match("^[%a_]+") then return end 
-  local status= self.vars[name]
-  -- status=  vars_value ~= nil and tostring( status) or "" 
-  if not value then 
-  for k,v in next , self.vars do 
-      coroutine.yield( 
-      ("%s:%s:%s--(%s)"):format(key,k,not v,"toggle") )
-  end 
-  else
-  puts("******>", __FILE__(),__LINE__(),value,type(value) ,status,type(status) ) 
-  --if (value and not status ) then 
-  --if (value and true ) then 
-  puts("******>", __FILE__(),__LINE__(),self,str,type(str),key,name,value)
-    --coroutine.yield( 
-    --("%s:%s:%s--(%s)"):format(key, name, not status, "toggle"  ) )
-    value = value or ""
-    for i,elm in next,{not status ,true,false} do
-  puts("******>", __FILE__(),__LINE__(),self,str,type(str),key,name,value)
-       puts(("%s:%s:%s--(%s)"):format( key,name,elm, i==1 and "toggle" or elm and "set" or "unset" ) )
-        coroutine.yield( 
-        ("%s:%s:%s--(%s)"):format( key,name,elm, i==1 and "toggle" or elm and "set" or "unset" ) )
-    end
-  end 
-end) 
-end 
-local function property_iter(self,str)
-  return coroutine.wrap( function() 
-    local key,name,value = table.unpack(str:split(":") )
-    local stalus= self.vars[name] 
-
-    if not value  then 
+    --if not name:match("^[%a_]+") then return end 
+    local status= self.vars[name]
+    -- status=  vars_value ~= nil and tostring( status) or "" 
+    if not value then 
       for k,v in next , self.vars do 
         coroutine.yield( 
-        ("%s:%s--(%s)"):format(key,k,v) )
+        ("%s:%s:%s--(%s)"):format(key,k,not v,"toggle") )
       end 
-    else   
+    else
+      value = value or ""
+      for i,elm in next,{not status ,true,false} do
         coroutine.yield( 
-        ("%s--(%s)" ):format(str,self.vars[name] ))
-    end
-  end)
+        ("%s:%s:%s--(%s)"):format( key,name,elm, i==1 and "toggle" or elm and "set" or "unset" ) )
+      end
+    end 
+  end) 
 end 
 local function Option(ref,vars)
   local obj={}
@@ -202,28 +175,37 @@ local function Option(ref,vars)
     return self.obj:get_option(name) 
   end 
   function obj:set(name,value) 
-    puts("=======>",__FILE__(),__LINE__() , self, self.obj,self.set,name,value,type(value),obj.vars[name] )
     self.obj:set_option( name, value == "true") 
-    puts("=======>",__FILE__(),__LINE__() , self, self.obj,self.set,name,value,type(value) )
-
   end 
   obj.execute= obj.set
   setmetatable(obj, Base1) 
   return obj
 end
 
+local function property_iter(self,str)
+  return coroutine.wrap( function() 
+    local key,name,value = table.unpack(str:split(":") )
+    local stalus= self.vars[name] 
+
+    if not value  then 
+      for k,v in next , self.vars do 
+        coroutine.yield( ("%s:%s--(%s)"):format(key,k,v) )
+      end 
+    else   
+        coroutine.yield( ("%s--(%s)" ):format(str,self.vars[name] ))
+    end
+  end)
+end 
 local function Property(ref,vars)
   local obj={}
-  obj.vars= vars or {}
   obj.obj= ref 
+  obj.vars= vars or {}
   obj.iter= property_iter
   function obj:get(name)
     return self.obj:get_option(name) 
   end 
   function obj:set(name,value) 
-    puts("=======>",__FILE__(),__LINE__() , self, self.obj,self.set,name,value )
     if  value and #value >0 and value ~= self.vars[name] then 
-    puts("=======>",__FILE__(),__LINE__() , self, self.obj,self.set,name,value )
       self.obj:set_property( name, value) 
     end 
   end 
@@ -232,22 +214,16 @@ local function Property(ref,vars)
   return obj
 end 
 local function get_configs(self,path)
-  puts("------get_configs-->",__FILE__(),__LINE__(),self,path )
-
-  local item= self:get_item(path or "" ) 
-  puts("------get_configs-->",__FILE__(),__LINE__(),self,path,item)
+  local item= self:get(path)  --- self.obj.get_item(path)
   local list_c=List() 
   if item then 
-    puts("------get_configs-->",__FILE__(),__LINE__(),self,path,item,item.type)
     if item.type== "kScalar" then 
       list_c:push( { path , item:get_value().value} ) 
-      puts("------get_configs-->",__FILE__(),__LINE__(),self,path,item:get_value().value ,item,item.value,item.type,#list_c, list_c[1][1],list_c[1][2])
-      
     elseif item.type== "kList" then 
         local list= item:get_list() 
         for i=0,list.size-1 do 
           local iitem= list:get_at(i)
-          list_c:push{ path .."/@" .. i, iitem.type== "kScalar" and iitem:get_value().value or iitem.type  }
+          list_c:push{ #path>0 and path .."/@" .. i, iitem.type== "kScalar" and iitem:get_value().value or iitem.type  }
         end 
     elseif item.type == "kMap" then 
       local map = item:get_map() 
@@ -256,37 +232,27 @@ local function get_configs(self,path)
         list_c:push{  (#path>0 and path .."/" or "") ..  key , mitem.type == "kScalar" and mitem:get_value().value or mitem.type }
       end 
     end 
+  -------------------------------------
   else 
-    local h,l = path:match("^([%a%.%/_%d]+)%/?(%/.*)$")
-      puts("------get_configs-->",__FILE__(),__LINE__(),self,path,h,l )
-      local list_l = get_configs(self,h or "")
-      list_c = list_l and list_l:select(function(elm) return elm[1]:match("^".. path ) end ) 
+    local t_path,sub_str = path:match("^(.*)%/(.*)$")
+    if not t_path then 
+      sub_str,path = path,""
+    else 
+      path=t_path
+    end 
+    list_c = get_configs(self,path)
   end 
-  
-  return #list_c > 0 and list_c or nil 
+  return list_c 
 end 
   
 local function config_iter(self,str)
   local key,path,value= table.unpack( str:split(":") )
-  local h,l = path:match("^([%a%.%/_%d]+)%/?(%/.*)$")
-  local l = not h and path 
-  local item= self:get_item(path) 
-  
   return coroutine.wrap(function() 
-   
-   local item = not config:is_null() and config:get_item(path) or nil 
-   local item_str = item and item.type == "kSclcar" and item:to_value().value or ""
-  if value or not item then 
-    coroutine.yield( ("m%s--(%s)"):format(str,item_str))
-    ------------------------------
-  elseif item.type == m then 
-  puts("---->",__FILE_a_(),__LINE__(), self,self.obj, key,path, value )
-    self:get_config(path):each(function(elm)
-      puts("---->",__FILE__(),__LINE__(), self,self.obj, key,path, value or "" , #config,elm[1],elm[2] )
-      coroutine.yield( ("%s%s--(%s)"):format(str,elm[1],elm[2]))
+    local list= get_configs(self,path) 
+    value = value and ":" .. value or ""
+    list:each(function(elm) 
+      coroutine.yield( ("%s:%s%s--(%s)"):format(key,elm[1],value,elm[2] ) )
     end)
-
-  end 
   end )
 end 
 
@@ -299,59 +265,85 @@ local function _Config(ref,vars)
     return self.obj:get_item(name) 
   end 
   function obj:set(name,value) 
-
-    puts("=======>",__FILE__(),__LINE__() , self, self.obj,self.set )
+    if not value then return end 
     name = name:gsub("/+$","")
-    --local config= self.obj
-    if value and self.obj:get_item( name ).type == "kScalar" then 
-      self.obj:set_string( name, value ) 
+    local item = self:get(name) 
+    --  change value 
+    if  item then 
+      if  item.type == "kScalar" then 
+        self.obj:set_string( name, value ) 
+      end 
+    else 
+      path,sub_name=  name:match("^(.*)/(.*)$")
+      if not path then 
+        path , sub_name = "", name
+      end 
+      local item= self:set(path) 
+      if item and item.type == "kMap" then 
+        self.obj:set_string(name,value)
+      end 
     end 
   end 
+  obj.execute= obj.set
   setmetatable(obj,Base1)
   return obj
 end
-local function Func(obj,vars)
+
+-- Func
+local function func_iter(self,str)
+  return coroutine.wrap( function() 
+    local key,name,value = table.unpack(str:split(":") )
+    local stalus= self.vars[name] 
+    puts("trace1", __FILE__(),__FUNC__(),__LINE__(), str , key,name,value, status)
+    --if not value  then 
+    value = value and ":" .. value or ""
+    for k,v in pairs(self.vars)  do 
+      coroutine.yield( ("%s:%s%s--(%s)"):format(key,k,value,v) )
+    end 
+    -- else   
+    --   coroutine.yield( ("%s--(%s)" ):format(str,self.vars[name] ))
+  end)
+end 
+local function Func(ref,vars)
   local obj={}
   obj.vars= vars or {}
   obj.obj= ref 
-  obj.iter= config_iter
+  obj.iter= func_iter
   function obj:get(name)
-    return self.obj:get_item(name) 
+    return self.vars[ name ]
   end 
-  function obj:set(name,value) 
-
-    puts("=======>",__FILE__(),__LINE__() , self, self.obj,self.set )
-    name = name:gsub("/+$","")
-    --local config= self.obj
-    if value and self.obj:get_item( name ).type == "kScalar" then 
-      self.obj:set_string( name, value ) 
+  function obj:execute(name,value)  -- 
+       
+    value = value~= nil and value  or ""
+    if self.vars[name] then 
+      local func = self.vars[name]
+      puts("trace", __FILE__(),__FUNC__(),__LINE__(), self,self.obj,str , name,value, self.vars[name])
+      func( self.obj, load( 'return ' .. tostring(value) )() )
+      --, load( 'return ' .. value)() )
     end 
   end 
+  --obj.execute = obj.set
   setmetatable(obj,Base1)
   return obj
 end 
 
-
+-- Command
 local Command={}
 Command.__index=Command
 Command.__call = New 
 setmetatable(Command,{__call=New})
 function Command:execute(str)
   local key,name,value= table.unpack(str:split(":"))
+  puts("trace", __FILE__(),__FUNC__(),__LINE__(), str, key,name,value)
   self[key]:execute(name,value)
 end 
 
 function Command:iter(str)
-  puts("trace",__FILE__(),__LINE__(),self,str )
-  local cmd_key,name,value= table.unpack(str:split(":"))
-  puts("trace",__FILE__(),__LINE__(),self,self[cmd_key], cmd_key, name,value )
-
-  return  self[cmd_key]:iter(str) 
+  local key,name,value= table.unpack(str:split(":"))
+  return  self[key]:iter(str) 
 end 
 
-function Command:append(key,obj, m_name, set)
-  
-  puts("---->",__FILE__(),__LINE__(), key,obj,m_name,set,name_of_set )
+function Command:append(key, m_name, obj, set)
   if m_name == "option" then 
     self[key] = Option(obj,set) 
   elseif m_name == "property" then 
@@ -361,11 +353,11 @@ function Command:append(key,obj, m_name, set)
   elseif m_name == "config" then 
     self[key] = _Config(obj)
   elseif m_name == "global" then 
+    self[key] = Global(obj) 
   else 
       return false
   end 
   return true
 end 
-
 
 return Command 

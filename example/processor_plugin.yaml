@@ -1,0 +1,12 @@
+#--------------------------------
+# custom.yaml
+# patch: 
+#   __include: processor_plugin:/patch
+#
+#--------------------------------
+patch:
+  engine/processors/@after 0: lua_processor@init_processor@module1
+  module1/modules:
+    - { module: 'command', module_name: "cammand_proc", name_space: "command" }
+    - { module: 'english', module_name: "english_proc", name_space: "english" }
+    - { module: "conjunctive", module_name: "conjunctive_proc", name_space: "conjunctive" }

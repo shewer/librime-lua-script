@@ -26,11 +26,25 @@ local suffix=":"
 local List=require 'tools/list'
 local puts=require'tools/debugtool'
 require 'tools/rime_api'
-local funcs={}
-function funcs.reload(self)
-  local schema=self.engien.scheam
+
+local env_funcs={}
+-- self == env
+function env_funcs.reload(self)
+  local schema=self.engine.schema
   self.engine:apply_schema( Schema(schema.schema_id) )
 end
+function env_funcs.date(self)
+  self.engine:commit_text( os.date() )
+end
+function env_funcs.date1(self)
+  self.engine:commit_text( os.date("%Y-%m-%d") )
+end 
+function env_funcs.menu_size(self,size)
+  local config=self:Config()
+  size = size < 10 and size or config:get_int("menu/page_size")
+  config:set_int("menu/page_size",  size ) 
+  env_funcs.reload(self) 
+end 
 
 
 local Command=require 'command/command_str'
@@ -42,9 +56,8 @@ local function load_data(env)
   :reduce( function(elm,org)  org[elm]= context:get_option(elm) ;return org end ,{})
   env.propertys= List("command","english")
   :reduce(function(elm,org)  org[elm] = context:get_property(elm) ; return org end ,{})
-  env.funcs= {
-    reload = function(env) env.engine:apply_schema(Schema( engine.schema.schema_id )) end ,
-  }
+  env.funcs=funcs
+
 end
 local T= {}
 function T.init(env)
@@ -58,10 +71,10 @@ function T.init(env)
   -- o:name toggle , true,false
   --
   env.commands= Command()
-  env.commands:append("o",context,"option",env.options)
-  env.commands:append("p",context,"property",env.propertys)
-  env.commands:append("f",env,"func",env.funcs)
-  env.commands:append("c",config,"config")
+  env.commands:append("o", "option", context, env.options)
+  env.commands:append("p", "property", context, env.propertys)
+  env.commands:append("f", "func", env, env_funcs)
+  env.commands:append("c", "config", config)
 
 
 
@@ -79,13 +92,14 @@ function T.init(env)
   --  execute command when commit
   env.commit=context.commit_notifier:connect(function(ctx)
     local cand=ctx:get_selected_candidate()
-    env.execute_str = cand and cand.type=="command" and cand.text=="" and cand.comment:match("^(.*)%-%-.*$")
+    local execute_str = cand and cand.type=="command" and cand.text=="" and cand.comment:match("^(.*)%-%-.*$")
+    if execute_str  then
+      puts("log", "command executestr",execute_str)
+      env.commands:execute( execute_str)
+    end
+
   end )
   env.update=context.update_notifier:connect(function(ctx)
-    if env.execute_str  then
-      env.commands:execute( env.execute_str)
-      env.execute_str=nil
-    end
   end )
 end
 function T.fini(env)
@@ -180,6 +194,11 @@ function P.init(env)
   Env(env)
   --load_config(env)
   component(env)
+  env.pattern= ("^%s%s%s.*$"):format(prefix,"[%a]", suffix )
+  env.comp_key= KeyEvent("Tab")
+  env.uncomp_key= KeyEvent("Shift+Tab")
+  env.reload_key=KeyEvent("Control+r")
+
 
 
 end
@@ -188,7 +207,27 @@ end
 function P.func(key,env)
   local Rejected,Accepted,Noop=0,1,2
   local context=env:Context()
-  context.input:match("")
+  local status=env:get_status()
+
+  -- reject 
+  if not context.input:match(env.pattern) then return Noop end 
+  -- match env.pattern 
+  if key:eq(env.uncomp_key)  then 
+      context.input  = context.input:match("^(.*)[:/].*$")
+      return Accepted
+  end 
+  if status.has_menu  then 
+    local cand=context:get_selected_candidate()
+    local comment= cand.comment:match( "^(.*)%-%-.*$") 
+    if key:eq(env.comp_key)  then 
+      context.input =  prefix .. comment
+      return Accepted
+    --elseif key:repr() == " " then 
+      --env.commonds:execute(comment) 
+      --return Accepted 
+    end 
+  end 
+  
 
 
   return Noop
