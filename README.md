@@ -53,7 +53,7 @@
   ```
   ### 由 rime.lua module2 載入 
   ```yaml
-  custom.yaml
+  #custom.yaml
   patch:
     engine/processors/@after 0: lua_processor@init_processor@module2 
   ```
@@ -65,7 +65,7 @@
   {module='english', module_name="english_proc",name_space="english" },
   {module="conjunctive", odule_name = "conjunctive_proc",name_space="conjunctive"},
 }
-  init_processor=requrie('init_processor')
+  init_processor=require('init_processor')
     
   ```
 
