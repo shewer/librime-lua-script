@@ -41,6 +41,7 @@ function env_funcs.date1(self)
 end 
 function env_funcs.menu_size(self,size)
   local config=self:Config()
+  if type(size) ~= "number" then return end 
   size = size < 10 and size or config:get_int("menu/page_size")
   config:set_int("menu/page_size",  size ) 
   env_funcs.reload(self) 
