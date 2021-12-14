@@ -116,12 +116,10 @@ end
 function P.func(key,env)
   local Rejected,Accepted,Noop=0,1,2
   local context= env:Context()
-  puts("trace",__FILE__(),__FUNC__(),__LINE__(), key:repr() , env.keys.next:repr(), key:eq(env.keys.next))
 
   local status= env:get_status()
   --if true then return Noop end
   if key:eq(env.keys.next)  then
-    puts("trace",__FILE__(),__FUNC__(),__LINE__(),"---C-9 ----" , match)
     context:set_property(Multi_reverse, env.trans:next())
     context:refresh_non_confirmed_composition()
     return Accepted

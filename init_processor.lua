@@ -47,9 +47,9 @@
 require 'tools/rime_api'
 local List = require 'tools/list'
 INFO = "^log"
-DEBUG="^log"
+--DEBUG="^log"
 -- INFO = "^log"
-CONSOLE="^trace"
+--CONSOLE="^trace"
 --CONSOLE="log"
 local puts=require'tools/debugtool'
 
@@ -102,7 +102,6 @@ function M.init(env)
   -- init self --
   local config=env:Config() 
   
-
   -- include module 
   env.modules = init_module( env )  
 
@@ -110,10 +109,6 @@ function M.init(env)
   env.modules:each( function(elm) 
     elm.module.init( elm.env ) 
   end)
-
-
-
-
 
   -- init end 
   -- print component 
@@ -141,7 +136,7 @@ function M.func(key,env)
   local Rejected,Accepted,Noop=0,1,2
 -- self func
 
--- module func
+-- sub_module func
   local res = env.modules:each(function(elm)
     local res= elm.module.func(key,elm.env)
     if res ~= Noop then return res  end 
