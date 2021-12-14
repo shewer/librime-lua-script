@@ -64,6 +64,7 @@
   {module='command', module_name="cammand_proc",name_space="command" },
   {module='english', module_name="english_proc",name_space="english" },
   {module="conjunctive", odule_name = "conjunctive_proc",name_space="conjunctive"},
+  { module= 'multi_reverse', module_name= "multi_reverse__proc", name_space= "multi_reverse" },
 }
   init_processor=require('init_processor')
     
@@ -71,25 +72,26 @@
 
   
 # librime-lua-script
-## ~~multi_reverse 主副字典反查(新版)  支持 librime-lua(新舊版)~~  新架構可能造成失效待修正
+## multi_reverse 主副字典反查(新版)  支持 librime-lua  新架構可能造成失效待修正
 自動導入 engine/translators/   script_translator table_translator   反查 lua_filter
 ### 反查字典切換
 * Ctrl+6 反查開關
-* ctrl+7 反查碼顯示最短碼開關
+* ctrl+7 反查碼顯示最短碼開關 -- 未完成
 * ctrl+8 未完成碼上屏開關 
 * Ctrl+9 反查碼filter 切換(正) 
 * Ctrl+0 反查碼filter 切換(負)
-### 安裝
+### 安裝獨立加載 模組
+
 * rime.lua
 ```lua
-require 'tools/rime_api'   -- 擴充 rime_api table 接口 
-require 'multi_reverse'    -- 載入 multi_reverse_processor multi_reverse_filter
+multi_reverse_proc = require 'multi_reverse'    -- 載入 multi_reverse_processor multi_reverse_filter
 assert( multi_reverse_processor) 
 ```
 * schema_id.custom.yaml 
 ``` 
 patch: 
-   engine/processors/@after 0: lua_processor@multi_reverse_processor
+   engine/processors/@after 0: lua_processor@multi_reverse_proc@multi_reverse
+   
 ```
 ## 聯想詞彙 conjunctive.lua (支援librime-lua Commits on Oct 11, 2020 版本)
 
