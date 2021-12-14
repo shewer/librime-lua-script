@@ -13,7 +13,7 @@ local Completion="completion"
 
 function M.tags_match(segment,env)
   local context=env.engine.context
-  return  context:get_option(Completion)
+  return  not context:get_option(Completion)
 end
 
 function M.init(env)
@@ -30,9 +30,8 @@ local function func(input,env)
     yield(cand)
   end
 end
-
 local function old_func(input,env)
-  if not env.engine.context:get_option(Completion) then
+  if env.engine.context:get_option(Completion) then
     for cand in input:iter() do  yield(cand) end -- bypas
   else
     func(input, env)
@@ -40,5 +39,4 @@ local function old_func(input,env)
 end
 
 M.func = Projection and func or old_func
-
 return M

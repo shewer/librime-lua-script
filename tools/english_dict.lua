@@ -8,17 +8,8 @@
 
 -- environment setting
 -- rime log  redefine
-function __FILE__(n) n=n or 2 return debug.getinfo(n,'S').source end
-function __LINE__(n) n=n or 2 return debug.getinfo(n, 'l').currentline end
-function __FUNC__(n) n=n or 2 return debug.getinfo(n, 'n').name end
-if not log then
-  log={}
-  log.info= function(str) print(str) end
-  log.error= function(str) print(str) end
+local puts= require'tools/debugtool'
 
-end
-
-print( "---filename :" , string.gsub(debug.getinfo(1).source, "^@(.+/)[^/]+$", "%1english.txt") )
 --USERDIR= ( USERDIR or  os.getenv("APPDATA") or "" ) .. [[\Rime]]
 
 -- 字典 字根 查碼 table
@@ -209,12 +200,12 @@ local function openfile(filename)
   -- 取得目前路逕
   local path= string.gsub(debug.getinfo(1).source,"^@(.+/)[^/]+$", "%1")
   filename =  path ..  (filename or "english.txt" )
-  log.info(path,filename)
+  puts("log",path,filename)
   local dict_file =  io.open(filename)
   if dict_file  then
-    log.info("english module : open file:" .. filename )
+    puts("log","english module : open file:" .. filename )
   else
-    log.error("english module : open file failed :" .. filename )
+    puts("log","english module : open file failed :" .. filename )
   end
   return dict_file
 end

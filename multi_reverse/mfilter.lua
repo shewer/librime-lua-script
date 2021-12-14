@@ -14,6 +14,7 @@
 
 --  append  rime_api  method
 require'tools/rime_api'
+local puts=require 'tools/debugtool'
 
 local List= require'tools/list'
 
@@ -48,48 +49,41 @@ end
 --
 M={}
 M.Name= ...
-Multi_reverse="multi_reverse"
-
+local Multi_reverse="multi_reverse"
+local Qcode="qcade"
 --  env.reverdb 開檔失敗 return false
 --  補足 tags match  tags_match api ，如果須要 限制 tags 範圍 將下一行取消註解
 --if not _tags_match(env.tags ,segment) then  return false end
 -- 以 name_space 作爲開關
 function M.tags_match(segment,env)
-  return  env.reverdb 
+  return  env.reverdb
     and env.engine.context:get_property(Multi_reverse) == env.name_space
     or false
 end
 
 function M.init(env)
   local config=env.engine.schema.config
-  env.tags= rime_api.clone_configlist( config, env.name_space .. "/tags" )
-  env.projection= rime_api.load_projection( config, env.name_space .. "/comment_format")
+  --env.tags= rime_api.clone_configlist( config, env.name_space .. "/tags" )
+  env.projection= rime_api.Projection( config, env.name_space .. "/comment_format")
   env.reverdb= rime_api.load_reversedb( config:get_string( env.name_space .. "/dictionary" ) )
+
 end
 
 function M.fini(env)
   env.reverdb =nil
 end
 
-local function func(input,env)
+function M.func(input,env)
+  puts("trace",__FILE__(),__FUNC__(),__LINE__(), "---trace---", input,env)
   local context=env.engine.context
   for cand in input:iter() do
     local code=env.reverdb:lookup(cand.text)
     cand.comment = cand.comment .. "|" ..
     env.projection:apply(
-    context:get_option("qcode") and quick_code(code) or code )
+    context:get_option(Qcode) and quick_code(code) or code )
     yield(cand)
   end
 end
 
-local function old_func(input,env)
-  if env.reverdb  and  env.engine.context:get_property( Multi_reverse ) ==  env.name_space then
-    func(input, env)
-  else
-    for cand in input:iter() do  yield(cand)  end   -- bypass
-  end
-end
-
-M.func = Projection and func or old_func
 
 return M

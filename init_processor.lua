@@ -47,9 +47,9 @@
 require 'tools/rime_api'
 local List = require 'tools/list'
 INFO = "^log"
---DEBUG="^trace"
+DEBUG="^log"
 -- INFO = "^log"
---CONSOLE="^log"
+CONSOLE="^trace"
 --CONSOLE="log"
 local puts=require'tools/debugtool'
 
@@ -105,7 +105,6 @@ function M.init(env)
 
   -- include module 
   env.modules = init_module( env )  
-  puts("---------",__FILE__(), __LINE__(),env,env.modules,#env.modules )
 
   -- call sub_processor 
   env.modules:each( function(elm) 
@@ -132,20 +131,10 @@ end
 
 function M.fini(env)
   -- modules fini
-  env.modules:reduce( function(elm,org) return org:unshift(elm) end ,List() ) -- reverse
+  env.modules:reverse()
   :each( function(elm) elm.module.fini(elm.env) end )  -- call fini
 
   -- self finit --
-  local function _d()
-    a=1
-    while true do 
-      local n,v = debug.getlocal(2,a)
-      if not n then break end
-      puts("---local -->",__FILE__(),__LINE__(), n,v)
-      a=a+1
-    end
-  end 
-  _d() 
 end 
 
 function M.func(key,env)
@@ -153,11 +142,11 @@ function M.func(key,env)
 -- self func
 
 -- module func
-  env.modules:each(function(elm)
+  local res = env.modules:each(function(elm)
     local res= elm.module.func(key,elm.env)
     if res ~= Noop then return res  end 
   end)
-  return Noop
+  return res  or Noop
 end 
 
 

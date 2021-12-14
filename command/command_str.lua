@@ -294,7 +294,7 @@ local function func_iter(self,str)
   return coroutine.wrap( function() 
     local key,name,value = table.unpack(str:split(":") )
     local stalus= self.vars[name] 
-    puts("trace1", __FILE__(),__FUNC__(),__LINE__(), str , key,name,value, status)
+    --puts("trace1", __FILE__(),__FUNC__(),__LINE__(), str , key,name,value, status)
     --if not value  then 
     value = value and ":" .. value or ""
     for k,v in pairs(self.vars)  do 
@@ -317,7 +317,6 @@ local function Func(ref,vars)
     value = value~= nil and value  or ""
     if self.vars[name] then 
       local func = self.vars[name]
-      puts("trace", __FILE__(),__FUNC__(),__LINE__(), self,self.obj,str , name,value, self.vars[name])
       func( self.obj, load( 'return ' .. tostring(value) )() )
       --, load( 'return ' .. value)() )
     end 
@@ -334,7 +333,6 @@ Command.__call = New
 setmetatable(Command,{__call=New})
 function Command:execute(str)
   local key,name,value= table.unpack(str:split(":"))
-  puts("trace", __FILE__(),__FUNC__(),__LINE__(), str, key,name,value)
   self[key]:execute(name,value)
 end 
 

@@ -171,7 +171,13 @@ local function deepcompare(t1,t2,ignore_mt)
   return true
 end
 
-
+function M:reverse()
+  local obj=M()
+  for i= #self, 1 do 
+    obj[#self-i+1] = self[i] 
+  end 
+  return obj
+end 
 function M:size()
   return #self
 end

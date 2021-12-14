@@ -80,11 +80,6 @@ end
 
 
 
-local M=rime_api
--- Context method
--- Env(env):context():Set_option("test") -- set option "test" true
---                    Unset_option("test") -- set option "test" false
---                    Toggle_option("test")  -- toggle "test"
 local C={}
 function C.Set_option(self,name)
   self:set_option(name,true)
@@ -189,7 +184,14 @@ function CN.config_list_replace(config,path, target, replace )
   end 
   return false
 end 
-
+----- rime_api tools 
+local M=rime_api
+-- Context method
+-- Env(env):context():Set_option("test") -- set option "test" true
+--                    Unset_option("test") -- set option "test" false
+--                    Toggle_option("test")  -- toggle "test"
+--  Projection api
+M.Projection=Init_projection 
 --  filter tools
 function M.load_reversedb(dict_name)
   -- loaded  ReverseDb
@@ -249,6 +251,7 @@ function E:get_status()
 end
 function E:print_components()
   local config= self:Config()
+  puts( "log","-----" ..self.engine.schema.schema_id,self.name_space .. " --------")
   local function list_print(conf,path)
   puts( "log","-----" .. path .. " --------")
     for i=0, conf:get_list_size(path) -1 do
