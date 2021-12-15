@@ -38,14 +38,14 @@ function env_funcs.date(self)
 end
 function env_funcs.date1(self)
   self.engine:commit_text( os.date("%Y-%m-%d") )
-end 
+end
 function env_funcs.menu_size(self,size)
   local config=self:Config()
-  if type(size) ~= "number" then return end 
+  if type(size) ~= "number" then return end
   size = size < 10 and size or config:get_int("menu/page_size")
-  config:set_int("menu/page_size",  size ) 
-  env_funcs.reload(self) 
-end 
+  config:set_int("menu/page_size",  size )
+  env_funcs.reload(self)
+end
 
 
 local Command=require 'command/command_str'
@@ -207,27 +207,28 @@ function P.fini(env)
 end
 function P.func(key,env)
   local Rejected,Accepted,Noop=0,1,2
+  if key:release() or key:ctrl() or key:alt() then return Noop end
   local context=env:Context()
   local status=env:get_status()
 
-  -- reject 
-  if not context.input:match(env.pattern) then return Noop end 
-  -- match env.pattern 
-  if key:eq(env.uncomp_key)  then 
+  -- reject
+  if not context.input:match(env.pattern) then return Noop end
+  -- match env.pattern
+  if key:eq(env.uncomp_key)  then
       context.input  = context.input:match("^(.*)[:/].*$")
       return Accepted
-  end 
-  if status.has_menu  then 
+  end
+  if status.has_menu  then
     local cand=context:get_selected_candidate()
-    local comment= cand.comment:match( "^(.*)%-%-.*$") 
-    if key:eq(env.comp_key)  then 
+    local comment= cand.comment:match( "^(.*)%-%-.*$")
+    if key:eq(env.comp_key)  then
       context.input =  prefix .. comment
       return Accepted
-    --elseif key:repr() == " " then 
-      --env.commonds:execute(comment) 
-      --return Accepted 
-    end 
-  end 
+    --elseif key:repr() == " " then
+      --env.commonds:execute(comment)
+      --return Accepted
+    end
+  end
   return Noop
 end
 
