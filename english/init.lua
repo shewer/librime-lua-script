@@ -37,7 +37,7 @@ function S.func(segs ,env) -- segmetation:Segmentation,env_
   if context:get_option(English) and context:is_composing() then
     local str = segs.input:sub(cartpos)
     if not  str:match("^%a[%a'?*/:_,.%-]*$") then  return true  end
-    puts("log", __LINE__() ,"-----trace-----sgement" , str ,context.input )
+    --puts("log", __LINE__() ,"-----trace-----sgement" , str ,context.input )
 
     local str= segs.input:sub(segs:get_current_start_position() )
     local seg=Segment(cartpos,segs.input:len())
@@ -128,6 +128,7 @@ function P.fini(env)
 end
 function P.func(key,env)
   local Rejected,Accepted,Noop=0,1,2
+  -- 過濾 release ctrl alt key 避免 key_char 重複加入input
   if key:release() or key:ctrl() or key:alt() then return Noop end
   local context=env:Context()
   local status=env:get_status()
@@ -137,31 +138,40 @@ function P.func(key,env)
   -- match env.pattern
   -- english mode  and key ==  a
   if context:get_option(English)  then
-    if context:is_composing() and key_char == " " then
-      env.engine:commit_text( context.input .. " " )
-      context:clear()
+    if  context:is_composing() and key_char:match("^[%a'?*/:_%-]$") or  key_char:match("^[%a]$") then
+      context:push_input(key_char)
       return Accepted
     end
-    if  context:is_composing() and key_char:match("^[%a'?*/:_,.%-]$") or  key_char:match("^[%a]$") then
-      context:push_input(key_char)
-      puts("trace",__FILE__(),__LINE__(), "----trace ----", key_char , context.input )
-      return Accepted
+    if context:is_composing() and key_char:match("^[ .,]")  then
+      context:commit()
+      return Rejected
     end
   end
+
+  -- 反回上一次 input text
   if key:eq(env.uncomp_key) and #env.history > 0  then
     context.input = env.history:pop()
     return Accepted
   end
+  -- enable English mode
   if key:eq(env.enable_key) then
     context:Toggle_option(English)
     context:refresh_non_confirmed_composition()
     return Accepted
   end
+  -- 補齊input   以cand.type "ninja" 替換部分字段 "english" 替換全字母串
   if status.has_menu  then
     local cand=context:get_selected_candidate()
-    if cand.type == env.name_space and key:eq(env.comp_key)  then
+    --puts("trace" , __FILE__(),__LINE__() , cand.type , cand.info )
+    if key:eq(env.comp_key)  then
       env.history:push(context.input)
-      context.input = cand.text
+      if cand.type == "english" then
+        context.input = cand.text
+      elseif cand.type== "ninja" then
+        context:push_input( cand.text:sub( cand._end - cand.start ) )
+      else
+        return Noop
+      end
       return Accepted
     end
   end
