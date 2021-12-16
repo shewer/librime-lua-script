@@ -50,7 +50,7 @@ end
 M={}
 M.Name= ...
 local Multi_reverse="multi_reverse"
-local Qcode="qcade"
+local Qcode="qcode"
 --  env.reverdb 開檔失敗 return false
 --  補足 tags match  tags_match api ，如果須要 限制 tags 範圍 將下一行取消註解
 --if not _tags_match(env.tags ,segment) then  return false end
@@ -65,7 +65,9 @@ function M.init(env)
   local config=env.engine.schema.config
   --env.tags= rime_api.clone_configlist( config, env.name_space .. "/tags" )
   env.projection= rime_api.Projection( config, env.name_space .. "/comment_format")
-  env.reverdb= rime_api.load_reversedb( config:get_string( env.name_space .. "/dictionary" ) )
+  env.dictionary= config:get_string(env.name_space .. "/dictionary")
+  env.reverdb= rime_api.load_reversedb(env.dictionary)
+
 
 end
 
@@ -78,6 +80,13 @@ function M.func(input,env)
   local context=env.engine.context
   for cand in input:iter() do
     local code=env.reverdb:lookup(cand.text)
+    if #code<1  and cand.text:utf8_len()> 1 and env.dictionary:match("pinyin") then
+      code =  List(cand.text:split(""))
+      :map(function(elm) return env.reverdb:lookup(elm) end)
+      :concat(" ")
+      puts("trace",__FILE__(),__FUNC__(),__LINE__(), "---trace---", input,code ,env)
+    end
+
     cand.comment = cand.comment .. "|" ..
     env.projection:apply(
     context:get_option(Qcode) and quick_code(code) or code )

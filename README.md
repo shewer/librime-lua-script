@@ -31,6 +31,8 @@
     * 支援 * / 字尾字根  /i ing /n ness /l less  /t tion /s sion /a able 
     * 詞類     :adv  :vt :v ....
     * 空白鍵上屏井補上 空白字元
+    * 增加短語字典 lua/english/ext_dict.txt , 輸入短語字串時(cand.type == "english_ext")  按下 Tab 時交換 cand.text cand.coment 
+      ex: input: btw   candidate:  btw [by the way]  candidate: by the way [btw]
 
   ## 安裝
   ```
@@ -81,7 +83,7 @@
 自動導入 engine/translators/   script_translator table_translator   反查 lua_filter
 ### 反查字典切換
 * Ctrl+6 反查開關
-* ctrl+7 反查碼顯示最短碼開關 -- 未完成  較適合table_translator 
+* ctrl+7 反查碼顯示最短碼開關 較適合table_translator 
 * ctrl+8 未完成碼上屏開關  -- 過濾 completion cand 
 * Ctrl+9 反查碼filter 切換(正)
 * Ctrl+0 反查碼filter 切換(負)
@@ -100,20 +102,13 @@ patch:
 ```
 ## 聯想詞彙 conjunctive.lua (支援librime-lua Commits on Oct 11, 2020 版本)
 
-利用 commit_notifier & update_notifier & engine.process_key context.input(~ ~)  ~~重送 KeyEvent(~)~~ , 觸發 lua_translator@conjunctive 產生聯想詞彙
-
-增加聯想開關(F11)
- *增加 (~) 觸發聯想(~ ~)字串處理
-   * [><~] : 刪字 ~ < 刪字尾   > 刪字首，變更時下面聯想詞也會更新重組， 織 backspace 恢復上一字元  space 變更 env.history
-   * C : 清除 space 變更 env.history=""
-   * B : 還原上次異動 space 變更 env.history= env.history_back
-   * H : user 常用詞 選屏上字
-
-
-
-
-
-自動載入參數據( lua_translator@conjunctive and module ) 插入 echo_translator後   punct_translator前
+   * 上屏後啓動聯想
+   * 聯想開關(F11)
+   * ~ 觸發聯想 
+     * [><~] : 刪字 ~ < 刪字尾   > 刪字首，變更時下面聯想詞也會更新重組， 織 backspace 恢復上一字元  space 變更 env.history
+     * C : 清除 space 變更 env.history=""
+     * B : 還原上次異動 space 變更 env.history= env.history_back
+     * H : user 常用詞 選屏上字
 
 ### 安裝
 ```

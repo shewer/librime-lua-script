@@ -20,7 +20,7 @@
 --  replace uniquifier  and append tags command in  reject_tags
 --
 --
---
+
 local English="english"
 local puts = require 'tools/debugtool'
 local T= require'english/english_tran'
@@ -138,11 +138,11 @@ function P.func(key,env)
   -- match env.pattern
   -- english mode  and key ==  a
   if context:get_option(English)  then
-    if  context:is_composing() and key_char:match("^[%a'?*/:_%-]$") or  key_char:match("^[%a]$") then
+    if  context:is_composing() and key_char:match("^[%a'.?*/:_%-]$") or  key_char:match("^[%a]$") then
       context:push_input(key_char)
       return Accepted
     end
-    if context:is_composing() and key_char:match("^[ .,]")  then
+    if context:is_composing() and key_char:match("^[ ,]")  then
       context:commit()
       return Rejected
     end
@@ -169,6 +169,10 @@ function P.func(key,env)
         context.input = cand.text
       elseif cand.type== "ninja" then
         context:push_input( cand.text:sub( cand._end - cand.start ) )
+      elseif cand.type== "english_ext" then
+        local text = cand.text
+        cand.text = cand.comment:match("%[(.*)%]")
+        cand.comment= "[" .. text .. "]"
       else
         return Noop
       end
