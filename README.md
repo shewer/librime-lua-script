@@ -11,6 +11,10 @@
     * ~ 觸發聯想
     * 上屏字母串編輯 ~< 字尾刪除 > 字頭刪除
     * ~~H  自定字串  ~~C 清除  ~~B 還原
+    
+   
+   ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E8%81%AF%E6%83%B3%E8%A9%9Edemo.gif)
+   
   ## command 命令模組 顯示 設定 執行 命令 支援 Tab 補齊功能
    可擴充 config func 設定 達到線上重載功能，後續再增加
 
@@ -26,6 +30,10 @@
        * /c:me{Tab}/p{Tab}:9{Space} 設定 menu/page_size
        * /f:re(Tab}{Space} 重載   /f:reload execute
        * /f:me{Tab}:5{Space} 設定meun/page_size 井重載 /f:menu_size:5
+       
+       
+  ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E5%91%BD%E4%BB%A4%E6%A8%A1%E5%BC%8Fdemo.gif)
+  
 
   ## english 英文字典模組 支援 Tab 補齊功能 及 wordninja
     * 英打模式 F10
@@ -34,6 +42,10 @@
     * 空白鍵上屏井補上 空白字元
     * 增加短語字典 lua/english/ext_dict.txt , 輸入短語字串時(cand.type == "english_ext")  按下 Tab 時交換 cand.text cand.coment 
       ex: input: btw   candidate:  btw [by the way]  candidate: by the way [btw]
+      
+     
+ ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E8%8B%B1%E6%89%93%E6%A8%A1%E5%BC%8Fdemo.gif)
+
 
   ## 安裝
   ```
@@ -88,6 +100,7 @@
 * ctrl+8 未完成碼上屏開關  -- 過濾 completion cand 
 * Ctrl+9 反查碼filter 切換(正)
 * Ctrl+0 反查碼filter 切換(負)
+![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E4%B8%BB%E5%89%AF%E5%AD%97%E5%85%B8%E5%8F%8D%E6%9F%A5demo.gif)
 ### 安裝獨立加載 模組
 
 * rime.lua
@@ -110,6 +123,7 @@ patch:
      * C : 清除 space 變更 env.history=""
      * B : 還原上次異動 space 變更 env.history= env.history_back
      * H : user 常用詞 選屏上字
+![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E8%81%AF%E6%83%B3%E8%A9%9Edemo.gif)
 
 ### 安裝
 ```
