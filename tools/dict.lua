@@ -58,7 +58,7 @@ warn("@on")
 local function load_essay(filename)
   local fn=io.open(filename)
   if not fn then
-    (log or warn)(filename .. " not exist in path of user_data or shared_data")
+    (log and log.warning or warn)(filename .. " not exist in path of user_data or shared_data")
     return
   end
 
