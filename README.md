@@ -36,6 +36,8 @@
   
 
   ## english 英文字典模組 支援 Tab 補齊功能 及 wordninja
+    * **注意** win10部份單字的comment 會造成崩潰，需要remark單字，linux 無此問題可以把 tools/english_tw.txt 內文 
+      "#" 移除
     * 英打模式 F10
     * 支援 * / 字尾字根  /i ing /n ness /l less  /t tion /s sion /a able 
     * 詞類     :adv  :vt :v ....
