@@ -7,19 +7,19 @@
 --
 --[[
 
--- rime.lua
-conjunctive_proc= require 'conjunctive'
+  -- rime.lua
+  conjunctive_proc= require 'conjunctive'
 
 
----  custom.yaml
-patch:
-engine/processors/@after 0: lua_processor@conjunctive_proc
+  ---  custom.yaml
+  patch:
+  engine/processors/@after 0: lua_processor@conjunctive_proc
 
 
 
-這個模塊會自動建立
-engine/translators: lua_translator@conjunctive --
-recognizer/patterns/conjunctive:  "^" .. pattern_str  觸發 tag
+  這個模塊會自動建立
+  engine/translators: lua_translator@conjunctive --
+  recognizer/patterns/conjunctive:  "^" .. pattern_str  觸發 tag
 --]]
 
 local List=require 'tools/list'
@@ -42,7 +42,8 @@ local _HISTORY=List{
 
 -- user define data
 local pattern_str ="~~"
-local rec_pattern = ("^%s%s$"):format(pattern_str,"[A-Z<>~]*$") 
+local rec_char= "BCH<>~"
+local rec_pattern = ("^%s[%s]*$"):format(pattern_str, rec_char)
 local lua_tran_ns = "conjunctive"
 local dict_file = 'essay.txt'
 --dict_file= '/usr/share/rime-data/essay.txt'  -- debug
@@ -52,8 +53,8 @@ local path_ch= package.config:sub(1,1)
 
 local Dict = require 'tools/dict'
 _dict= Dict( "." .. path_ch .. dict_file)
-or Dict( rime_api.get_user_data_dir() .. path_ch  .. dict_file)
-or Dict( rime_api.get_shared_data_dir() .. path_ch .. dict_file)
+  or Dict( rime_api.get_user_data_dir() .. path_ch  .. dict_file)
+  or Dict( rime_api.get_shared_data_dir() .. path_ch .. dict_file)
 
 local M={}
 
@@ -63,37 +64,37 @@ function M.init(env)
   env.history=""
   env.history_back=""
 
-  env.commit_connect= env.engine.context.commit_notifier
-  :connect(
-  function(ctx)
-    local conjunctive_mode = not ctx:get_option(lua_tran_ns) and not ctx:get_option("ascii_mode")
-    if not conjunctive_mode then return end
+  env.commit_connect= env.engine.context.commit_notifier:connect(
+    function(ctx)
+      local conjunctive_mode = not ctx:get_option(lua_tran_ns) and not ctx:get_option("ascii_mode")
+      if not conjunctive_mode then return end
 
-    local cand=ctx:get_selected_candidate()
-    local command_mode= cand and "history" == cand.type  and "" == cand.text
-    -- change env.history
-    if command_mode then
-      env.history_back=  env.history
-      env.history = cand.comment:match("^(.*)[-][-].*$") or env.history
-    end
+      local cand=ctx:get_selected_candidate()
+      local command_mode= cand and "history" == cand.type  and "" == cand.text
+      -- change env.history
+      if command_mode then
+	env.history_back=  env.history
+	env.history = cand.comment:match("^(.*)[-][-].*$") or env.history
+      end
 
-    local commit_text= ctx:get_commit_text()
-    if  #commit_text>0 and  ctx.input ~= commit_text then  
-      env.history = env.history .. commit_text 
-      env.history = env.history:utf8_sub(-10)
-      --print( env.history, ctx.input , ctx:get_commit_text() )
+      local commit_text= ctx:get_commit_text()
+      if  #commit_text>0 and  ctx.input ~= commit_text then
+	env.history = env.history .. commit_text
+	env.history = env.history:utf8_sub(-10)
+	--print( env.history, ctx.input , ctx:get_commit_text() )
 
-      env.history_commit=  not env.dict:empty(env.history)
-    end
-  end )
+	env.history_commit=  not env.dict:empty(env.history)
+      end
+  end  )
+  
+  
 
-  env.update_connect= env.engine.context.update_notifier
-  :connect(
-  function(ctx)
-    if env.history_commit then
-      env.history_commit=nil
-      ctx.input=pattern_str
-    end
+  env.update_connect= env.engine.context.update_notifier:connect(
+    function(ctx)
+      if env.history_commit then
+	env.history_commit=nil
+	ctx.input=pattern_str
+      end
   end )
 end
 
@@ -106,7 +107,6 @@ end
 function M.func(input,seg,env)
   local context = env.engine.context
   local history= env.history
-
   if context:get_option(lua_tran_ns) then return end  -- false: enable true: disable
   if not seg:has_tag(lua_tran_ns)  then return end
 
@@ -114,17 +114,27 @@ function M.func(input,seg,env)
 
   local active_input = input:match("^".. pattern_str .. "(.*)$")
   if active_input == nil then return end
+  local preedit= "[聯]"
+  local cand_type="history"
 
   if active_input == "C" then
-    yield( Candidate("history", seg.start, seg._end, "", "--清除 (" .. history .. ")" ))
-    yield( Candidate("history", seg.start, seg._end, "", env.history_back.. "--還原" ))
+    local cand1= Candidate(cand_type, seg.start, seg._end, "", "--清除 (" .. history .. ")" )
+    local cand2= Candidate(cand_type, seg.start, seg._end, "", env.history_back.. "--還原" )
+    cand1.preedit= preedit .. "clear"
+    cand2.preedit= preedit .. "restory"
+    yield(cand1)
+    yield(cand2)
 
   elseif active_input == "B" then
-    yield( Candidate("history", seg.start, seg._end, "", env.history_back.. "--還原" ))
+    local cand2= Candidate(cand_type, seg.start, seg._end, "", env.history_back.. "--還原" )
+    cand2.preedit= preedit .. "restory"
+    yield(cand2)
 
   elseif active_input == "H" then
     _HISTORY:each(function(elm)
-      yield( Candidate("history", seg.start, seg._end, elm, "--自選" ))
+	local cand1=  Candidate(cand_type, seg.start, seg._end, elm, "--自選" )
+	cand1.preedit= "[選]".. elm
+	yield(cand1)
     end)
 
   elseif active_input:match("[<>~]+") then
@@ -134,11 +144,15 @@ function M.func(input,seg,env)
       local ei= - #active_input:gsub("[^<~]","")
       history = history:utf8_sub(si,ei)
     end
-    yield( Candidate("history", seg.start, seg._end, "", history .. "--修改" ))
+    local cand3= Candidate(cand_type, seg.start, seg._end, "", history .. "--修改" )
+    cand3.preedit= "[修]" .. history
+    yield(cand3)
   end
 
   for w ,wt in env.dict:reduce_iter(history) do
-    yield( Candidate( lua_tran_ns , seg.start,seg._end, w, "(聯)") )
+    local cand= Candidate( lua_tran_ns , seg.start,seg._end, w, "(聯)")
+    cand.preedit=w .. preedit
+    yield(cand)
   end
 end
 
@@ -194,8 +208,8 @@ function P.init(env)
   components(env)
 
 
-  env.commit_select= ("^[ %s%s%s]$"):format(
-     "%<%>CBHi%~", config:get_string("menu/alternative_select_keys") or "%d", escape_key )
+  env.commit_select= ("^[%s%s%s]$"):format(
+    rec_char .. " " , config:get_string("menu/alternative_select_keys") or "%d", escape_key )
   -- set alphabet string
   env.alphabet= config:get_string("speller/alphabet") or "zyxwvutsrqponmlkjihgfedcba"
   env.key_press=false
@@ -213,21 +227,25 @@ function P.func(key, env)
   local conjunctive_mode = not context:get_option(lua_tran_ns) and not context:get_option("ascii_mode")
   if not conjunctive_mode then return Noop end
 
+  local status= env:get_status()
   local ascii=  key.modifier <=1 and key.keycode <128
-  and string.char(key.keycode)
-  or ""
+    and string.char(key.keycode)
+    or ""
 
-  -- "~" 觸發聯想
-  if not context:is_composing() and  ascii == "~" then
+  if status.empty and ascii == "~" then
+    -- "~" 觸發聯想
     context.input= pattern_str
     return Accepted
-  end 
-  -- 中斷聯想
-  if  context.input:match("^" .. pattern_str) then
-    if #ascii >0 and not ascii:match(env.commit_select) then 
-      context:clear()
-    end 
   end
+
+  -- 中斷聯想: 清除input  ~~ 不處理key
+  if  context.input:match("^" .. pattern_str)
+    and not   ascii:match(env.commit_select)
+    and ( #ascii > 0 or key:repr() == "Return" ) then
+    context:clear()
+    return Noop
+  end
+
   return Noop
 end
 
