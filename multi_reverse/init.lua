@@ -6,14 +6,17 @@
 -- Distributed under terms of the MIT license.
 --
 -- 自動加載 多字典反查碼filter
+-- 
 --
 -- lua_processor@multi_reverse   -- create lua_filter as below
--- lua_processor@multi_reverse   -- create lua_filter as below
--- lua_filter@completion --  過濾 completion  switch   option: completion
 -- lua_filter@completion --  過濾 completion  switch   option: completion
 -- lua_filter@multi_reverse@name_space_of_translation(script & table)  -- 使用 property: multi_reverse= name_space  轉換目的反查碼
 --
---
+-- 此模組可以獨立載入 lua_processor@multi_reverse 或是 做爲init_processor 子模組
+-- function component() 自動載入 completion 且加入 engine/filter 用於過濾cand.type == "Completion"
+-- 自動載入 mfilter 查找 engine/translators 中 table_translator and script_translator 且加入 engine/filters
+-- 
+
 --
 --
 local puts=require'tools/debugtool'
@@ -40,45 +43,38 @@ local function get_trans_namespace(config)
 
   local t_list=config:clone_configlist(path)
     :select( function(tran)
-	local f=not tran:match("vcode$") and (  tran:match("^script_translator@") or tran:match("^table_translator@") )
 	return  not tran:match("vcode$") and (  tran:match("^script_translator@") or tran:match("^table_translator@") )
 	   end )
     :map( function(tran)
-	local ns= assert(tran:match("@([%a_][%a%d_]*)$"),"tran not match")
-	return ns
+	return  assert(tran:match("@([%a_][%a%d_]*)$"),"tran not match")
 	end )
   t_list:unshift( "translator" )
   return t_list
 end
-
-local FC= require 'multi_reverse/completion'
-local FM= require 'multi_reverse/mfilter'
 
 local function component(env)
   local config= env:Config()
   local t_path="engine/translators"
   local f_path="engine/filters"
   -- append  lua_filter@completion
-  -- append  lua_filter@completion
-  _G[Completion] = _G[Completion] or FC or require 'multi_reverse/completion'
+  _G[Completion] = _G[Completion] or require( 'multi_reverse/completion' )
   if not config:find_index(f_path, "lua_filter@" .. Completion ) then
     if not config:find_index(f_path, "lua_filter@" .. Completion ) then
       config:set_string( f_path .. "/@before 0" , "lua_filter@" .. Completion   )
     end
   end
   -- append lua_filter@multi_reverse@<name_space>
-  _G[Multi_reverse] = _G[Multi_reverse] or FM or require 'multi_reverse/multi_reverse'
+  _G[Multi_reverse] = _G[Multi_reverse] or require( 'multi_reverse/mfilter' )
   _=get_trans_namespace(config)
     :map( function(elm)
 	local f_multi= "lua_filter@" .. Multi_reverse .. "@" .. elm
 	if not config:find_index(f_path, f_multi ) then
 	  if not config:find_index(f_path, f_multi ) then
 	    local index = config:get_list_size( f_path )
-	    local index = config:get_list_size( f_path )
 	    config:set_string( f_path .. "/@before ".. index - 1 , f_multi )
 	  end
 	end
-	end)
+	end )
 end
 
 local P={}
@@ -109,15 +105,16 @@ function P.init(env)
   context:set_option(Qcode, true)
   context:set_property(Multi_reverse, env.trans:status() )
 
-  -- init notifire  option  property
+  -- init notifire  option  property  : for  reflash  menu  
+  local options= List(Qcode,Multi_reverse,Completion)
   local notifier_o= context.option_update_notifier:connect(function(ctx,name)
-      if List(Qcode,Multi_reverse,Completion):find(name) then
-	context:refresh_non_confirmed_composition()
+      if options:find(name) then
+	ctx:refresh_non_confirmed_composition()
       end
   end)
   local notifier_p= context.property_update_notifier:connect(function(ctx,name)
       if name == Multi_reverse then
-	context:refresh_non_confirmed_composition()
+	ctx:refresh_non_confirmed_composition()
       end
   end)
   env.notifier=List(notifier_o,notifier_p)
