@@ -1,13 +1,13 @@
 # 更新
   * multi_reverse Control+ 6 7 8 9 0  改成只在 has_menu 作用,降低與app hot-key衝突
   * multi_reverse 增加 反查碼off(Control+6}) 時，Shift_L hold 顯示反查碼, release時恢復()，可以讓選單短一點
-  * conjunctive 修正 ~~ 上屏 
+  * conjunctive 修正 ~~ 上屏(在聯想模式時偶有 非commit key: 1-0 space " ~~ " 未清除  ) 
   * conjunctive 變更 preedit 顯示格式 
-    * ~~ :  融[聯]  cand.text
-    * ~~[~<>]: [修]更是顯示格式化金金聚
-    * ~~H: [選]發性進行性失語 
-    * ~~C: [聯]clear
-    * ~~B: [聯]restory
+    * ~~ :  融[聯]  <cand.text>[聯]
+    * ~~ [~<>]: [修]更是顯示格式化金金聚 [修]<history_text>
+    * ~~ H: [選]發性進行性失語 [選]<cand.text>  
+    * ~~ C: [聯]clear
+    * ~~ B: [聯]restory
 # 增加 init_processor.lua
   使用了 tags_match() and ConfigMap:keys() 只支援 librime-lua #131 以上版本 window版本rime.dll 可從 https://github.com/shewer/librime-lua/releases 下載
   可由 yaml name_space 或 rime.lua 載入模組(以 yaml name_space 爲優先)
