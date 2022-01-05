@@ -1,6 +1,15 @@
 # 更新
   * multi_reverse Control+ 6 7 8 9 0  改成只在 has_menu 作用,降低與app hot-key衝突
   * multi_reverse 增加 反查碼off(Control+6}) 時，Shift_L hold 顯示反查碼, release時恢復()，可以讓選單短一點
+  * conjunctive 增加简体版 essay_cn.txt 词库档(使用opencc转换) ，井修改 lua/conjunctive.lua  local dict_file='essay_cn.txt' 
+     ```
+      cp example/essay_cn.txt  <user_data_dir>/essay_cn.txt
+      
+      ediit file : lua/conjunctive.lua
+          local dict_file='essay_cn.txt'
+          -- 如要用其他词库请依 essay.txt 格式制作
+     ```
+      
   * conjunctive 修正 ~~ 上屏(在聯想模式時偶有 非commit key: 1-0 space " ~~ " 未清除  ) 
   * conjunctive 變更 preedit 顯示格式 
     * ~~ :  融[聯]  <cand.text>[聯]
@@ -170,7 +179,7 @@ patch:
 -- user define data
 local pattern_str="~"  -- 聯想觸發 keyevent
 local lua_tran_ns="conjunctive"
-local dict_file= 'essay.txt'
+local dict_file= 'essay.txt' -- 此为繁体字版  要用简体字可复制example/essay_cn.txt 到 <user_data_dir> 井修改此档名
 local switch_key="F11" -- 聯想詞開闢 預設 0  on  1 off , keybinder {when:always,accept: F11, toggle: conjunctive}
 
 ```
