@@ -1,4 +1,11 @@
-# 更新
+# librime-lua-script 是一個利用 librime-lua 擴展 rime 輸入法的集成模組
+  此模組須使用 librime-lua #131以上版本[下載rime.dll](https://github.com/shewer/librime-lua/releases )
+  * 聯想詞輸入模組: 
+  * 英打+英文字典模組: 
+  * 主副字典反查模組: 此模組會查找 script_translator table_translator 可反杳方案內的字典
+  * 命令模組: 此模組可以在輸入模式 set & get option property config 及執行function
+  * 載入程序: 以上模組都可以獨立手動載入也可以利用, init_processor.lua 把需要載入模組設定於 <name_space>/modules: {list}. 預設以此模式[安裝](#安裝)。
+## 更新
   * multi_reverse Control+ 6 7 8 9 0  改成只在 has_menu 作用,降低與app hot-key衝突
   * multi_reverse 增加 反查碼off(Control+6}) 時，Shift_L hold 顯示反查碼, release時恢復()，可以讓選單短一點
   * conjunctive 增加简体版 essay_cn.txt 词库档(使用opencc转换) ，井修改 lua/conjunctive.lua  local dict_file='essay_cn.txt' 
@@ -17,6 +24,49 @@
     * ~~ H: [選]發性進行性失語 [選]<cand.text>  
     * ~~ C: [聯]clear
     * ~~ B: [聯]restory
+
+  # 安裝
+  ```
+  git clone https://github.com/shewer/librime-lua-script <userdata>/lua
+  cp  lua/example/processor.yaml <userdata>
+  ```
+
+ ### 由 yaml module1/modules 載入
+  ```yaml
+  custom.yaml
+  patch:
+    __include: processor_plugin:/patch
+    # patch:
+    #   engine/processors/@after 0: lua_processor@init_processor@module1
+    #     module1/modules:
+    #       - { module: 'command'      , module_name: "cammand_proc"       , name_space: "command" }
+    #       - { module: 'english'      , module_name: "english_proc"       , name_space: "english" }
+    #       - { module: "conjunctive"  , module_name: "conjunctive_proc"   , name_space: "conjunctive" }
+    #       - { module: 'multi_reverse', module_name: "multi_reverse__proc", name_space: "multi_reverse" }
+
+  ```
+  ```lua
+  --rime.lua
+  init_processor= require('init_processor')
+  ```
+  ### 由 rime.lua module2 載入
+  ```yaml
+  #custom.yaml
+  patch:
+    engine/processors/@after 0: lua_processor@init_processor@module2
+  ```
+  ```lua
+  ---rime.lua
+
+  module2={
+  {module='command', module_name="cammand_proc",name_space="command" },
+  {module='english', module_name="english_proc",name_space="english" },
+  {module="conjunctive", odule_name = "conjunctive_proc",name_space="conjunctive"},
+  { module= 'multi_reverse', module_name= "multi_reverse__proc", name_space= "multi_reverse" },
+}
+  init_processor=require('init_processor')
+
+  ```
 # 增加 init_processor.lua
   使用了 tags_match() and ConfigMap:keys() 只支援 librime-lua #131 以上版本 window版本rime.dll 可從 https://github.com/shewer/librime-lua/releases 下載
   可由 yaml name_space 或 rime.lua 載入模組(以 yaml name_space 爲優先)
@@ -68,51 +118,8 @@
  ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E8%8B%B1%E6%89%93%E6%A8%A1%E5%BC%8Fdemo.gif)
 
 
-  ## 安裝
-  ```
-  git clone https://github.com/shewer/librime-lua-script <userdata>/lua
-  cp  lua/example/processor.yaml <userdata>
-  ```
-
- ### 由 yaml module1/modules 載入
-  ```yaml
-  custom.yaml
-  patch:
-    __include: processor_plugin:/patch
-    # patch:
-    #   engine/processors/@after 0: lua_processor@init_processor@module1
-    #     module1/modules:
-    #       - { module: 'command'      , module_name: "cammand_proc"       , name_space: "command" }
-    #       - { module: 'english'      , module_name: "english_proc"       , name_space: "english" }
-    #       - { module: "conjunctive"  , module_name: "conjunctive_proc"   , name_space: "conjunctive" }
-    #       - { module: 'multi_reverse', module_name: "multi_reverse__proc", name_space: "multi_reverse" }
-
-  ```
-  ```lua
-  --rime.lua
-  init_processor= require('init_processor')
-  ```
-  ### 由 rime.lua module2 載入
-  ```yaml
-  #custom.yaml
-  patch:
-    engine/processors/@after 0: lua_processor@init_processor@module2
-  ```
-  ```lua
-  ---rime.lua
-
-  module2={
-  {module='command', module_name="cammand_proc",name_space="command" },
-  {module='english', module_name="english_proc",name_space="english" },
-  {module="conjunctive", odule_name = "conjunctive_proc",name_space="conjunctive"},
-  { module= 'multi_reverse', module_name= "multi_reverse__proc", name_space= "multi_reverse" },
-}
-  init_processor=require('init_processor')
-
-  ```
 
 
-# librime-lua-script
 ## multi_reverse 主副字典反查(新版)  支持 librime-lua  新架構可能造成失效待修正
 自動導入 engine/translators/   script_translator table_translator   反查 lua_filter
 ### 反查字典切換
