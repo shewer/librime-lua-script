@@ -45,21 +45,34 @@ local pattern_str ="~~"
 local rec_char= "BCH<>~"
 local rec_pattern = ("^%s[%s]*$"):format(pattern_str, rec_char)
 local lua_tran_ns = "conjunctive"
+
+-- 词库设定 : 如果不需要 繁简转换 remark dict_file_cn
+-- 繁简转换原则以 simplifier 工作原则 以 option simplification 切换繁简约
 local dict_file = 'essay.txt'
+local dict_file_cn = 'essay-zh-hans.txt'
+
 --dict_file= '/usr/share/rime-data/essay.txt'  -- debug
 local switch_key ="F11"
 local escape_key = "%.%-"
 local path_ch= package.config:sub(1,1)
 
 local Dict = require 'tools/dict'
-_dict= Dict( "." .. path_ch .. dict_file)
+_dict=_dict or  Dict( "." .. path_ch .. dict_file)
   or Dict( rime_api.get_user_data_dir() .. path_ch  .. dict_file)
   or Dict( rime_api.get_shared_data_dir() .. path_ch .. dict_file)
 
+
+if dict_file_cn then
+  _dict_cn =  _dict_cn
+  or  Dict( "." .. path_ch .. dict_file_cn)
+  or Dict( rime_api.get_user_data_dir() .. path_ch  .. dict_file_cn)
+  or Dict( rime_api.get_shared_data_dir() .. path_ch .. dict_file_cn)
+end
 local M={}
 
 function M.init(env)
   env.dict= _dict or Dict("essay.txt")
+  env.dict_cn= _dict_cn or _dict
 
   env.history=""
   env.history_back=""
@@ -73,27 +86,27 @@ function M.init(env)
       local command_mode= cand and "history" == cand.type  and "" == cand.text
       -- change env.history
       if command_mode then
-	env.history_back=  env.history
-	env.history = cand.comment:match("^(.*)[-][-].*$") or env.history
+        env.history_back=  env.history
+        env.history = cand.comment:match("^(.*)[-][-].*$") or env.history
       end
 
       local commit_text= ctx:get_commit_text()
       if  #commit_text>0 and  ctx.input ~= commit_text then
-	env.history = env.history .. commit_text
-	env.history = env.history:utf8_sub(-10)
-	--print( env.history, ctx.input , ctx:get_commit_text() )
+        env.history = env.history .. commit_text
+        env.history = env.history:utf8_sub(-10)
+        --print( env.history, ctx.input , ctx:get_commit_text() )
 
-	env.history_commit=  not env.dict:empty(env.history)
+        env.history_commit=  not env.dict:empty(env.history)
       end
   end  )
-  
-  
+
+
 
   env.update_connect= env.engine.context.update_notifier:connect(
     function(ctx)
       if env.history_commit then
-	env.history_commit=nil
-	ctx.input=pattern_str
+        env.history_commit=nil
+        ctx.input=pattern_str
       end
   end )
 end
@@ -110,7 +123,7 @@ function M.func(input,seg,env)
   if context:get_option(lua_tran_ns) then return end  -- false: enable true: disable
   if not seg:has_tag(lua_tran_ns)  then return end
 
-  -- start 
+  -- start
 
   local active_input = input:match("^".. pattern_str .. "(.*)$")
   if active_input == nil then return end
@@ -149,7 +162,8 @@ function M.func(input,seg,env)
     yield(cand3)
   end
 
-  for w ,wt in env.dict:reduce_iter(history) do
+  local dict = context:get_option("simplification") and env.dict_cn or env.dict
+  for w ,wt in dict:reduce_iter(history) do
     local cand= Candidate( lua_tran_ns , seg.start,seg._end, w, "(聯)")
     cand.preedit=w .. preedit
     yield(cand)
@@ -175,20 +189,20 @@ local function add_keybind(config,keybind)
 end
 
 
--- append  lua_translator@conjunctive 
+-- append  lua_translator@conjunctive
 local function components(env)
-  local config=env:Config() 
+  local config=env:Config()
   -- set module  "conjunctive"
   _G[lua_tran_ns]= _G[lua_tran_ns] or M
   -- add lua_translator after echo_translator before punct_translator
   local path= "engine/translators"
-  local name= "lua_translator@" .. env.name_space 
-  if not config:find_index(path,name) then 
+  local name= "lua_translator@" .. env.name_space
+  if not config:find_index(path,name) then
     config:config_list_append(path, name)
-  end 
+  end
 
   -- add pattern "~~"
-  config:set_string("recognizer/patterns/" .. lua_tran_ns , rec_pattern) 
+  config:set_string("recognizer/patterns/" .. lua_tran_ns , rec_pattern)
 
   -- register keybinder {when: "always",accept: switch_key, toggle: conjunctive }
   add_keybind(config, {when= "always", accept= switch_key, toggle= lua_tran_ns } )
@@ -198,7 +212,7 @@ local P={}
 
 
 function P.component(env,name)
-end 
+end
 
 function P.init(env)
   Env(env)
@@ -220,7 +234,7 @@ end
 
 function P.func(key, env)
   local Rejected,Accepted,Noop= 0,1,2
-  
+
   local context = env.engine.context
 
   -- true(1) : disable  false(0) enable

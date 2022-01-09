@@ -1,27 +1,45 @@
 # librime-lua-script 是一個利用 librime-lua 擴展 rime 輸入法的集成模組
   此模組須使用 librime-lua #131以上版本[下載rime.dll](https://github.com/shewer/librime-lua/releases )
-  * 聯想詞輸入模組: 
-  * 英打+英文字典模組: 
+  * 聯想詞輸入模組:
+  * 英打+英文字典模組:
   * 主副字典反查模組: 此模組會查找 script_translator table_translator 可反杳方案內的字典
   * 命令模組: 此模組可以在輸入模式 set & get option property config 及執行function
   * 載入程序: 以上模組都可以獨立手動載入也可以利用, init_processor.lua 把需要載入模組設定於 <name_space>/modules: {list}. 預設以此模式[安裝](#安裝)。
-## 更新
+## 更新(20220109)
+
   * multi_reverse Control+ 6 7 8 9 0  改成只在 has_menu 作用,降低與app hot-key衝突
   * multi_reverse 增加 反查碼off(Control+6}) 時，Shift_L hold 顯示反查碼, release時恢復()，可以讓選單短一點
-  * conjunctive 增加简体版 essay_cn.txt 词库档(使用opencc转换) ，井修改 lua/conjunctive.lua  local dict_file='essay_cn.txt' 
+  * ~~conjunctive 增加简体版 essay_cn.txt 词库档(使用opencc转换) ，井修改 lua/conjunctive.lua  local dict_file='essay_cn.txt'~~
      ```
-      cp example/essay_cn.txt  <user_data_dir>/essay_cn.txt
-      
+      cp example/essay-zh-hans.txt  <user_data_dir>/essay-zh-hans.txt
+
       ediit file : lua/conjunctive.lua
           local dict_file='essay_cn.txt'
           -- 如要用其他词库请依 essay.txt 格式制作
      ```
-      
-  * conjunctive 修正 ~~ 上屏(在聯想模式時偶有 非commit key: 1-0 space " ~~ " 未清除  ) 
-  * conjunctive 變更 preedit 顯示格式 
+  * conjunctive 增加 导入switchs: simplification 切换繁简体词库 [已修正格式 essay-zh-hans.txt ]  来源https://github.com/rime/rime-essay-simp
+    简体用户 如果使用此功能 dict_file 一定要繁体词库 dict_file_cn (简体词库) 否则繁体输入时引用原来的词库可能查询不到繁体联想词库
+
+    ```
+      cp example/essay-zh-hans.txt <user_data_dir>/essay-zh-hans.txt
+
+      yaml # 请确认方案是否设定 simplifier
+         engine/filters:
+            - simplifier
+         switches:
+            - name: simplification
+              states: [ 漢字,汉字 ]
+         simplifier/opencc_config: s2t.json   # 简体用户
+         simplifier/opencc_config: t2s.json   # 繁体用户  (預設值 可以不設)
+     ```
+
+
+    使用 option simplification 判断繁简模式
+  * conjunctive 修正 ~~ 上屏(在聯想模式時偶有 非commit key: 1-0 space " ~~ " 未清除  )
+  * conjunctive 變更 preedit 顯示格式
     * ~~ :  融[聯]  <cand.text>[聯]
     * ~~ [~<>]: [修]更是顯示格式化金金聚 [修]<history_text>
-    * ~~ H: [選]發性進行性失語 [選]<cand.text>  
+    * ~~ H: [選]發性進行性失語 [選]<cand.text>
     * ~~ C: [聯]clear
     * ~~ B: [聯]restory
 
@@ -80,10 +98,10 @@
     * ~ 觸發聯想
     * 上屏字母串編輯 ~< 字尾刪除 > 字頭刪除
     * ~~H  自定字串  ~~C 清除  ~~B 還原
-    
-   
+
+
    ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E8%81%AF%E6%83%B3%E8%A9%9Edemo.gif)
-   
+
   ## command 命令模組 顯示 設定 執行 命令 支援 Tab 補齊功能
    可擴充 config func 設定 達到線上重載功能，後續再增加
 
@@ -99,22 +117,22 @@
        * /c:me{Tab}/p{Tab}:9{Space} 設定 menu/page_size
        * /f:re(Tab}{Space} 重載   /f:reload execute
        * /f:me{Tab}:5{Space} 設定meun/page_size 井重載 /f:menu_size:5
-       
-       
+
+
   ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E5%91%BD%E4%BB%A4%E6%A8%A1%E5%BC%8Fdemo.gif)
-  
+
 
   ## english 英文字典模組 支援 Tab 補齊功能 及 wordninja
-    * **注意** win10部份單字的comment 會造成崩潰，需要remark單字，linux 無此問題可以把 tools/english_tw.txt 內文 
+    * **注意** win10部份單字的comment 會造成崩潰，需要remark單字，linux 無此問題可以把 tools/english_tw.txt 內文
       "#" 移除
     * 英打模式 F10
-    * 支援 * / 字尾字根  /i ing /n ness /l less  /t tion /s sion /a able 
+    * 支援 * / 字尾字根  /i ing /n ness /l less  /t tion /s sion /a able
     * 詞類     :adv  :vt :v ....
     * 空白鍵上屏井補上 空白字元
-    * 增加短語字典 lua/english/ext_dict.txt , 輸入短語字串時(cand.type == "english_ext")  按下 Tab 時交換 cand.text cand.coment 
+    * 增加短語字典 lua/english/ext_dict.txt , 輸入短語字串時(cand.type == "english_ext")  按下 Tab 時交換 cand.text cand.coment
       ex: input: btw   candidate:  btw [by the way]  candidate: by the way [btw]
-      
-     
+
+
  ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E8%8B%B1%E6%89%93%E6%A8%A1%E5%BC%8Fdemo.gif)
 
 
@@ -124,8 +142,8 @@
 自動導入 engine/translators/   script_translator table_translator   反查 lua_filter
 ### 反查字典切換
 * Ctrl+6 反查開關
-* ctrl+7 反查碼顯示最短碼開關 較適合table_translator 
-* ctrl+8 未完成碼上屏開關  -- 過濾 completion cand 
+* ctrl+7 反查碼顯示最短碼開關 較適合table_translator
+* ctrl+8 未完成碼上屏開關  -- 過濾 completion cand
 * Ctrl+9 反查碼filter 切換(正)
 * Ctrl+0 反查碼filter 切換(負)
 ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E4%B8%BB%E5%89%AF%E5%AD%97%E5%85%B8%E5%8F%8D%E6%9F%A5demo.gif)
@@ -146,7 +164,7 @@ patch:
 
    * 上屏後啓動聯想
    * 聯想開關(F11)
-   * ~ 觸發聯想 
+   * ~ 觸發聯想
      * [><~] : 刪字 ~ < 刪字尾   > 刪字首，變更時下面聯想詞也會更新重組， 織 backspace 恢復上一字元  space 變更 env.history
      * C : 清除 space 變更 env.history=""
      * B : 還原上次異動 space 變更 env.history= env.history_back
