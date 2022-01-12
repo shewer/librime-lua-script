@@ -50,7 +50,7 @@ INFO = "^log"
 --DEBUG="^trace"
 -- INFO = "^log"
 --CONSOLE="^trace"
---CONSOLE="log"
+CONSOLE="log"
 local puts=require'tools/debugtool'
 
 local module_key=List("module","module_name","name_space")
@@ -134,7 +134,7 @@ end
 
 function M.func(key,env)
   local Rejected,Accepted,Noop=0,1,2
-  local context=env:Config()
+  local context=env:Context()
   -- self func
   -- sub_module func
   local res = env.modules:each(function(elm)
