@@ -211,26 +211,31 @@ local dict_file= 'essay.txt' -- 此为繁体字版  要用简体字可复制exam
 local switch_key="F11" -- 聯想詞開闢 預設 0  on  1 off , keybinder {when:always,accept: F11, toggle: conjunctive}
 
 ```
-## 以词定字 : 用于单字不会拆时 
+## 以词定字
+ 此模組 可以將詞組拆選井反查單字字根 ，用于单字不会拆时~~
   ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E4%BB%A5%E8%A9%9E%E5%AE%9A%E5%AD%97.gif)
-  以詞定字 + 反查字根
-  注意: Shadow Candidate 無法變更 text preedit comment 所以無法顯示，但是定字上屏仍然有效.可以用[ + number 直接選字上屏
-  此模組只有一佪 component  lua_processor@<module_name>@<name_space>
   
+  
+  注意: Shadow Candidate 無法變更 text preedit comment 所以無法顯示，但是定字上屏仍然有效.可以用[ + number 直接選字上屏
+    
   觸發條件  對選中的candidate 詞長>1  and  NEXT_KEY PREV_KEY
+  
   引用資料
-     name_space/dictinary : 調用反查字典  預設: translator/dictionary
-     name_space/preedit_fromat: 單字字根轉置 預設: translator/preedit_format
-     可以利用 name_space 選用其他反查字典及 preedit_format
-     name_space/next_key  NEXT_KEY  : 觸發鍵   預設: "["
-     name_space/prev_key  PREV_KEY  : 觸發鍵   預設: " ]"
+     * name_space/dictinary : 調用反查字典  預設: translator/dictionary
+     * name_space/preedit_fromat: 單字字根轉置 預設: translator/preedit_format
+     * 可以利用 name_space 選用其他反查字典及 preedit_format
+     * name_space/next_key  NEXT_KEY  : 觸發鍵   預設: '['
+     * name_space/prev_key  PREV_KEY  : 觸發鍵   預設: ']'
+   
+   
   ```
      install 1
      -------------------------------------------------------------------------
      rime.lua
         selcet_character = require 'component/select_character'
      <config>.yaml
-        engine/processors/@after 0: lua_processor@select_character@<name_space>
+        #lua_processor@<module_name>@<name_space>
+        engine/processors/@after 0: lua_processor@select_character@translator
      -------------------------------------------------------------------------
 
       install 2
