@@ -5,7 +5,9 @@
   * 主副字典反查模組: 此模組會查找 script_translator table_translator 可反杳方案內的字典
   * 命令模組: 此模組可以在輸入模式 set & get option property config 及執行function
   * 載入程序: 以上模組都可以獨立手動載入也可以利用, init_processor.lua 把需要載入模組設定於 <name_space>/modules: {list}. 預設以此模式[安裝](#安裝)。
-## 更新(20220109)
+## 更新(20220114)
+  * 新增select_character [以词定字](#以词定字)上屏模组
+     
 
   * multi_reverse Control+ 6 7 8 9 0  改成只在 has_menu 作用,降低與app hot-key衝突
   * multi_reverse 增加 反查碼off(Control+6}) 時，Shift_L hold 顯示反查碼, release時恢復()，可以讓選單短一點
@@ -57,6 +59,7 @@
     # patch:
     #   engine/processors/@after 0: lua_processor@init_processor@module1
     #     module1/modules:
+    #       - { module: 'component/select_character', module_name: 'select_character', name_space: "translator" }
     #       - { module: 'command'      , module_name: "cammand_proc"       , name_space: "command" }
     #       - { module: 'english'      , module_name: "english_proc"       , name_space: "english" }
     #       - { module: "conjunctive"  , module_name: "conjunctive_proc"   , name_space: "conjunctive" }
@@ -208,7 +211,38 @@ local dict_file= 'essay.txt' -- 此为繁体字版  要用简体字可复制exam
 local switch_key="F11" -- 聯想詞開闢 預設 0  on  1 off , keybinder {when:always,accept: F11, toggle: conjunctive}
 
 ```
+## 以词定字 : 用于单字不会拆时 
+  ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E4%BB%A5%E8%A9%9E%E5%AE%9A%E5%AD%97.gif)
+  以詞定字 + 反查字根
+  注意: Shadow Candidate 無法變更 text preedit comment 所以無法顯示，但是定字上屏仍然有效.可以用[ + number 直接選字上屏
+  此模組只有一佪 component  lua_processor@<module_name>@<name_space>
+  
+  觸發條件  對選中的candidate 詞長>1  and  NEXT_KEY PREV_KEY
+  引用資料
+     name_space/dictinary : 調用反查字典  預設: translator/dictionary
+     name_space/preedit_fromat: 單字字根轉置 預設: translator/preedit_format
+     可以利用 name_space 選用其他反查字典及 preedit_format
+     name_space/next_key  NEXT_KEY  : 觸發鍵   預設: "["
+     name_space/prev_key  PREV_KEY  : 觸發鍵   預設: " ]"
+  ```
+     install 1
+     -------------------------------------------------------------------------
+     rime.lua
+        selcet_character = require 'component/select_character'
+     <config>.yaml
+        engine/processors/@after 0: lua_processor@select_character@<name_space>
+     -------------------------------------------------------------------------
 
+      install 2
+      -------------------------------------------------------------------------
+      append to processor_plugin.yaml
+      module1/modules:
+        - { module: 'component/select_character', module_name: 'select_character' , name_space: 'translator' }
+        - ......
+        - .....
+  ```
+
+   
 ## [tools 常用工具](https://github.com/shewer/librime-lua-script/tools/README.md)
 * list.lua 提供 each map reduce select ...
 * string 擴充 utf8.sub string.split string.utf8_sub string.utf8_len string.utf8_offset
