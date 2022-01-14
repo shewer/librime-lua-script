@@ -45,11 +45,13 @@
 
 
 require 'tools/rime_api'
+
 local List = require 'tools/list'
 INFO = "^log"
+
 --DEBUG="^trace"
 -- INFO = "^log"
---CONSOLE="^trace"
+-- CONSOLE="^trace"
 CONSOLE="log"
 local puts=require'tools/debugtool'
 
@@ -112,6 +114,10 @@ function M.init(env)
 
   -- init end
   -- print component
+  puts("log","---submodules---" )
+  env.modules:each( function(elm)
+  puts("log", elm.module, elm.module_name .."@" .. elm.name_space)
+  end )
   env:print_components()
   do
     local pattern_p= "recognizer/patterns"
