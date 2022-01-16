@@ -47,12 +47,6 @@
 require 'tools/rime_api'
 
 local List = require 'tools/list'
-INFO = "^log"
-
---DEBUG="^trace"
--- INFO = "^log"
--- CONSOLE="^trace"
-CONSOLE="log"
 local puts=require'tools/debugtool'
 
 local module_key=List("module","module_name","name_space")
