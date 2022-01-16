@@ -1,4 +1,8 @@
 local puts=require 'tools/debugtool'
+local D01= nil
+
+
+
 local nj=require 'tools/wordninja'
 local English_dict= require 'tools/english_dict'
 local eng_dict=English_dict("english_tw.txt")
@@ -13,7 +17,7 @@ local function load_ext_dict(filename)
   filename =  path ..  (filename or "english.txt" )
   local tab = {}
   for line in io.open(filename):lines() do
-    puts("trace", __FILE__(),__LINE__(), line)
+    puts(D01, __FILE__(),__LINE__(), line)
     if not line:match("^#") then  -- 第一字 #  不納入字典
       local t=line:split("\t")
       if t then
