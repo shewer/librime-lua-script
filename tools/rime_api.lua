@@ -38,9 +38,24 @@ List = require'tools/list'
 local puts = require 'tools/debugtool'
 
 
-function Version()
-  return Projection and "20210417"  or "20210125"
+local function Version()
+  local ver
+  if KeySequence().repr then
+    ver= 139
+  elseif  ConfigMap().keys then
+    ver= 127
+  elseif Projection then
+    ver= 102
+   elseif KeyEvent then
+     ver = 100
+   elseif Memory then
+     ver = 80
+   else
+     ver= 79
+   end
+  return ver
 end
+
 
 --  舊的版本 使用 lua_function  轉換  且 模擬 :apply(str) 接口
 local function old_Init_projection(config,path)
@@ -63,15 +78,20 @@ end
 
 function Init_projection( config, path)
   --  old version
-  if Version() < "20210417" then
+  if Version() < 102 then
     return old_Init_projection(config,path)
   end
   local patterns= config:get_list( path )
+  if not patterns then 
+    puts(WARN, __FILE__(),__LINE__(), "configlist of " .. path .. "is null" )
+  elseif patterns.size <1 then 
+    puts(WARN, __FILE__(),__LINE__(), "configlist of " .. path .. "size is 0" )
+  end
   local projection= Projection()
   if  patterns then
     projection:load(patterns)
   else
-    log.warning( "ConfigList of  " .. path  ..
+    puts(WARN, "ConfigList of  " .. path  ..
       " projection of comment_format could not loaded. comment_format type: " ..
       tostring(patterns) )
   end
@@ -240,7 +260,7 @@ function E:get_status()
   stat.has_menu= ctx:has_menu()
   -- old version check ( Projection userdata)
   local ok,empty
-  if Version() <"20210417" then
+  if Version() < 100 then
     ok,empty = pcall(comp.empty)
     empty=  ok  and empty or comp:empty() --  empty=  ( ok ) ? empty : comp:empty()
   else
