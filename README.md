@@ -7,7 +7,7 @@
   * 載入程序: 以上模組都可以獨立手動載入也可以利用, init_processor.lua 把需要載入模組設定於 <name_space>/modules: {list}. 預設以此模式[安裝](#安裝)。
 ## 更新(20220114)
   * 新增select_character [以词定字](#以词定字)上屏模组
-     
+
 
   * multi_reverse Control+ 6 7 8 9 0  改成只在 has_menu 作用,降低與app hot-key衝突
   * multi_reverse 增加 反查碼off(Control+6}) 時，Shift_L hold 顯示反查碼, release時恢復()，可以讓選單短一點
@@ -46,48 +46,72 @@
     * ~~ B: [聯]restory
 
   # 安裝
-  ```
-  git clone https://github.com/shewer/librime-lua-script <userdata>/lua
-  cp  lua/example/processor.yaml <userdata>
-  ```
+   ## 安裝方法
+    1. install source
+      ```
+      cd  <user-data-dir>
+      git clone https://github.com/shewer/librime-lua-script --depth=1
+      mv librime-lua-script/*  ./lua
+      cp lua/example/processor_plugin.yaml .
+      cp lua/example/essay-zh-hans.txt .
+      ```
 
- ### 由 yaml module1/modules 載入
-  ```yaml
-  custom.yaml
-  patch:
-    __include: processor_plugin:/patch
-    # patch:
-    #   engine/processors/@after 0: lua_processor@init_processor@module1
-    #     module1/modules:
-    #       - { module: 'component/select_character', module_name: 'select_character', name_space: "translator" }
-    #       - { module: 'command'      , module_name: "cammand_proc"       , name_space: "command" }
-    #       - { module: 'english'      , module_name: "english_proc"       , name_space: "english" }
-    #       - { module: "conjunctive"  , module_name: "conjunctive_proc"   , name_space: "conjunctive" }
-    #       - { module: 'multi_reverse', module_name: "multi_reverse__proc", name_space: "multi_reverse" }
+   ##. 設定方法一 : 使用 yaml 設置
+    1. append init_processor module
+      eddit rime.lua
+      ```lua
+      -- append
+      init_processor= require('init_processor')
+      ```
+    2. add to <方案>.custom.yaml
+      ```yaml
+      #custom.yaml
+      patch:
+        __include: processor_plugin:/patch
 
-  ```
-  ```lua
-  --rime.lua
-  init_processor= require('init_processor')
-  ```
-  ### 由 rime.lua module2 載入
-  ```yaml
-  #custom.yaml
-  patch:
-    engine/processors/@after 0: lua_processor@init_processor@module2
-  ```
-  ```lua
-  ---rime.lua
+      ```
+    3. edit processor_plugin.yaml
+      ```yaml
+       # processor_plugin.yaml 內容
+       # 可自行 remark 不要用的模組
+       # select_character 以詞定字
+       # command   命令模式
+       # english   英打
+       # conjunctive 聯想模式
+       # multi_reverse 主副字典反查模組
+       #
+       patch:
+          engine/processors/@after 0: lua_processor@init_processor@module1
+            module1/modules:
+               - { module: 'component/select_character', module_name: 'select_character', name_space: "translator" }
+               - { module: 'command'      , module_name: "cammand_proc"       , name_space: "command" }
+               - { module: 'english'      , module_name: "english_proc"       , name_space: "english" }
+               - { module: "conjunctive"  , module_name: "conjunctive_proc"   , name_space: "conjunctive" }
+               - { module: 'multi_reverse', module_name: "multi_reverse__proc", name_space: "multi_reverse" }
 
-  module2={
-  {module='command', module_name="cammand_proc",name_space="command" },
-  {module='english', module_name="english_proc",name_space="english" },
-  {module="conjunctive", odule_name = "conjunctive_proc",name_space="conjunctive"},
-  { module= 'multi_reverse', module_name= "multi_reverse__proc", name_space= "multi_reverse" },
-}
-  init_processor=require('init_processor')
+      ```
 
-  ```
+   ## 設定方法二: 由 rime.lua module2 載入
+    1. append init_processor module
+      eddit rime.lua
+      ```lua
+      -- append
+       module2={
+        {module='command', module_name="cammand_proc",name_space="command" },
+        {module='english', module_name="english_proc",name_space="english" },
+        {module="conjunctive", odule_name = "conjunctive_proc",name_space="conjunctive"},
+        { module= 'multi_reverse', module_name= "multi_reverse__proc", name_space= "multi_reverse" },
+      }
+
+      init_processor= require('init_processor')
+      ```
+    2. add to <方案>.custom.yaml
+      ```yaml
+      #custom.yaml
+        engine/processors/@after 0: lua_processor@init_processor@module2 # module2
+
+      ```
+
 # 增加 init_processor.lua
   使用了 tags_match() and ConfigMap:keys() 只支援 librime-lua #131 以上版本 window版本rime.dll 可從 https://github.com/shewer/librime-lua/releases 下載
   可由 yaml name_space 或 rime.lua 載入模組(以 yaml name_space 爲優先)
@@ -214,20 +238,20 @@ local switch_key="F11" -- 聯想詞開闢 預設 0  on  1 off , keybinder {when:
 ## 以词定字
  此模組 可以將詞組拆選井反查單字字根 ，用于单字不会拆时~~
   ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E4%BB%A5%E8%A9%9E%E5%AE%9A%E5%AD%97.gif)
-  
-  
+
+
   注意: Shadow Candidate 無法變更 text preedit comment 所以無法顯示，但是定字上屏仍然有效.可以用[ + number 直接選字上屏
-    
+
   觸發條件  對選中的candidate 詞長>1  and  NEXT_KEY PREV_KEY
-  
+
   引用資料
      * name_space/dictinary : 調用反查字典  預設: translator/dictionary
      * name_space/preedit_fromat: 單字字根轉置 預設: translator/preedit_format
      * 可以利用 name_space 選用其他反查字典及 preedit_format
      * name_space/next_key  NEXT_KEY  : 觸發鍵   預設: '['
      * name_space/prev_key  PREV_KEY  : 觸發鍵   預設: ']'
-   
-   
+
+
   ```
      install 1
      -------------------------------------------------------------------------
@@ -247,7 +271,7 @@ local switch_key="F11" -- 聯想詞開闢 預設 0  on  1 off , keybinder {when:
         - .....
   ```
 
-   
+
 ## [tools 常用工具](https://github.com/shewer/librime-lua-script/tools/README.md)
 * list.lua 提供 each map reduce select ...
 * string 擴充 utf8.sub string.split string.utf8_sub string.utf8_len string.utf8_offset
