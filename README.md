@@ -47,6 +47,7 @@
   patch:
     engine/processors/@after 0: lua_processor@init_processor@module1
       module1/modules:
+        #  以詞定字  name_space: 可指定其他有 dictionary 反查 單字字根 (ex: cangjin5/dictionary)
         - { module: 'component/select_character', module_name: 'select_character', name_space: "translator" }
         - { module: 'command'      , module_name: "cammand_proc"       , name_space: "command" }
         - { module: 'english'      , module_name: "english_proc"       , name_space: "english" }
@@ -87,6 +88,40 @@
   由 init_processor 導入模組
   可用模組 english(包含wordninja) conjunctive command
   化簡繁複 custom.yaml rime.lua 編輯
+  
+  ## 以词定字
+ 此模組 可以將詞組拆選井反查單字字根 ，用于单字不会拆时~~
+  ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E4%BB%A5%E8%A9%9E%E5%AE%9A%E5%AD%97.gif)
+
+
+  注意: Shadow Candidate 無法變更 text preedit comment 所以無法顯示，但是定字上屏仍然有效.可以用[ + number 直接選字上屏
+
+  觸發條件  對選中的candidate 詞長>1  and  NEXT_KEY PREV_KEY
+
+  引用資料
+     * name_space/dictinary : 調用反查字典  預設: translator/dictionary
+     * name_space/preedit_fromat: 單字字根轉置 預設: translator/preedit_format
+     * 可以利用 name_space 選用其他反查字典及 preedit_format
+     * name_space/next_key  NEXT_KEY  : 觸發鍵   預設: '['
+     * name_space/prev_key  PREV_KEY  : 觸發鍵   預設: ']'
+###獨立安裝
+
+```lua
+--rime.lua
+-- module_name
+selcet_character = require 'component/select_character'
+```
+
+
+```yaml
+#<config>.yaml
+#lua_processor@<module_name>@<name_space>
+patch:
+   engine/processors/@after 0: lua_processor@select_character@translator
+   #translator/next_key: "<" #  default: [
+   #translator/prev_key: ">" #  default: ]
+```
+
   ## conjunctive 聯想詞模組
     * 中文上屏後觸發
     * F11 聯想詞開關
@@ -228,35 +263,6 @@ local lua_tran_ns="conjunctive"
 local dict_file= 'essay.txt' -- 此为繁体字版  要用简体字可复制example/essay_cn.txt 到 <user_data_dir> 井修改此档名
 local switch_key="F11" -- 聯想詞開闢 預設 0  on  1 off , keybinder {when:always,accept: F11, toggle: conjunctive}
 
-```
-## 以词定字
- 此模組 可以將詞組拆選井反查單字字根 ，用于单字不会拆时~~
-  ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E4%BB%A5%E8%A9%9E%E5%AE%9A%E5%AD%97.gif)
-
-
-  注意: Shadow Candidate 無法變更 text preedit comment 所以無法顯示，但是定字上屏仍然有效.可以用[ + number 直接選字上屏
-
-  觸發條件  對選中的candidate 詞長>1  and  NEXT_KEY PREV_KEY
-
-  引用資料
-     * name_space/dictinary : 調用反查字典  預設: translator/dictionary
-     * name_space/preedit_fromat: 單字字根轉置 預設: translator/preedit_format
-     * 可以利用 name_space 選用其他反查字典及 preedit_format
-     * name_space/next_key  NEXT_KEY  : 觸發鍵   預設: '['
-     * name_space/prev_key  PREV_KEY  : 觸發鍵   預設: ']'
-###獨立安裝
-
-```lua
---rime.lua
-selcet_character = require 'component/select_character'
-```
-
-
-```yaml
-#<config>.yaml
-#lua_processor@<module_name>@<name_space>
-patch:
-   engine/processors/@after 0: lua_processor@select_character@translator
 ```
 
 
