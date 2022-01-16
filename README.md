@@ -1,26 +1,14 @@
 # librime-lua-script 是一個利用 librime-lua 擴展 rime 輸入法的集成模組
   此模組須使用 librime-lua #131以上版本[下載rime.dll](https://github.com/shewer/librime-lua/releases )
+  * 以詞定字: select_character [以词定字](#以词定字)上屏模组
   * 聯想詞輸入模組:
   * 英打+英文字典模組:
   * 主副字典反查模組: 此模組會查找 script_translator table_translator 可反杳方案內的字典
   * 命令模組: 此模組可以在輸入模式 set & get option property config 及執行function
   * 載入程序: 以上模組都可以獨立手動載入也可以利用, init_processor.lua 把需要載入模組設定於 <name_space>/modules: {list}. 預設以此模式[安裝](#安裝)。
-## 更新(20220114)
-  * 新增select_character [以词定字](#以词定字)上屏模组
 
 
-  * multi_reverse Control+ 6 7 8 9 0  改成只在 has_menu 作用,降低與app hot-key衝突
-  * multi_reverse 增加 反查碼off(Control+6}) 時，Shift_L hold 顯示反查碼, release時恢復()，可以讓選單短一點
-  * ~~conjunctive 增加简体版 essay_cn.txt 词库档(使用opencc转换) ，井修改 lua/conjunctive.lua  local dict_file='essay_cn.txt'~~
-     ```
-      cp example/essay-zh-hans.txt  <user_data_dir>/essay-zh-hans.txt
 
-      ediit file : lua/conjunctive.lua
-          local dict_file='essay_cn.txt'
-          -- 如要用其他词库请依 essay.txt 格式制作
-     ```
-  * conjunctive 增加 导入switchs: simplification 切换繁简体词库 [已修正格式 essay-zh-hans.txt ]  来源https://github.com/rime/rime-essay-simp
-    简体用户 如果使用此功能 dict_file 一定要繁体词库 dict_file_cn (简体词库) 否则繁体输入时引用原来的词库可能查询不到繁体联想词库
 
     ```
       cp example/essay-zh-hans.txt <user_data_dir>/essay-zh-hans.txt
@@ -46,71 +34,76 @@
     * ~~ B: [聯]restory
 
   # 安裝
-   ## 安裝方法
-    1. install source
-      ```
-      cd  <user-data-dir>
-      git clone https://github.com/shewer/librime-lua-script --depth=1
-      mv librime-lua-script/*  ./lua
-      cp lua/example/processor_plugin.yaml .
-      cp lua/example/essay-zh-hans.txt .
-      ```
+  ## 事前準備
+  ```bash
+  cd  <user-data-dir>
+  git clone https://github.com/shewer/librime-lua-script --depth=1
+  mv librime-lua-script/*  ./lua
+  cp lua/example/processor_plugin.yaml .
+  cp lua/example/essay-zh-hans.txt .
+  ```
 
-   ##. 設定方法一 : 使用 yaml 設置
-    1. append init_processor module
-      eddit rime.lua
-      ```lua
-      -- append
-      init_processor= require('init_processor')
-      ```
-    2. add to <方案>.custom.yaml
-      ```yaml
-      #custom.yaml
-      patch:
-        __include: processor_plugin:/patch
+  ## 設定方法一 : 使用 yaml 設置
+  
+  append init_processor module in rime.lua 
+    
+  ```lua
+  -- append rime.lua
+  init_processor= require('init_processor')
+  ```
+  add to <方案>.custom.yaml
+      
+  ```yaml
+  #custom.yaml
+  patch:
+    __include: processor_plugin:/patch
+  ```
+    
+  edit processor_plugin.yaml
+    
+  ```yaml
+  # processor_plugin.yaml 內容
+  # 可自行 remark 不要用的模組
+  # select_character 以詞定字
+  # command   命令模式
+  # english   英打
+  # conjunctive 聯想模式
+  # multi_reverse 主副字典反查模組
+  #
+  patch:
+    engine/processors/@after 0: lua_processor@init_processor@module1
+      module1/modules:
+        - { module: 'component/select_character', module_name: 'select_character', name_space: "translator" }
+        - { module: 'command'      , module_name: "cammand_proc"       , name_space: "command" }
+        - { module: 'english'      , module_name: "english_proc"       , name_space: "english" }
+        - { module: "conjunctive"  , module_name: "conjunctive_proc"   , name_space: "conjunctive" }
+        - { module: 'multi_reverse', module_name: "multi_reverse__proc", name_space: "multi_reverse" }
 
-      ```
-    3. edit processor_plugin.yaml
-      ```yaml
-       # processor_plugin.yaml 內容
-       # 可自行 remark 不要用的模組
-       # select_character 以詞定字
-       # command   命令模式
-       # english   英打
-       # conjunctive 聯想模式
-       # multi_reverse 主副字典反查模組
-       #
-       patch:
-          engine/processors/@after 0: lua_processor@init_processor@module1
-            module1/modules:
-               - { module: 'component/select_character', module_name: 'select_character', name_space: "translator" }
-               - { module: 'command'      , module_name: "cammand_proc"       , name_space: "command" }
-               - { module: 'english'      , module_name: "english_proc"       , name_space: "english" }
-               - { module: "conjunctive"  , module_name: "conjunctive_proc"   , name_space: "conjunctive" }
-               - { module: 'multi_reverse', module_name: "multi_reverse__proc", name_space: "multi_reverse" }
+  ```
 
-      ```
+ ## 設定方法二: 由 rime.lua module2 載入
+    
+   append init_processor module in rime.lua
+    
+   ```lua
+   -- append rime.lua
+   module2={
+     {module='command', module_name="cammand_proc",name_space="command" },
+     {module='english', module_name="english_proc",name_space="english" },
+     {module="conjunctive", odule_name = "conjunctive_proc",name_space="conjunctive"},
+     { module= 'multi_reverse', module_name= "multi_reverse__proc", name_space= "multi_reverse" },
+   }
 
-   ## 設定方法二: 由 rime.lua module2 載入
-    1. append init_processor module
-      eddit rime.lua
-      ```lua
-      -- append
-       module2={
-        {module='command', module_name="cammand_proc",name_space="command" },
-        {module='english', module_name="english_proc",name_space="english" },
-        {module="conjunctive", odule_name = "conjunctive_proc",name_space="conjunctive"},
-        { module= 'multi_reverse', module_name= "multi_reverse__proc", name_space= "multi_reverse" },
-      }
+   init_processor= require('init_processor')
+   ```
+   
+   add to <方案>.custom.yaml
 
-      init_processor= require('init_processor')
-      ```
-    2. add to <方案>.custom.yaml
-      ```yaml
-      #custom.yaml
-        engine/processors/@after 0: lua_processor@init_processor@module2 # module2
-
-      ```
+   ```yaml
+   #custom.yaml
+   engine/processors/@after 0: lua_processor@init_processor@module2 # module2
+   
+   ```
 
 # 增加 init_processor.lua
   使用了 tags_match() and ConfigMap:keys() 只支援 librime-lua #131 以上版本 window版本rime.dll 可從 https://github.com/shewer/librime-lua/releases 下載
@@ -177,18 +170,25 @@
 ### 安裝獨立加載 模組
 
 * rime.lua
+
 ```lua
 multi_reverse_proc = require 'multi_reverse'    -- 載入 multi_reverse_processor multi_reverse_filter
 assert( multi_reverse_processor)
 ```
+
 * schema_id.custom.yaml
+
 ```
 patch:
    engine/processors/@after 0: lua_processor@multi_reverse_proc@multi_reverse
 
 ```
-## 聯想詞彙 conjunctive.lua (支援librime-lua Commits on Oct 11, 2020 版本)
 
+## 聯想詞彙 conjunctive.lua (支援librime-lua Commits on Oct 11, 2020 版本)
+   * conjunctive 增加 导入switchs: simplification 切换繁简体词库 [已修正格式 essay-zh-hans.txt ]  来源https://github.com/rime/rime-essay-simp
+    简体用户 如果使用此功能注意事項:
+       1 只使用簡體詞庫: 請確認 essay.txt 是簡體版 
+       2 切換繁簡都要有聯想功能: essay.txt 使用原始 繁體版，把簡體版檔名: eassy-zh-hans.txt
    * 上屏後啓動聯想
    * 聯想開關(F11)
    * ~ 觸發聯想
@@ -198,21 +198,23 @@ patch:
      * H : user 常用詞 選屏上字
 ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E8%81%AF%E6%83%B3%E8%A9%9Edemo.gif)
 
-### 安裝
-```
--- copy file  to user_data_dir/lua
-lua/tools/list.lua  -- list module
-lua/tools/ditc.lua  -- 聯想詞彙 module
-lua/conjunctive.lua  -- 主程式
+### 單獨安裝
 
+```lua
 --- rime.lua
+-- <module_name> 
 conjunctive_proc= require('conjunctive')
+```
+```yaml
 ---  custom.yaml
 patch:
+  # lua_processor@<module_name> 
   engine/processors/@after 0: lua_processor@conjunctive_proc
 
 ```
+
 ### 設定值
+
 ```lua
 -- conjunctive.lua 設定參數
  -- 使用者常用詞
@@ -250,26 +252,18 @@ local switch_key="F11" -- 聯想詞開闢 預設 0  on  1 off , keybinder {when:
      * 可以利用 name_space 選用其他反查字典及 preedit_format
      * name_space/next_key  NEXT_KEY  : 觸發鍵   預設: '['
      * name_space/prev_key  PREV_KEY  : 觸發鍵   預設: ']'
+###獨立安裝
 
-
-  ```
-     install 1
-     -------------------------------------------------------------------------
-     rime.lua
-        selcet_character = require 'component/select_character'
-     <config>.yaml
-        #lua_processor@<module_name>@<name_space>
-        engine/processors/@after 0: lua_processor@select_character@translator
-     -------------------------------------------------------------------------
-
-      install 2
-      -------------------------------------------------------------------------
-      append to processor_plugin.yaml
-      module1/modules:
-        - { module: 'component/select_character', module_name: 'select_character' , name_space: 'translator' }
-        - ......
-        - .....
-  ```
+```lua
+--rime.lua
+selcet_character = require 'component/select_character'
+```
+  
+```yaml
+#<config>.yaml
+#lua_processor@<module_name>@<name_space>
+   engine/processors/@after 0: lua_processor@select_character@translator
+```
 
 
 ## [tools 常用工具](https://github.com/shewer/librime-lua-script/tools/README.md)
