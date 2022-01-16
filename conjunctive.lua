@@ -60,6 +60,9 @@ local Dict = require 'tools/dict'
 _dict=_dict or  Dict( "." .. path_ch .. dict_file)
   or Dict( rime_api.get_user_data_dir() .. path_ch  .. dict_file)
   or Dict( rime_api.get_shared_data_dir() .. path_ch .. dict_file)
+if not _dict then 
+  puts("trace", __FILE__(),__LINE__(), "open dict faild", dict_file_cn )
+end 
 
 
 if dict_file_cn then
@@ -67,6 +70,9 @@ if dict_file_cn then
   or  Dict( "." .. path_ch .. dict_file_cn)
   or Dict( rime_api.get_user_data_dir() .. path_ch  .. dict_file_cn)
   or Dict( rime_api.get_shared_data_dir() .. path_ch .. dict_file_cn)
+  if not _dict_cn then 
+    puts("trace", __FILE__(),__LINE__(), "open dict faild", dict_file_cn )
+  end 
 end
 local M={}
 
