@@ -7,32 +7,6 @@
   * 命令模組: 此模組可以在輸入模式 set & get option property config 及執行function
   * 載入程序: 以上模組都可以獨立手動載入也可以利用, init_processor.lua 把需要載入模組設定於 <name_space>/modules: {list}. 預設以此模式[安裝](#安裝)。
 
-
-
-
-    ```
-      cp example/essay-zh-hans.txt <user_data_dir>/essay-zh-hans.txt
-
-      yaml # 请确认方案是否设定 simplifier
-         engine/filters:
-            - simplifier
-         switches:
-            - name: simplification
-              states: [ 漢字,汉字 ]
-         simplifier/opencc_config: s2t.json   # 简体用户
-         simplifier/opencc_config: t2s.json   # 繁体用户  (預設值 可以不設)
-     ```
-
-
-    使用 option simplification 判断繁简模式
-  * conjunctive 修正 ~~ 上屏(在聯想模式時偶有 非commit key: 1-0 space " ~~ " 未清除  )
-  * conjunctive 變更 preedit 顯示格式
-    * ~~ :  融[聯]  <cand.text>[聯]
-    * ~~ [~<>]: [修]更是顯示格式化金金聚 [修]<history_text>
-    * ~~ H: [選]發性進行性失語 [選]<cand.text>
-    * ~~ C: [聯]clear
-    * ~~ B: [聯]restory
-
   # 安裝
   ## 事前準備
   ```bash
@@ -213,6 +187,23 @@ patch:
   engine/processors/@after 0: lua_processor@conjunctive_proc
 
 ```
+    
+```bash
+cp example/essay-zh-hans.txt <user_data_dir>/essay-zh-hans.txt
+```
+
+使用 option simplification 判断繁简模式
+
+```yaml
+# 请确认方案是否设定 simplifier
+engine/filters:
+  - simplifier
+switches:
+  - name: simplification
+    states: [ 漢字,汉字 ]
+simplifier/opencc_config: s2t.json   # 简体用户
+simplifier/opencc_config: t2s.json   # 繁体用户  (預設值 可以不設)
+```
 
 ### 設定值
 
@@ -259,7 +250,8 @@ local switch_key="F11" -- 聯想詞開闢 預設 0  on  1 off , keybinder {when:
 --rime.lua
 selcet_character = require 'component/select_character'
 ```
-  
+
+
 ```yaml
 #<config>.yaml
 #lua_processor@<module_name>@<name_space>
