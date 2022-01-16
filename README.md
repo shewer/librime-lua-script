@@ -101,7 +101,8 @@
 
    ```yaml
    #custom.yaml
-   engine/processors/@after 0: lua_processor@init_processor@module2 # module2
+   patch:
+     engine/processors/@after 0: lua_processor@init_processor@module2 # module2
    
    ```
 
@@ -262,6 +263,7 @@ selcet_character = require 'component/select_character'
 ```yaml
 #<config>.yaml
 #lua_processor@<module_name>@<name_space>
+patch:
    engine/processors/@after 0: lua_processor@select_character@translator
 ```
 
