@@ -138,7 +138,7 @@ function CM:inc()
   return self:index()
 end
 function CM:dec()
-  local index= (self:index() or  self:size() ) - 1
+  local index= (self:index() or  self:size()+1 ) - 1
   self:index( index  ) 
   self:_update()
   return self:index()
