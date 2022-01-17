@@ -83,15 +83,15 @@ function Init_projection( config, path)
   end
   local patterns= config:get_list( path )
   if not patterns then 
-    puts(WARN, __FILE__(),__LINE__(), "configlist of " .. path .. "is null" )
+    puts(WARN, __FILE__(),__FUNC__(),__LINE__(), "configlist of " .. path .. "is null" )
   elseif patterns.size <1 then 
-    puts(WARN, __FILE__(),__LINE__(), "configlist of " .. path .. "size is 0" )
+    puts(WARN, __FILE__(),__FUNC__(),__LINE__(), "configlist of " .. path .. "size is 0" )
   end
   local projection= Projection()
   if  patterns then
     projection:load(patterns)
   else
-    puts(WARN, "ConfigList of  " .. path  ..
+    puts(WARN, __FILE__(),__FUNC__(), __LINE__(), "ConfigList of  " .. path  ..
       " projection of comment_format could not loaded. comment_format type: " ..
       tostring(patterns) )
   end
@@ -206,6 +206,7 @@ function CN.config_list_replace(config,path, target, replace )
 end 
 ----- rime_api tools 
 local M=rime_api
+M.Version=Version
 -- Context method
 -- Env(env):context():Set_option("test") -- set option "test" true
 --                    Unset_option("test") -- set option "test" false
