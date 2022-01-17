@@ -45,10 +45,11 @@
 function __FILE__(n) n=n or 2 return debug.getinfo(n,'S').soruce end
 function __LINE__(n) n=n or 2 return debug.getinfo(n, 'l').currentline end
 function __FUNC__(n) n=n or 2 return debug.getinfo(n, 'n').name end
-INFO="^log"
-WARN="^warn"
-ERROR="^error"
-DEBUG="^trace"
+INFO="log"
+WARN="warn"
+ERROR="error"
+DEBUG="trace"
+CONSOLE="console"
 
 
 
@@ -61,13 +62,15 @@ end
 local function puts( tag , ...)
   if type(tag) ~= "string" then return end
 
-  if INFO and tag:match(INFO) then
+  if INFO and tag:match("^" .. INFO) then
     (log and log.info or print)( tag .. tran_msg(...))
-  elseif ERROR and tag:match(ERROR) then
+  elseif WARN and tag:match("^" .. WARN) then
     (log and log.error or print)(tag .. tran_msg(...))
-  elseif DEBUG and tag:match(DEBUG) then
+  elseif ERROR and tag:match("^" .. ERROR) then
     (log and log.error or print)(tag .. tran_msg(...))
-  elseif  CONSOLE and tag:match( CONSOLE ) then
+  elseif DEBUG and tag:match("^" .. DEBUG) then
+    (log and log.error or print)(tag .. tran_msg(...))
+  elseif  CONSOLE and tag:match( "^" .. CONSOLE ) then
     ( print)( tag .. tran_msg(...))
   else
     return
