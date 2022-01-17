@@ -94,16 +94,16 @@
   ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E4%BB%A5%E8%A9%9E%E5%AE%9A%E5%AD%97.gif)
 
 
-  注意: Shadow Candidate 無法變更 text preedit comment 所以無法顯示，但是定字上屏仍然有效.可以用[ + number 直接選字上屏
+  注意: Shadow Candidate（如繁簡轉換後) 無法變更 text preedit comment 所以無法顯示，但是定字上屏仍然有效.可以用[ + number 直接選字上屏
 
   觸發條件  對選中的candidate 詞長>1  and  NEXT_KEY PREV_KEY
 
   引用資料
-     * name_space/dictinary : 調用反查字典  預設: translator/dictionary
-     * name_space/preedit_fromat: 單字字根轉置 預設: translator/preedit_format
+     * <name_space>/dictinary : 調用反查字典  預設: translator/dictionary
+     * <name_space>/preedit_fromat: 單字字根轉置 預設: translator/preedit_format
      * 可以利用 name_space 選用其他反查字典及 preedit_format
-     * name_space/next_key  NEXT_KEY  : 觸發鍵   預設: '['
-     * name_space/prev_key  PREV_KEY  : 觸發鍵   預設: ']'
+     * <name_space>/next_key  NEXT_KEY  : 觸發鍵   預設: '['
+     * <name_space>/prev_key  PREV_KEY  : 觸發鍵   預設: ']'
 ###獨立安裝
 
 ```lua
@@ -114,7 +114,7 @@ selcet_character = require 'component/select_character'
 
 
 ```yaml
-#<config>.yaml
+#<config>.custom.yaml
 #lua_processor@<module_name>@<name_space>
 patch:
    engine/processors/@after 0: lua_processor@select_character@translator

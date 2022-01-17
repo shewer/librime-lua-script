@@ -108,17 +108,17 @@ function M.init(env)
 
   -- init end
   -- print component
-  puts("log","---submodules---" )
+  puts(INFO,"---submodules---" )
   env.modules:each( function(elm)
-  puts("log", elm.module, elm.module_name .."@" .. elm.name_space)
+  puts(INFO, elm.module, elm.module_name .."@" .. elm.name_space)
   end )
   env:print_components()
   do
     local pattern_p= "recognizer/patterns"
-    puts( "log", "---------" ..  pattern_p .. "-----------" )
+    puts( INFO, "---------" ..  pattern_p .. "-----------" )
     List( config:get_map(pattern_p):keys())
     :each(function(elm)
-      puts("log", pattern_p .. "/" .. elm .. ":\t" ..  config:get_string( pattern_p .. "/" .. elm  ) )
+      puts(INFO, pattern_p .. "/" .. elm .. ":\t" ..  config:get_string( pattern_p .. "/" .. elm  ) )
     end )
   end
 end
@@ -133,11 +133,13 @@ function M.fini(env)
 end
 
 function M.func(key,env)
+    puts(CONSOLE,__FILE__(),__LINE__(), "------trace------")
   local Rejected,Accepted,Noop=0,1,2
   local context=env:Context()
   -- self func
   -- sub_module func
   local res = env.modules:each(function(elm)
+    puts(CONSOLE,__FILE__(),__LINE__(), "------trace------")
     local res= elm.module.func(key,elm.env)
     if res ~= Noop then return res  end
   end)
