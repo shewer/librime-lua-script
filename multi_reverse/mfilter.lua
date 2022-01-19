@@ -76,7 +76,6 @@ function M.fini(env)
 end
 
 function M.func(input,env)
-  puts("trace",__FILE__(),__FUNC__(),__LINE__(), "---trace---", input,env)
   local context=env.engine.context
   for cand in input:iter() do
     local code=env.reverdb:lookup(cand.text)
@@ -84,7 +83,6 @@ function M.func(input,env)
       code =  List(cand.text:split(""))
       :map(function(elm) return env.reverdb:lookup(elm) end)
       :concat(" ")
-      puts("trace",__FILE__(),__FUNC__(),__LINE__(), "---trace---", input,code ,env)
     end
 
     cand.comment = cand.comment .. "|" ..

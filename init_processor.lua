@@ -133,13 +133,16 @@ function M.fini(env)
 end
 
 function M.func(key,env)
-    puts(CONSOLE,__FILE__(),__LINE__(), "------trace------")
   local Rejected,Accepted,Noop=0,1,2
   local context=env:Context()
   -- self func
   -- sub_module func
+  if context.input =="/ver" and key:repr() == "space" then
+    env.engine:commit_text( rime_api.Version() )
+    context:clear()
+    return Accepted
+  end
   local res = env.modules:each(function(elm)
-    puts(CONSOLE,__FILE__(),__LINE__(), "------trace------")
     local res= elm.module.func(key,elm.env)
     if res ~= Noop then return res  end
   end)
