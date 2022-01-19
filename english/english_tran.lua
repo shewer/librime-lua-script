@@ -3,14 +3,20 @@ local D01= nil
 
 
 
-local nj=require 'tools/wordninja'
 local English_dict= require 'tools/english_dict'
-local eng_dict=English_dict("english_tw.txt")
+_eng_dict=English_dict("english_tw.txt")
+
+local function njload()
+  local nj= require 'tools/wordninja'
+  nj.init()
+  nj.test()
+  return nj
+end
+_nj= _nj or njload()
+
 
 local English="english"
 local Ninja="ninja"
-nj.init()
-nj.test()
 
 local function load_ext_dict(filename)
   local path= string.gsub(debug.getinfo(1).source,"^@(.+/)[^/]+$", "%1")
@@ -42,19 +48,19 @@ function T.func(inp,seg,env)
   if #input==0 then return end
 
   --puts("trace",__FILE__(),__FUNC__(),__LINE__(),"----english-----", input  )
-  local commit= input:match("^[%a%_%.%']+$")  and nj.split(input) or {}
 
   local first=ext_dict[input:lower()]
      and Candidate("english_ext", seg.start, seg._end, input , "[".. ext_dict[input:lower()] .. "]")
      or Candidate(English, seg.start, seg._end, input , "[english]")
   yield(first)
 
+  local commit= input:match("^[%a%_%.%']+$")  and _nj.split(input) or {}
   if #commit > 1 then
     yield( Candidate(Ninja, seg.start,seg._end, table.concat(commit," "), "[ninja]"))
   end
 
   -- 使用 context.input 杳字典 type "english"
-  for w in eng_dict:iter(inp:sub(seg.start,seg._end)) do
+  for w in _eng_dict:iter(inp:sub(seg.start,seg._end)) do
     -- 如果 與 字典相同 替換 first cand.comment
     if input ==w.word and first.type == English then
       first.comment= w.info
@@ -66,7 +72,7 @@ function T.func(inp,seg,env)
   if #commit > 1 then
     local n_word= commit[#commit]
 
-    for w in eng_dict:iter(n_word) do
+    for w in _eng_dict:iter(n_word) do
       -- seg.start =   seg.end - #m_word
       yield( Candidate(Ninja, seg._end - #n_word , seg._end,w.word,"(Ninja) " .. w.info))
     end
