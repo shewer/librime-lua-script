@@ -122,15 +122,6 @@ patch:
    #translator/prev_key: ">" #  default: ]
 ```
 
-  ## conjunctive 聯想詞模組
-    * 中文上屏後觸發
-    * F11 聯想詞開關
-    * ~ 觸發聯想
-    * 上屏字母串編輯 ~< 字尾刪除 > 字頭刪除
-    * ~~H  自定字串  ~~C 清除  ~~B 還原
-
-
-   ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E8%81%AF%E6%83%B3%E8%A9%9Edemo.gif)
 
   ## command 命令模組 顯示 設定 執行 命令 支援 Tab 補齊功能
    可擴充 config func 設定 達到線上重載功能，後續再增加
