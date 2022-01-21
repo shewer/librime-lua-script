@@ -64,7 +64,7 @@ M._dict=M._dict or  Dict( "." .. path_ch .. dict_file)
   or Dict( rime_api.get_user_data_dir() .. path_ch  .. dict_file)
   or Dict( rime_api.get_shared_data_dir() .. path_ch .. dict_file)
 if not M._dict then 
-  puts("trace", __FILE__(),__LINE__(), "open dict faild", dict_file_cn )
+  puts("trace", __FILE__(),__LINE__(), "open dict faild", dict_file )
 end 
 puts(CONSOLE,__FILE__(),"loaded dict .........",os.clock() - t1 )
 
