@@ -42,13 +42,15 @@
 --
 --
 
-
-
+-- librime-lua-script env
+require 'tools/string'
 require 'tools/rime_api'
+local puts=require'tools/debugtool'
+package.path= package.path .. ";./lua/component/?.lua"
+
+
 
 local List = require 'tools/list'
-local puts=require'tools/debugtool'
-
 local module_key=List("module","module_name","name_space")
 
 local function load_config(env)
@@ -89,12 +91,30 @@ local function init_module(env)
   end)
 end
 
+local function auto_load(env)
+  local config=env.engine.schema.config
+  local lua_components = List("processors","segments","translators","filters")
+  :map(function(elm) return config:get_list("engine/" .. elm) end)
+  :reduce(function(elm,org)
+    for i=0,elm.size-1 do
+        org:push( elm:get_value_at(i).value:match("^lua_%a+@.*$") )
+    end
+    return org
+  end, List() )
+  :each(function(elm)
+     local comp_name=elm:split("@")[2]
+     if not _G[ comp_name] then
+        _G[comp_name] =require(comp_name) or nil
+        puts(CONSOLE,__FILE__(),__LINE__(), "require component", elm, comp_name )
+     end
+  end )
 
-
+end
 
 local M={}
 function M.init(env)
   Env(env)
+  auto_load(env)
   -- init self --
   local config=env:Config()
 
@@ -103,7 +123,10 @@ function M.init(env)
 
   -- call sub_processor
   env.modules:each( function(elm)
-    elm.module.init( elm.env )
+    local ok,res=xpcall( elm.module.init,debug.traceback,( elm.env ))
+    if not ok then
+      puts(ERROR,__LINE__(), elm.env.name_space,res)
+    end
   end)
 
   -- init end
@@ -127,7 +150,12 @@ end
 function M.fini(env)
   -- modules fini
   env.modules:reverse()
-  :each( function(elm) elm.module.fini(elm.env) end )  -- call fini
+  :each( function(elm)
+    local ok,res=xpcall( elm.module.fini,debug.traceback,elm.env )
+    if not ok  then
+      puts(ERROR,__LINE__(), elm.env.name_space,res)
+    end
+   end )  -- call fini
 
   -- self finit --
 end
@@ -143,8 +171,15 @@ function M.func(key,env)
     return Accepted
   end
   local res = env.modules:each(function(elm)
-    local res= elm.module.func(key,elm.env)
-    if res ~= Noop then return res  end
+      --local ret= elm.module.func(key,elm.env)
+      --if ret ~= 2  then return  ret end
+
+    local ok,res=xpcall( elm.module.func,debug.traceback,key, elm.env )
+    if not ok then
+      puts(ERROR,__LINE__(), elm.env.name_space,res )
+    else
+      if res ~= Noop then return res  end
+    end
   end)
   --
   return res  or Noop
