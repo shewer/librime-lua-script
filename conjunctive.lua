@@ -57,28 +57,34 @@ local escape_key = "%.%-"
 local path_ch= package.config:sub(1,1)
 
 local Dict = require 'tools/dict'
-_dict=_dict or  Dict( "." .. path_ch .. dict_file)
+local M={}
+puts(CONSOLE,__FILE__(),"load dict .........")
+local t1=os.clock()
+M._dict=M._dict or  Dict( "." .. path_ch .. dict_file)
   or Dict( rime_api.get_user_data_dir() .. path_ch  .. dict_file)
   or Dict( rime_api.get_shared_data_dir() .. path_ch .. dict_file)
-if not _dict then 
+if not M._dict then 
   puts("trace", __FILE__(),__LINE__(), "open dict faild", dict_file_cn )
 end 
+puts(CONSOLE,__FILE__(),"loaded dict .........",os.clock() - t1 )
 
 
+puts(CONSOLE,__FILE__(),"load dict .........")
+local t1=os.clock()
 if dict_file_cn then
-  _dict_cn =  _dict_cn
+  M._dict_cn =  M._dict_cn
   or  Dict( "." .. path_ch .. dict_file_cn)
   or Dict( rime_api.get_user_data_dir() .. path_ch  .. dict_file_cn)
   or Dict( rime_api.get_shared_data_dir() .. path_ch .. dict_file_cn)
-  if not _dict_cn then 
+  if not M._dict_cn then 
     puts("trace", __FILE__(),__LINE__(), "open dict faild", dict_file_cn )
   end 
 end
-local M={}
+puts(CONSOLE,__FILE__(),"loaded dict .........",os.clock() - t1 )
 
 function M.init(env)
-  env.dict= _dict or Dict("essay.txt")
-  env.dict_cn= _dict_cn or _dict
+  env.dict= M._dict or Dict("essay.txt")
+  env.dict_cn= M._dict_cn or M._dict
 
   env.history=""
   env.history_back=""
