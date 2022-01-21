@@ -1,7 +1,7 @@
--- 
+--
 --
 --[[
--- Dict(filename) return object of dict or  nil 
+-- Dict(filename) return object of dict or  nil
    dict:find_word(word) -- return table(list) or nil
    dict:reduce_find_word(word) return table(list) or nil
    dict:word_iter(word) return iter function for loop
@@ -9,7 +9,7 @@
 
 
 --
--- example 
+-- example
 --
 local Dict=require 'tools/dict'
 local dict= Dict(filename)  --essay.txt
@@ -27,7 +27,7 @@ end
 --]]
 
 List=require 'tools/list'
--- tools/string.lua 
+-- tools/string.lua
 function utf8.sub(str,si,ei)
   local function index(ustr,i)
     return i>=0 and ( ustr:utf8_offset(i) or ustr:len() +1 )
@@ -55,6 +55,7 @@ local function word_weight(word)
 end
 
 warn("@on")
+
 local function load_essay(filename)
   local fn=io.open(filename)
   if not fn then
@@ -64,18 +65,22 @@ local function load_essay(filename)
 
   local words={}
   for line in fn:lines() do
-    local key,word,weight = conv_line(line)
+
+    local data = line:gsub("\t","-")
+    local key= utf8.sub(data,1,1)
     words[key] = type(words[key]) == "table" and words[key] or List()
-    word= ("%s-%s"):format(word, weight or  0)
-    words[key]:push(word)
+    words[key]:push( data )
   end
+
   fn:close()
 
-  -- sorc dicts by weight
-  local s_func=function(a,b) return word_weight(a)> word_weight(b) end 
+  -- sort dicts by weight
+  --[[
+  local s_func=function(a,b) return word_weight(a)> word_weight(b) end
   for k,v in pairs(words) do
-    v:sort_self(s_func) 
+    --v:sort_self(s_func)
   end
+  --]]
   return words
 end
 
@@ -92,9 +97,17 @@ setmetatable(M,{__call=M.New})
 
 
 
+local s_func=function(a,b) return word_weight(a)> word_weight(b) end
+
 function M:find_word( word)
-    local key = word:utf8_sub(1,1)
-    local dict=self[key] or List()
+    local dict=self[word:utf8_sub(1,1)] or List()
+    --- sort check
+    if not dict._sorted then
+      dict:sort_serf(s_func)
+      dict._sorted = true
+    end
+    --  sert end
+
     local res_tab= dict
     :select(function(elm) return elm:match("^" .. word .. ".+-.*" ) end )
  --   :sort_self(function(a,b) return word_weight(a) > word_weight(b) end )
@@ -121,7 +134,14 @@ end
 
 function M:word_iter(word)
   return coroutine.wrap(function()
-    for i,elm in ipairs( self[word:utf8_sub(1,1) ] or {}) do
+    local dict=self[word:utf8_sub(1,1)] or List()
+    --- sort check
+    if not dict._sorted then
+      dict:sort_self(s_func)
+      dict._sorted = true
+    end
+    -- sort check
+    for i,elm in ipairs(dict) do
       local w,wt = elm:match("^" .. word .. "(.+)-(%d*).*$" )
       if w then
         coroutine.yield( w,wt)
