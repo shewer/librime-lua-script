@@ -2,7 +2,8 @@
   此模組須使用 librime-lua #131以上版本[下載rime.dll](https://github.com/shewer/librime-lua/releases )
   * 以詞定字: select_character [以词定字](#以词定字)上屏模组
   * 聯想詞輸入模組:
-  * 英打+英文字典模組:
+  * 英打+英文字典模組: 20220124 增加 english/tag 預設 english 如果須要 tag:abc 輸出，可以在<方案>.custom.yaml
+    設定   english/tag: abc   or  abc_segmentor/extra_tags: [ english ]
   * 主副字典反查模組: 此模組會查找 script_translator table_translator 可反杳方案內的字典
   * 命令模組: 此模組可以在輸入模式 set & get option property config 及執行function
   * 載入程序: 以上模組都可以獨立手動載入也可以利用, init_processor.lua 把需要載入模組設定於 <name_space>/modules: {list}. 預設以此模式[安裝](#安裝)。
@@ -152,6 +153,8 @@ patch:
     * 空白鍵上屏井補上 空白字元
     * 增加短語字典 lua/english/ext_dict.txt , 輸入短語字串時(cand.type == "english_ext")  按下 Tab 時交換 cand.text cand.coment
       ex: input: btw   candidate:  btw [by the way]  candidate: by the way [btw]
+    *  20220124 增加 english/tag 預設 english : 如果須要在 tag:abc 輸出，可以在<方案>.custom.yaml
+      設定   english/tag: abc   or  abc_segmentor/extra_tags: [ english ]
 
 
  ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E8%8B%B1%E6%89%93%E6%A8%A1%E5%BC%8Fdemo.gif)

@@ -38,11 +38,16 @@ T._eng_dict=T._eng_dict or English_dict("english_tw.txt")
 T._nj= T._nj or njload()
 T._ext_dict= T.ext_dict or load_ext_dict("ext_dict.txt")
 function T.init(env)
+  local config= env.engine.schema.config
+  env.tag= config:get_string(env.name_space .. "/tag") or English
 end
 function T.fini(env)
 end
 function T.func(inp,seg,env)
   local context=env.engine.context
+
+  if not ( seg:has_tag(env.tag) or context:get_option(English) )  then return end
+
   local input =  seg:has_tag("lua_cmd") and inp:sub(2) or inp:sub(seg.start,seg._end)
 
   input = input:match("^[%a][%a_.'/*:%-]*$") and input or ""
