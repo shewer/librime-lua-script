@@ -12,3 +12,14 @@ patch:
     - { module: 'english', module_name: "english_proc", name_space: "english" }
     - { module: "conjunctive", module_name: "conjunctive_proc", name_space: "conjunctive" }
     - { module: 'multi_reverse', module_name: "multi_reverse__proc", name_space: "multi_reverse" }
+  switches/+:
+    - name: conjunctive
+      states: [ 無,聯]
+    - name: english
+      states: [ 無,英]
+    - name: multi_reverse
+      states: [ 無,查]
+    - name: qcode
+      states: [ 無,短]
+    - name: completion
+      states: [ 無,未]
