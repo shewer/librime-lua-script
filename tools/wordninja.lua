@@ -107,7 +107,8 @@ local function _split(str)
   return rever_word(str,{} )
 end
 
-function split(s)
+function split(s,sp)
+  sp= sp or " "
   local tab= setmetatable({},{__index=table})
   --    "abe,.p,.poeu-,a" -> {abe p poeu a}
   for w in  s:gmatch("[%a%d']+") do
@@ -115,7 +116,7 @@ function split(s)
       tab:insert(ww)
     end
   end
-  return tab
+  return table.concat(tab,sp) 
 end
 
 local ss="WethepeopleoftheunitedstatesinordertoformamoreperfectunionestablishjusticeinsuredomestictranquilityprovideforthecommondefencepromotethegeneralwelfareandsecuretheblessingsoflibertytoourselvesandourposteritydoordainandestablishthisconstitutionfortheunitedstatesofAmerica"
@@ -124,20 +125,12 @@ local ss_res="We the people of the united states in order to form a more perfect
 local function time_count(func,...)
   local t1=os.clock()
   local res = func(...)
-  return res,os.clock() - t1
+  return res,(os.clock() - t1)
 end
 local function test(s)
-  if type(s) == "string" then
-    local res,time = time_count( split,s)
-    rstr= table.concat(res," ")
-    print(("--%s--\n--%s--\n%s"):format(s,rstr,time) )
-  else
-    s=ss
-    local res,time = time_count( split,s)
-    rstr= table.concat(res," ")
-    print(("--%s--\n--%s--\n%s"):format(s,rstr,time) )
-    assert( rstr == ss_res , "Error: not match " )
-  end
+  s = type(s) == "string" and s or ss 
+  local res,time = time_count( split,s)
+  print(("--%s--\n--%s--\n%s"):format(s,res,time) )
   return rstr
 end
 
