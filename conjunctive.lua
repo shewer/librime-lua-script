@@ -91,7 +91,7 @@ function M.init(env)
 
   env.commit_connect= env.engine.context.commit_notifier:connect(
     function(ctx)
-      local conjunctive_mode = not ctx:get_option(lua_tran_ns) and not ctx:get_option("ascii_mode")
+      local conjunctive_mode = ctx:get_option(lua_tran_ns) and not ctx:get_option("ascii_mode")
       if not conjunctive_mode then return end
 
       local cand=ctx:get_selected_candidate()
@@ -132,7 +132,7 @@ end
 function M.func(input,seg,env)
   local context = env.engine.context
   local history= env.history
-  if context:get_option(lua_tran_ns) then return end  -- false: enable true: disable
+  if not context:get_option(lua_tran_ns) then return end  -- false: enable true: disable
   if not seg:has_tag(lua_tran_ns)  then return end
 
   -- start
