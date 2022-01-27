@@ -81,7 +81,7 @@
      engine/processors/@after 0: lua_processor@init_processor@module2 # module2
    
    ```
-
+# english_tran.lua 增加 優先載入 wordnanja-rs  , 只要把 wordninja.(dll/so/dylib) 放入 <user_data_dir>/lua/plugin 
 # 增加 init_processor.lua
   使用了 tags_match() and ConfigMap:keys() 只支援 librime-lua #131 以上版本 window版本rime.dll 可從 https://github.com/shewer/librime-lua/releases 下載
   可由 yaml name_space 或 rime.lua 載入模組(以 yaml name_space 爲優先)
@@ -155,6 +155,7 @@ patch:
       ex: input: btw   candidate:  btw [by the way]  candidate: by the way [btw]
     *  20220124 增加 english/tag 預設 english : 如果須要在 tag:abc 輸出，可以在<方案>.custom.yaml
       設定   english/tag: abc   or  abc_segmentor/extra_tags: [ english ]
+    * english_tran.lua 增加 優先載入 wordnanja-rs  , 只要把 wordninja.(dll/so/dylib) 放入 <user_data_dir>/lua/plugin 
 
 
  ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E8%8B%B1%E6%89%93%E6%A8%A1%E5%BC%8Fdemo.gif)
