@@ -22,6 +22,7 @@ local function njload()
     nj= require 'tools/wordninja'
     nj.init()
   end
+  -- test 
   do
     local t1= os.clock()
     local ss="WethepeopleoftheunitedstatesinordertoformamoreperfectunionestablishjusticeinsuredomestictranquilityprovideforthecommondefencepromotethegeneralwelfareandsecuretheblessingsoflibertytoourselvesandourposteritydoordainandestablishthisconstitutionfortheunitedstatesofAmerica"
