@@ -164,9 +164,9 @@ function M.func(input,seg,env)
 
   elseif active_input:match("[<>~]+") then
     if #active_input >1 then
-      active_input=active_input:sub(2)
+      active_input=active_input:sub(3)
       local si= #active_input:gsub("[^>]","") +1
-      local ei= - #active_input:gsub("[^<~]","")
+      local ei= history:utf8_len()  - #active_input:gsub("[^<~]","")
       history = history:utf8_sub(si,ei)
     end
     local cand3= Candidate(cand_type, seg.start, seg._end, "", history .. "--修改" )
