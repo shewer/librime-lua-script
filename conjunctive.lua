@@ -132,7 +132,7 @@ end
 function M.func(input,seg,env)
   local context = env.engine.context
   local history= env.history
-  if not context:get_option(lua_tran_ns) then return end  -- false: enable true: disable
+  if not context:get_option(lua_tran_ns) then return end  -- false: disenable true: enable
   if not seg:has_tag(lua_tran_ns)  then return end
 
   -- start
@@ -250,7 +250,7 @@ function P.func(key, env)
   local context = env.engine.context
 
   -- true(1) : disable  false(0) enable
-  local conjunctive_mode = not context:get_option(lua_tran_ns) and not context:get_option("ascii_mode")
+  local conjunctive_mode = context:get_option(lua_tran_ns) and not context:get_option("ascii_mode")
   if not conjunctive_mode then return Noop end
 
   local status= env:get_status()
@@ -258,6 +258,7 @@ function P.func(key, env)
     and string.char(key.keycode)
     or ""
 
+  --puts(CONSOLE,__FILE__(),__LINE__(),"keyven check ======>", key,key:repr(),key.keycode,key.modifier,ascii)
   if status.empty and ascii == "~" then
     -- "~" 觸發聯想
     context.input= pattern_str
