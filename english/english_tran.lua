@@ -10,9 +10,10 @@ local function njload()
   -- try to load wordninja-lua 
   -- https://github.com/BlindingDark/wordninja-rs-lua
   -- cp wordninja.so  <user_data_dir>/lua/plugin
+  -- window lua 版本不符將造成暫時取消 window版本 載入 wordnanja-rs
   local cpath=package.cpath
-  local df= cpath:match("so") or cpath:match("dll") or cpath:match("dylib") 
-  local path= (";/lua/plugin/?." .. df):gsub("/",package.config:sub(1,1) )
+  local df= cpath:match("so") or cpath:match("dylib") -- or cpath:match("dll")
+  local path= df and  (";/lua/plugin/?." .. df):gsub("/",package.config:sub(1,1) ) or ""
   package.cpath=package.cpath ..  path
 
   local ok,res= pcall(require, "wordninja" )
