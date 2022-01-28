@@ -40,19 +40,21 @@ local puts = require 'tools/debugtool'
 
 local function Version()
   local ver
-  if KeySequence().repr then
+  if Opencc then 
+    ver = 147
+  elseif KeySequence().repr then
     ver= 139
   elseif  ConfigMap().keys then
     ver= 127
   elseif Projection then
     ver= 102
-   elseif KeyEvent then
-     ver = 100
-   elseif Memory then
-     ver = 80
-   else
-     ver= 79
-   end
+  elseif KeyEvent then
+    ver = 100
+  elseif Memory then
+    ver = 80
+  else
+    ver= 79
+  end
   return ver
 end
 
