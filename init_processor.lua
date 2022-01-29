@@ -42,6 +42,19 @@
 --
 --
 
+local function init_cpath()
+  local path= ("./lua/plugin/"):gsub("/",package.config:sub(1,1) )
+  local pattern = path:gsub("([.?/%\\])","%%%1")
+  --  pattern --> "%.%/lua%/plugin%/"  or "%.%\\lua%\\plugin%\\"
+  if not package.cpath:match( pattern ) then
+    local cp=package.cpath
+    local df= cp:match('?.so') or cp:match('?.dylib') or cp:match('?.dll')
+    package.cpath= package.cpath .. (df and ";" .. path .. df or "")
+  end
+end
+-- append cpath <user_data_dir>/lua/plugin/?.(so|dll|dylib)
+init_cpath()
+
 -- librime-lua-script env
 require 'tools/string'
 require 'tools/rime_api'
