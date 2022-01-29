@@ -65,7 +65,7 @@ local function puts( tag , ...)
   if INFO and tag:match("^" .. INFO) then
     (log and log.info or print)( tag .. tran_msg(...))
   elseif WARN and tag:match("^" .. WARN) then
-    (log and log.error or print)(tag .. tran_msg(...))
+    (log and log.warning or print)(tag .. tran_msg(...))
   elseif ERROR and tag:match("^" .. ERROR) then
     (log and log.error or print)(tag .. tran_msg(...))
   elseif DEBUG and tag:match("^" .. DEBUG) then
