@@ -1,29 +1,25 @@
 local puts=require 'tools/debugtool'
 local D01= nil
 
-
-
 local English_dict= require 'tools/english_dict'
 
 
 local function njload()
-  -- try to load wordninja-lua 
+  -- try to load wordninja-lua
   -- https://github.com/BlindingDark/wordninja-rs-lua
   -- cp wordninja.so  <user_data_dir>/lua/plugin
   -- window lua 版本不符將造成暫時取消 window版本 載入 wordnanja-rs
-  local cpath=package.cpath
-  local df= cpath:match("so") or cpath:match("dylib") -- or cpath:match("dll")
-  local path= df and  (";/lua/plugin/?." .. df):gsub("/",package.config:sub(1,1) ) or ""
-  package.cpath=package.cpath ..  path
 
-  local ok,res= pcall(require, "wordninja" )
-  local nj= ok and res or nil
-  puts(CONSOLE,nj,ok,ok and res)
-  if not nj then
+  local ok,res= not package.cpath:match('?.dll') and  pcall(require, "wordninja" )
+  --local ok,res= pcall(require, "wordninja" )
+  local nj
+  if ok  then
+    nj=res
+  else
     nj= require 'tools/wordninja'
     nj.init()
   end
-  -- test 
+  -- test
   do
     local t1= os.clock()
     local ss="WethepeopleoftheunitedstatesinordertoformamoreperfectunionestablishjusticeinsuredomestictranquilityprovideforthecommondefencepromotethegeneralwelfareandsecuretheblessingsoflibertytoourselvesandourposteritydoordainandestablishthisconstitutionfortheunitedstatesofAmerica"
@@ -33,7 +29,6 @@ local function njload()
   end
   return nj
 end
-
 
 local English="english"
 local Ninja="ninja"
@@ -101,7 +96,7 @@ function T.func(inp,seg,env)
   -- 使用 ninja 最後一佪字查字典 type "ninja"
   if #commit > 1 then
     --local n_word= commit[#commit]
-    local n_word= commit:match(".* (.+)$") 
+    local n_word= commit:match(".* (.+)$")
 
     for w in T._eng_dict:iter(n_word) do
       -- seg.start =   seg.end - #m_word
