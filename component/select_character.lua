@@ -36,7 +36,7 @@ module1/modules:
 
 -------------------------------------------------------------------------
 
-
+local C01=""
 --]]
 --  require 'tools/string' -- utf8 module 
 -- local List=require 'tools/list'
@@ -104,42 +104,27 @@ function CM:index(index)
   return self._index and self._index +1 or nil
 end
 
-function CM:_update_preedit()
-  if  self._index then 
-    self:preedit( 
-      self._projection( self:select_character() )
-    )
-  end
-  return self._cand.preedit
-end 
-function CM:_update_commentt()
-  if  self._index then 
-    self:comment(
-      self._projection( self:select_character() )
-    )
-  end
-  return self._cand.comment
-end 
 function CM:_update()
-  self:_update_preedit()
-  --[[    Shadow Candadite can't modify 
-  if self._cand:get_dynamic_type() == "Shadow" then 
-    self:_update_commentt()
-  else
-    self:_update_preedit()
+  if self:index() then 
+    self:preedit( 
+      self:_projection() 
+    )
   end 
-  --]]
 end 
 
 function CM:inc()
-  local index= (self:index() or  0 ) + 1
-  self:index( index  ) 
+  local index= self:index() or  0 
+  puts(C01,__LINE__(), "----------inc index" , self:index(),self._cand:get_dynamic_type(),self._org_cand:get_dynamic_type() )
+  self:index( index +1  ) 
+  puts(C01,__LINE__(), "----------inc index after " , self:index() )
   self:_update()
   return self:index()
 end
 function CM:dec()
-  local index= (self:index() or  self:size()+1 ) - 1
-  self:index( index  ) 
+  puts(C01,__LINE__(), "----------dec index" , self:index(),self._cand:get_dynamic_type(),self._org_cand:get_dynamic_type() )
+  local index= self:index() or  self:size()+1 
+  self:index( index -1 ) 
+  puts(C01,__LINE__(), "----------dec index after " , self:index() )
   self:_update()
   return self:index()
 end 
@@ -150,6 +135,11 @@ end
 function CM:select_character(index)
   index = self:index(index)
   local word=  self._cand.text:utf8_sub(index,index) 
+  return word
+end 
+function CM:select_org_character(index)
+  index = self:index(index)
+  local word=  self._org_cand.text:utf8_sub(index,index) 
   return word
 end 
 
@@ -168,12 +158,13 @@ local function Warp_cand(cand, projection_func, index )
     return nil
   end
   local obj={}
-  obj._cand=cand
+  obj._org_cand=cand
+  obj._cand=cand:get_genuine()
   obj._size=cand.text:utf8_len() 
-  obj._org_preedit=cand.preedit
-  obj._org_comment=cand.comment
+  obj._org_preedit=obj._cand.preedit
+  obj._org_comment=obj._cand.comment
   obj._projection=projection_func 
-  obj._index=nil
+  obj._index= index
   return setmetatable(obj, CM )
 end 
 
@@ -205,37 +196,29 @@ function M.init(env)
   
   -- load reversedb 
   local dictionary= config:get_string( env.name_space .. "/dictionary") or config:get_string("translator/dictionary" )
-  env.reversedb= rime_api.load_reversedb(dictionary)
+  local reversedb= rime_api.load_reversedb(dictionary)
 
  -- load projection 
-  local preedit_item= config:get_item(env.name_space .. "/preedit_format") 
-  or config:get_item("translator/preedit_format" ) 
+  local preedit_item= config:get_item(env.name_space .. "/comment_format") 
+  or config:get_item("translator/comment_format" ) 
   or ConfigList().element
-  env.projection = Projection()
-  env.projection:load( preedit_item:get_list() ) 
+  local projection = Projection()
+  projection:load( preedit_item:get_list() ) 
 
   -- projection_func( word) return  包含 字根 preedit 
-  env.projection_func = function(word) 
-    return word .. " " .. 
-    env.projection:apply(
-    env.reversedb:lookup( word )
-    )
+  env.preedit_mode=3
+  env.projection_func = function(warp_cand) 
+    local org_word= warp_cand:select_org_character()
+    local word= warp_cand:select_character()
+    return org_word
+    .. ( env.preedit_mode & 2 > 0 and org_word ~= word and  "[" .. word .."]" or "")
+    .. ( env.preedit_mode & 4 > 0 and projection:apply( reversedb:lookup( word ) ) or "" )
   end 
 
 end
 function M.fini(env)
 end
-local function chk_cand(info,w_cand, cand) 
-  print( "-----",info,"-------")
-  local t= setmetatable({}, {__index=cand}) 
-  print("----------------->", t.text )
-  print("-----cand_temp",cand,cand.type, cand.text , cand.preedit, cand.comment, cand.quaility,cand:get_dynamic_type() ) 
-  if w_cand then 
-    print("-----env.cand",w_cand._cand,w_cand:type(), w_cand:text() , w_cand:preedit(teteu), w_cand:comment(), w_cand:quality(),w_cand._cand:get_dynamic_type()) 
-    print("check env.cand:eq( cand_temp)" ,w_cand:eq(cand) ,w_cand == cand ,w_cand:size() , w_cand:index(), w_cand:index() and w_cand:select_character(),
-    w_cand:index() and w_cand._projection( w_cand:select_character() ) )
-  end 
-end 
+
 function M.func(key,env)
   local Rejected,Accepted,Noop=0,1,2
   local context=env.engine.context
@@ -244,40 +227,25 @@ function M.func(key,env)
   if context:has_menu() then
 
     -- check selected candidate
-    local cand_temp= context:get_selected_candidate()
-    if not cand_temp then return Noop end 
-    if  cand_temp.text:utf8_len() < 2 then  return Noop end 
+    local cand= context:get_selected_candidate()
+    if not cand  then return Noop end
+    if cand.text:utf8_len() < 2 then  return Noop end
     -- entery  select_character  processor 
 
     if key:eq(env.head) then 
       -- 往下定字  -->
-      --set_cand(env,cand_temp)
-      env.cand = env.cand and env.cand:eq(cand_temp) and env.cand 
-      or Warp_cand(cand_temp, env.projection_func)
-
+      env.cand = env.cand and env.cand or Warp_cand(cand, env.projection_func)
       env.cand:inc()
       return Accepted
     elseif key:eq(env.tail) then 
       -- 往上定字  <--
-      --set_cand(env,cand_temp)
-      env.cand = env.cand and env.cand:eq(cand_temp) and env.cand
-      or Warp_cand(cand_temp, env.projection_func)
-
+      env.cand = env.cand and env.cand or Warp_cand(cand, env.projection_func)
       env.cand:dec()
       return Accepted
-    elseif env.cand and key:repr() == "space" then 
+    elseif  env.cand and key.keycode> 0x30 and key.keycode < 0x3a or key.keycode == 0x20 then 
+      local n= key.keycode - 0x30 
       -- 以詞定字模式標 定字上屏
-      env.engine:commit_text( env.cand:select_character() )
-
-      -- clear env.cand
-      env.cand:clear()
-      env.cand=nil
-      -- clear context.input
-      context:clear()
-      return Accepted
-    elseif env.cand and key.keycode > 0x30 and key.keycode < 0x3a  then 
-      --  以詞定字模式  數字鍵直接上屏
-      env.engine:commit_text( env.cand:select_character(key.keycode - 0x30) )
+      env.engine:commit_text( env.cand:select_org_character( n >0 and n or nil ) )
 
       -- clear env.cand
       env.cand:clear()
@@ -287,6 +255,7 @@ function M.func(key,env)
       return Accepted
     end 
   end
+
   if env.cand then 
     -- clear env.cand
     env.cand:clear()
