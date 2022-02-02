@@ -16,6 +16,14 @@
 --    可以利用 name_space 選用其他反查字典及 preedit_format
 -- name_space/next_key  NEXT_KEY  : 觸發鍵   預設: "["
 -- name_space/prev_key  PREV_KEY  : 觸發鍵   預設: " ]"
+-- name_space/use_reverse:  booleand default nil
+-- 如果要反查 須要 dictionary 和 projection pattern 配合
+-- dictionary:  name_space/dictionary or translator/dictionary
+--select_preedit_path: 設定 選用
+-- 可以設定 pattern 使用 以下路逕依序嘗試取得 ConfigList
+--   name_space: user_define  comment_format preedit_format
+--   translator: user_define  comment_format preedit_format
+--   ConfigList()
 
 --[[
 install 1
@@ -168,21 +176,41 @@ local function Warp_cand(cand, projection_func, index )
   return setmetatable(obj, CM )
 end
 
---   env.cand =  (env.cand and env.cand== cand and env.cand)  or cand
---  set cand   set or replace env.cand
-local function set_cand(env,cand)
-      --env.cand = env.cand and env.cand:eq(cand_temp) and env.cand
-      --or Warp_cand(cand_temp, env.projection_func)
-      if not env.cand  then
-        -- set env.cand
-        env.cand=Warp_cand(cand, env.projection_func )
-      elseif not env.cand:eq(cand) then
-        -- replease env.cand
-        env.cand:clear()
-        env.cand=Warp_cand(cand, env.projection_func )
-      end
-end
+--
+--
+--
+local function load_project_func(env)
+  local config= env.engine.schema.config
+  local use_reverse= config:get_int(env.name_space .. '/use_reverse') or  true
 
+  if use_reverse then
+    -- load reversedb
+    local dictionary= config:get_string( env.name_space .. "/dictionary") or config:get_string("translator/dictionary" )
+    reversedb= rime_api.load_reversedb(dictionary)
+
+    select_preedit_path= config:get_string(env.name_space .. '/select_preedit_format') or "comment_format"
+    -- load projection
+      local configlist = List(env.name_space, "translator"):each(function(ns)
+        local _item= List(select_preedit_path, "comment_format","preedit_format"):each(function(path)
+          path = ns .. "/" .. path
+          if config:get_list_size( path ) > 0  then
+            return config:get_list( path )
+          end
+        end )
+        if _item then return _item end
+      end) or ConfigList()
+    projection = Projection()
+    projection:load( configlist )
+    -- update use_reverse
+    use_reverse = projection and reversedb and use_reverse
+  end
+  return  function(warp_cand)
+      local org_word= warp_cand:select_org_character()
+      local word= warp_cand:select_character()
+      return org_word .. (  org_word ~= word and  "[" .. word .."]" or "")
+      .. ( use_reverse  and projection:apply( reversedb:lookup( word ) ) or "" )
+  end
+end
 local M={}
 function M.init(env)
   local config=env.engine.schema.config
@@ -193,29 +221,11 @@ function M.init(env)
   env.head= KeyEvent(nk )
   local pk=config:get_string(env.name_space .. "/prev_key" ) or PREV_KEY
   env.tail= KeyEvent(pk )
-
-  -- load reversedb
-  local dictionary= config:get_string( env.name_space .. "/dictionary") or config:get_string("translator/dictionary" )
-  local reversedb= rime_api.load_reversedb(dictionary)
-
- -- load projection
-  local preedit_item= config:get_item(env.name_space .. "/comment_format")
-  or config:get_item("translator/comment_format" )
-  or ConfigList().element
-  local projection = Projection()
-  projection:load( preedit_item:get_list() )
-
-  -- projection_func( word) return  包含 字根 preedit
-  env.preedit_mode=3
-  env.projection_func = function(warp_cand)
-    local org_word= warp_cand:select_org_character()
-    local word= warp_cand:select_character()
-    return org_word
-    .. ( env.preedit_mode & 2 > 0 and org_word ~= word and  "[" .. word .."]" or "")
-    .. ( env.preedit_mode & 4 > 0 and projection:apply( reversedb:lookup( word ) ) or "" )
-  end
+  -- load preedit_mode  default
+  env.projection_func= load_project_func(env)
 
 end
+
 function M.fini(env)
 end
 
@@ -242,7 +252,7 @@ function M.func(key,env)
       env.cand = env.cand and env.cand or Warp_cand(cand, env.projection_func)
       env.cand:dec()
       return Accepted
-    elseif  env.cand and key.keycode> 0x30 and key.keycode < 0x3a or key.keycode == 0x20 then
+    elseif  env.cand and (key.keycode> 0x30 and key.keycode < 0x3a or key.keycode == 0x20) then
       local n= key.keycode - 0x30
       -- 以詞定字模式標 定字上屏
       env.engine:commit_text( env.cand:select_org_character( n >0 and n or nil ) )
