@@ -117,8 +117,12 @@ local function auto_load(env)
   :each(function(elm)
      local comp_name=elm:split("@")[2]
      if not _G[ comp_name] then
-        _G[comp_name] =require(comp_name) or nil
-        puts(CONSOLE,__FILE__(),__LINE__(), "require component", elm, comp_name )
+        local ok,res= pcall(require, comp_name)
+        if ok then
+          _G[comp_name] = res
+        else
+          puts(WARN,__FILE__(),__LINE__(), "failed require component of ", elm, comp_name )
+        end
      end
   end )
 
