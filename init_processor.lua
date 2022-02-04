@@ -148,14 +148,14 @@ function M.init(env)
 
   -- init end
   -- print component
-  puts(INFO,"---submodules---" )
-  env.modules:each( function(elm)
-  puts(INFO, elm.module, elm.module_name .."@" .. elm.name_space)
-  end )
-  env:print_components()
   do
+    puts(INFO,"---submodules---" )
+    env.modules:each( function(elm)
+      puts(INFO, elm.module, elm.module_name .."@" .. elm.name_space)
+    end )
+    env:print_components()
     local pattern_p= "recognizer/patterns"
-    puts( INFO, "---------" ..  pattern_p .. "-----------" )
+    puts(INFO, "---------" ..  pattern_p .. "-----------" )
     List( config:get_map(pattern_p):keys())
     :each(function(elm)
       puts(INFO, pattern_p .. "/" .. elm .. ":\t" ..  config:get_string( pattern_p .. "/" .. elm  ) )
