@@ -274,12 +274,12 @@ function E:get_status()
 end
 function E:print_components()
   local config= self:Config()
-  puts( "log","-----" ..self.engine.schema.schema_id,self.name_space .. " --------")
+  puts( INFO,"-----" ..self.engine.schema.schema_id,self.name_space .. " --------")
   local function list_print(conf,path)
-  puts( "log","-----" .. path .. " --------")
+    puts( INFO,"-----" .. path .. " --------")
     for i=0, conf:get_list_size(path) -1 do
       path_i= path .. "/@" .. i
-      puts("log", path_i ..":\t" .. conf:get_string(path_i) )
+      puts(INFO, path_i ..":\t" .. conf:get_string(path_i) )
     end
   end
   List({"processors","segmentors","translators","filters"})
