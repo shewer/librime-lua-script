@@ -19,23 +19,23 @@
   ```
 
   ## 設定方法一 : 使用 yaml 設置
-  
-  append init_processor module in rime.lua 
-    
+
+  append init_processor module in rime.lua
+
   ```lua
   -- append rime.lua
   init_processor= require('init_processor')
   ```
   add to <方案>.custom.yaml
-      
+
   ```yaml
   #custom.yaml
   patch:
     __include: processor_plugin:/patch
   ```
-    
+
   edit processor_plugin.yaml
-    
+
   ```yaml
   # processor_plugin.yaml 內容
   # 可自行 remark 不要用的模組
@@ -58,9 +58,9 @@
   ```
 
  ## 設定方法二: 由 rime.lua module2 載入
-    
+
    append init_processor module in rime.lua
-    
+
    ```lua
    -- append rime.lua
    module2={
@@ -72,16 +72,16 @@
 
    init_processor= require('init_processor')
    ```
-   
+
    add to <方案>.custom.yaml
 
    ```yaml
    #custom.yaml
    patch:
      engine/processors/@after 0: lua_processor@init_processor@module2 # module2
-   
+
    ```
-# english_tran.lua 增加 優先載入 wordnanja-rs  , 只要把 wordninja.(dll/so/dylib) 放入 <user_data_dir>/lua/plugin 
+# english_tran.lua 增加 優先載入 wordnanja-rs  , 只要把 wordninja.(dll/so/dylib) 放入 <user_data_dir>/lua/plugin
 # 增加 init_processor.lua
   使用了 tags_match() and ConfigMap:keys() 只支援 librime-lua #131 以上版本 window版本rime.dll 可從 https://github.com/shewer/librime-lua/releases 下載
   可由 yaml name_space 或 rime.lua 載入模組(以 yaml name_space 爲優先)
@@ -89,7 +89,7 @@
   由 init_processor 導入模組
   可用模組 english(包含wordninja) conjunctive command
   化簡繁複 custom.yaml rime.lua 編輯
-  
+
   ## 以词定字
  此模組 可以將詞組拆選井反查單字字根 ，用于单字不会拆时~~
   ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E4%BB%A5%E8%A9%9E%E5%AE%9A%E5%AD%97.gif)
@@ -155,7 +155,7 @@ patch:
       ex: input: btw   candidate:  btw [by the way]  candidate: by the way [btw]
     *  20220124 增加 english/tag 預設 english : 如果須要在 tag:abc 輸出，可以在<方案>.custom.yaml
       設定   english/tag: abc   or  abc_segmentor/extra_tags: [ english ]
-    * english_tran.lua 增加 優先載入 wordnanja-rs  , 只要把 wordninja.(dll/so/dylib) 放入 <user_data_dir>/lua/plugin 
+    * english_tran.lua 增加 優先載入 wordnanja-rs  , 只要把 wordninja.(dll/so/dylib) 放入 <user_data_dir>/lua/plugin
 
 
  ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E8%8B%B1%E6%89%93%E6%A8%A1%E5%BC%8Fdemo.gif)
@@ -190,10 +190,17 @@ patch:
 ```
 
 ## 聯想詞彙 conjunctive.lua (支援librime-lua Commits on Oct 11, 2020 版本)
-   * conjunctive 增加 导入switchs: simplification 切换繁简体词库 [已修正格式 essay-zh-hans.txt ]  来源https://github.com/rime/rime-essay-simp
+   *
+   * conjunctive 增加 导入switchs: simplifier  切换繁简体词库 請使用 essay.txt 轉換 這版本詞比essay.txt 少少 ~~[已修正格式 essay-zh-hans.txt ]  来源https://github.com/rime/rime-essay-simp~~
     简体用户 如果使用此功能注意事項:
-       1 只使用簡體詞庫: 請確認 essay.txt 是簡體版 
-       2 切換繁簡都要有聯想功能: essay.txt 使用原始 繁體版，把簡體版檔名: eassy-zh-hans.txt
+       0 已知 簡體用戶會使用  simpllifier/opencc_config: s2t.jso
+       1 修改 rime.lua  __conjunctive_file  順序
+          ```lua
+              --   繁體使用者 simplifier/opencc_config: t2s.json (預設)  default: 繁體詞庫 enable: 簡體詞庫
+              --  __conjunctive_file={default="essay.txt",enable="essay_zh_han.txt"}
+              -- 簡體使用者 simplifier/opencc_config: s2t.json (預設)  default: 體簡詞庫 enable: 繁體詞庫
+              __conjunctive_file={default="eassay_cn.txt",enable="essay.txt"}
+          ```
    * 上屏後啓動聯想
    * 聯想開關(F11)
    * ~ 觸發聯想
@@ -207,17 +214,17 @@ patch:
 
 ```lua
 --- rime.lua
--- <module_name> 
+-- <module_name>
 conjunctive_proc= require('conjunctive')
 ```
 ```yaml
 ---  custom.yaml
 patch:
-  # lua_processor@<module_name> 
+  # lua_processor@<module_name>
   engine/processors/@after 0: lua_processor@conjunctive_proc
 
 ```
-    
+
 ```bash
 cp example/essay-zh-hans.txt <user_data_dir>/essay-zh-hans.txt
 ```

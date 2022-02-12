@@ -25,8 +25,13 @@
 local List=require 'tools/list'
 local puts = require 'tools/debugtool'
 
+local function convert_excape_char(str,escape_chars)
+-- string:gsub(ESCAPECH, "%%%1")      -- ("abc.?*("):gsub(ESCAPECH,"%%%1")
+  escape_chars = escape_chars or '%-.?()[*'
+  escape_chars = '([' .. escape_chars .. '])'
 
-
+  return str:gsub(escape_chars,"%%%1")
+end
 -- 使用者常用詞
 local _HISTORY=List{
   "發性進行性失語",
@@ -43,48 +48,43 @@ local _HISTORY=List{
 -- user define data
 local pattern_str ="~~"
 local rec_char= "BCH<>~"
-local rec_pattern = ("^%s[%s]*$"):format(pattern_str, rec_char)
+--    ^"~~[BCH<>~]*$"
+local rec_pattern = ("^%s[%s]*$"):format( convert_excape_char(pattern_str),
+convert_excape_char(rec_char) )
 local lua_tran_ns = "conjunctive"
 
 -- 词库设定 : 如果不需要 繁简转换 remark dict_file_cn
 -- 繁简转换原则以 simplifier 工作原则 以 option simplification 切换繁简约
-local dict_file = 'essay.txt'
-local dict_file_cn = 'essay-zh-hans.txt'
-
+local dict_file = __conjunctive_file and __conjunctive_file.default or 'essay.txt'
+local dict_file_cn = __conjunctive_file and __conjunctive_file.enable or 'essay_cn.txt'
 --dict_file= '/usr/share/rime-data/essay.txt'  -- debug
 local switch_key ="F11"
-local escape_key = "%.%-"
+local escape_key = ".-"
 local path_ch= package.config:sub(1,1)
 
+
 local Dict = require 'tools/dict'
-local M={}
-puts(CONSOLE,__FILE__(),"load dict .........")
-local t1=os.clock()
-M._dict=M._dict or  Dict( "." .. path_ch .. dict_file)
-  or Dict( rime_api.get_user_data_dir() .. path_ch  .. dict_file)
-  or Dict( rime_api.get_shared_data_dir() .. path_ch .. dict_file)
-if not M._dict then 
-  puts("trace", __FILE__(),__LINE__(), "open dict faild", dict_file )
-end 
-puts(CONSOLE,__FILE__(),"loaded dict .........",os.clock() - t1 )
-
-
-puts(CONSOLE,__FILE__(),"load dict .........")
-local t1=os.clock()
-if dict_file_cn then
-  M._dict_cn =  M._dict_cn
-  or  Dict( "." .. path_ch .. dict_file_cn)
-  or Dict( rime_api.get_user_data_dir() .. path_ch  .. dict_file_cn)
-  or Dict( rime_api.get_shared_data_dir() .. path_ch .. dict_file_cn)
-  if not M._dict_cn then 
-    puts("trace", __FILE__(),__LINE__(), "open dict faild", dict_file_cn )
-  end 
+local function load_dict( filename)
+  puts(INFO,__FILE__(),"load dict .........",filename)
+  local t1=os.clock()
+  local dict=  Dict( "." .. path_ch .. filename)
+  or Dict( rime_api.get_user_data_dir() .. path_ch  .. filename)
+  or Dict( rime_api.get_shared_data_dir() .. path_ch .. filename)
+  if not dict then
+    puts(WARNING, __FILE__(),__LINE__(), "open dict faild",  filename)
+  end
+  puts(INFO,__FILE__(),"loaded dict .........",os.clock() - t1 )
+  return dict
 end
-puts(CONSOLE,__FILE__(),"loaded dict .........",os.clock() - t1 )
+
+local M={}
+
+M._dict= M._dict or load_dict( dict_file)
+M._dict_cn= M.dict_cn or load_dict( dict_file_cn)  or M._dict
 
 function M.init(env)
-  env.dict= M._dict or Dict("essay.txt")
-  env.dict_cn= M._dict_cn or M._dict
+  env.dict= M._dict
+  env.dict_cn= M._dict_cn
 
   env.history=""
   env.history_back=""
@@ -102,13 +102,14 @@ function M.init(env)
         env.history = cand.comment:match("^(.*)[-][-].*$") or env.history
       end
 
+      -- update history
       local commit_text= ctx:get_commit_text()
       if  #commit_text>0 and  ctx.input ~= commit_text then
         env.history = env.history .. commit_text
         env.history = env.history:utf8_sub(-10)
-        --print( env.history, ctx.input , ctx:get_commit_text() )
 
-        env.history_commit=  not env.dict:empty(env.history)
+
+        env.commit_trigger =  not env.dict:empty(env.history)
       end
   end  )
 
@@ -116,8 +117,8 @@ function M.init(env)
 
   env.update_connect= env.engine.context.update_notifier:connect(
     function(ctx)
-      if env.history_commit then
-        env.history_commit=nil
+      if env.commit_trigger then
+        env.commit_trigger =nil
         ctx.input=pattern_str
       end
   end )
@@ -234,10 +235,14 @@ function P.init(env)
   components(env)
 
 
-  env.commit_select= ("^[%s%s%s]$"):format(
-    rec_char .. " " , config:get_string("menu/alternative_select_keys") or "%d", escape_key )
+  env.select_key= convert_excape_char( config:get_string("menu/alternative_select_keys") or "" )
+
+  env.escape_regex = ("^[%s%s ]$"):format(
+    convert_excape_char( rec_char .. env.select_key .. " " .. escape_key) , "%d" )
   -- set alphabet string
-  env.alphabet= config:get_string("speller/alphabet") or "zyxwvutsrqponmlkjihgfedcba"
+  env.alphabet_regex= ("^[%s%s]$"):format(
+   convert_excape_char( config:get_string("speller/alphabet") or "zyxwvutsrqponmlkjihgfedcba") )
+
   env.key_press=false
 end
 
@@ -245,6 +250,7 @@ function P.fini(env)
 end
 
 function P.func(key, env)
+  print()
   local Rejected,Accepted,Noop= 0,1,2
 
   local context = env.engine.context
@@ -254,23 +260,31 @@ function P.func(key, env)
   if not conjunctive_mode then return Noop end
 
   local status= env:get_status()
-  local ascii=  key.modifier <=1 and key.keycode <128
+  -- ascii  : #ascii == 1  or  ""
+  local ascii=  key.modifier <=1  and key.keycode <128
     and string.char(key.keycode)
     or ""
 
-  --puts(CONSOLE,__FILE__(),__LINE__(),"keyven check ======>", key,key:repr(),key.keycode,key.modifier,ascii)
   if status.empty and ascii == "~" then
     -- "~" 觸發聯想
     context.input= pattern_str
     return Accepted
   end
-
   -- 中斷聯想: 清除input  ~~ 不處理key
-  if  context.input:match("^" .. pattern_str)
-    and not   ascii:match(env.commit_select)
-    and ( #ascii > 0 or key:repr() == "Return" ) then
-    context:clear()
-    return Noop
+  if  context.input:match("^" .. pattern_str) then
+    -- pass ~<>HBC  select_commit char and  escape_key
+    if ascii:match(env.escape_regex) then
+      --pass
+    elseif ascii:match(env.alphabet_regex) or  ascii:match("^%p$") then
+      context:clear()
+    --
+    elseif key:repr() == "Return" or key:repr() == "BackSpace" then
+      context:clear()
+      return Accepted
+    -- elseif ascii:match(env.escape_regex) then
+    else
+
+    end
   end
 
   return Noop

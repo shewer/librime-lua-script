@@ -16,6 +16,13 @@ patch:
    engine/processors/lua_processor@init_processor@module2
  
 --]]
+
+-- 繁體使用者 simplifier/opencc_config: t2s.json (預設)  default: 繁體詞庫 enable: 簡體詞庫
+-- 
+__conjunctive_file={default="essay.txt",enable="essay_cn.txt"}
+-- 簡體使用者 simplifier/opencc_config: s2t.json (預設)  default: 體簡詞庫 enable: 繁體詞庫
+-- __conjunctive_file={default="eassay-zh-hans.txt",enable="essay.txt"}
+
 module1={
   {module = "command"    , module_name = "cammand_proc"    , name_space = "command" },
   {module = "conjunctive", module_name = "conjunctive_proc", name_space = "conjunctive"},

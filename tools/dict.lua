@@ -127,9 +127,15 @@ function M:reduce_find_word(word)
 end
 
 
+--function M:empty(word)
+  --local key=word:utf8_sub(1,1)
+  --return self[key] == nil or #self[key] < 2 or false
+--end
 function M:empty(word)
-  local key=word:utf8_sub(1,1)
-  return self[key] == nil or #self[key] < 2 or false
+  for w,wt in self:reduce_iter(word) do
+    return false
+  end
+  return true
 end
 
 function M:word_iter(word)
