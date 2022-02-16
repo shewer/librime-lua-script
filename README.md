@@ -190,7 +190,7 @@ patch:
 ```
 
 ## 聯想詞彙 conjunctive.lua (支援librime-lua Commits on Oct 11, 2020 版本)
-   *
+   * 增加候選字聯想: 暫時不適用( 拼音類輸入法 候選字太多 )
    * conjunctive 增加 导入switchs: simplifier  切换繁简体词库 請使用 essay.txt 轉換 這版本詞比essay.txt 少少 ~~[已修正格式 essay-zh-hans.txt ]  来源https://github.com/rime/rime-essay-simp~~
     简体用户 如果使用此功能注意事項:
        0 已知 簡體用戶會使用  simpllifier/opencc_config: s2t.jso

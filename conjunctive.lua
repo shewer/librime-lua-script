@@ -56,6 +56,7 @@ local rec_char= "BCH<>~"
 local rec_pattern = ("^%s[%s]*$"):format( convert_excape_char(pattern_str),
 convert_excape_char(rec_char) )
 local lua_tran_ns = "conjunctive"
+local simplification= "simplification"
 
 -- 词库设定 : 如果不需要 繁简转换 remark dict_file_cn
 -- 繁简转换原则以 simplifier 工作原则 以 option simplification 切换繁简约
@@ -193,39 +194,46 @@ local F={}
 function F.init(env)
   env.dict= M._dict
   env.dict_cn= M._dict_cn
+  env.preedit= "[聯]"
+  env.max=8
+  env.weight=100
 end
 function F.fini(env)
 end
 function F.func(input,env)
   local context= env.engine.context
-  local preedit= "[聯]"
   local history=context:get_property(env.name_space)
-  local dict = context:get_option("simplification") and env.dict or env.dict_cn
-  puts(DEBUG, __LINE__(), "----------------check dict in filter -------------------",dict , dict.reduce_iter)
+  local dict = context:get_option("simplification") and env.dict_cn or env.dict
   local list=List()
+  local comp_cand
   for cand in input:iter() do
-    if cand.type ~= "completion" then
-      if cand.type ~= lua_tran_ns then
-        list:push(cand)
-      end
-      yield(cand)
-    else
-      list:each(function(elm)
-        if #elm.text > 0 then
-          local count = 0
-          for w,wt in dict:reduce_iter( history .. elm.text ) do
-            conut = count +1
-            if wt >= 100 and count < 8 then
-              local cand= Candidate( lua_tran_ns , elm.start,elm._end, elm.text .. w, "(聯)")
-              cand.preedit=w .. preedit
-              yield(cand)
-            end
-          end
-        end
-      end)
-      yield(cand)
+    if cand.type == "completion" then 
+      comp_cand= cand
+      break
     end
-  end
+    if cand.type ~= "history" and #cand.text > 0 then list:push(cand) end
+    yield(cand)
+  end 
+  -- conjunctive filter 
+  list:each(function(elm)
+    local count = 0
+    for w,wt in dict:reduce_iter( history .. elm.text ) do
+      count = count +1
+      if wt >= env.weight and count < env.max then -- weight 
+        local cand= Candidate( "history" , elm.start,elm._end, elm.text .. w, env.preedit )
+        if cand then 
+          cand.preedit=elm.text .. w .. env.preedit
+          yield(cand) 
+        end 
+      end
+    end
+  end)
+  -- campletion cand
+  if comp_cand then yield(comp_cand) end
+  for ccand in input:iter() do 
+    yield(ccand)
+  end 
+
 
 end
 
