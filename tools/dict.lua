@@ -103,7 +103,7 @@ function M:find_word( word)
     local dict=self[word:utf8_sub(1,1)] or List()
     --- sort check
     if not dict._sorted then
-      dict:sort_serf(s_func)
+      dict:sort_self(s_func)
       dict._sorted = true
     end
     --  sert end
@@ -150,7 +150,7 @@ function M:word_iter(word)
     for i,elm in ipairs(dict) do
       local w,wt = elm:match("^" .. word .. "(.+)-(%d*).*$" )
       if w then
-        coroutine.yield( w,wt)
+        coroutine.yield( w,tonumber(wt))
       end
     end
   end )
