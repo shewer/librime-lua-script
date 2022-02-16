@@ -19,7 +19,11 @@
 
   這個模塊會自動建立
   engine/translators: lua_translator@conjunctive --
+
+  engine/filters: lua_filter@conjunctive_filter@conjunctive
+
   recognizer/patterns/conjunctive:  "^" .. pattern_str  觸發 tag
+
 --]]
 
 local List=require 'tools/list'
@@ -77,6 +81,7 @@ local function load_dict( filename)
   return dict
 end
 
+-- lua_translator@conjunctive
 local M={}
 
 M._dict= M._dict or load_dict( dict_file)
@@ -106,6 +111,7 @@ function M.init(env)
       local commit_text= ctx:get_commit_text()
       if  #commit_text>0 and  ctx.input ~= commit_text then
         env.history = env.history .. commit_text
+        context:set_property(env.name_space,env.history)
         env.history = env.history:utf8_sub(-10)
 
 
@@ -183,7 +189,45 @@ function M.func(input,seg,env)
   end
 end
 
+local F={}
+function F.init(env)
+  env.dict= M._dict
+  env.dict_cn= M._dict_cn
+end
+function F.fini(env)
+end
+function F.func(input,env)
+  local context= env.engine.context
+  local preedit= "[聯]"
+  local history=context:get_property(env.name_space)
+  local dict = context:get_option("simplification") and env.dict or env.dict_cn
+  puts(DEBUG, __LINE__(), "----------------check dict in filter -------------------",dict , dict.reduce_iter)
+  local list=List()
+  for cand in input:iter() do
+    if cand.type ~= "completion" then
+      if cand.type ~= lua_tran_ns then
+        list:push(cand)
+      end
+      yield(cand)
+    else
+      list:each(function(elm)
+        if #elm.text > 0 then
+          local count = 0
+          for w,wt in dict:reduce_iter( history .. elm.text ) do
+            conut = count +1
+            if wt >= 100 and count < 8 then
+              local cand= Candidate( lua_tran_ns , elm.start,elm._end, elm.text .. w, "(聯)")
+              cand.preedit=w .. preedit
+              yield(cand)
+            end
+          end
+        end
+      end)
+      yield(cand)
+    end
+  end
 
+end
 
 
 -- option conjunctive enable(false ) disable(true)
@@ -205,7 +249,7 @@ end
 -- append  lua_translator@conjunctive
 local function components(env)
   local config=env:Config()
-  -- set module  "conjunctive"
+  -- set module  "conjunctive translator"
   _G[lua_tran_ns]= _G[lua_tran_ns] or M
   -- add lua_translator after echo_translator before punct_translator
   local path= "engine/translators"
@@ -213,6 +257,14 @@ local function components(env)
   if not config:find_index(path,name) then
     config:config_list_append(path, name)
   end
+  -- set module  conjunctive filter"
+  _G[lua_tran_ns .. "_filter"]= _G[lua_tran_ns .. "_filter" ] or F
+  local path = "engine/filters"
+  local name = "lua_filter@" .. lua_tran_ns .. "_filter@" .. env.name_space
+  if not config:find_index(path,name) then
+    config:config_list_append(path, name)
+  end
+
 
   -- add pattern "~~"
   config:set_string("recognizer/patterns/" .. lua_tran_ns , rec_pattern)
