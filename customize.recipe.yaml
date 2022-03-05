@@ -9,6 +9,7 @@ recipe:
     Customize input schema to input character based on a phrase
 install_files: >-
   processor_plugin.yaml
+  lua/init_processor.lua
   lua/command/command_str.lua
   lua/command/init.lua
   lua/component/select_character.lua
