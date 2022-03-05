@@ -1,0 +1,56 @@
+
+# encoding: utf-8
+---
+recipe:
+  Rx: customize
+  args:
+    - schema=luna_pinyin
+  description: >-
+    Customize input schema to input character based on a phrase
+install_files: >-
+  processor_plugin.yaml
+  lua/command/command_str.lua
+  lua/command/init.lua
+  lua/component/select_character.lua
+  lua/component/unicode.lua
+  lua/component/uniquifier.lua
+  lua/english/README.md
+  lua/english/english.dict.xlsx
+  lua/english/english.txt
+  lua/english/english1.txt
+  lua/english/english_plugin.yaml
+  lua/english/english_tran.lua
+  lua/english/english_tw.txt
+  lua/english/ext_dict.txt
+  lua/english/init.lua
+  lua/english/rime.lua
+  lua/multi_reverse/README.md
+  lua/multi_reverse/completion.lua
+  lua/multi_reverse/init.lua
+  lua/multi_reverse/keybind_cfg.lua
+  lua/multi_reverse/mfilter.lua
+  lua/multi_reverse/multiswitch.lua
+  lua/tools/README.md
+  lua/tools/debugtool.lua
+  lua/tools/dict.lua
+  lua/tools/english_dict.lua
+  lua/tools/english_tw.txt
+  lua/tools/inspect.lua
+  lua/tools/json.lua
+  lua/tools/key_binder.lua
+  lua/tools/list.lua
+  lua/tools/luaunit.lua
+  lua/tools/meta_string.lua
+  lua/tools/metatable.lua
+  lua/tools/object.lua
+  lua/tools/object_new.lua
+  lua/tools/pattern.lua
+  lua/tools/rime_api.lua
+  lua/tools/string.lua
+  lua/tools/wordninja.lua
+  lua/tools/wordninja_words.txt
+  lua/conjunctive.lua
+patch_files:
+  ${schema:-luna_pinyin}.custom.yaml:
+    - patch/+:
+        __include: processor_plugin:/patch
