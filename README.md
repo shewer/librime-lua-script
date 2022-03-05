@@ -9,13 +9,23 @@
   * 載入程序: 以上模組都可以獨立手動載入也可以利用, init_processor.lua 把需要載入模組設定於 <name_space>/modules: {list}. 預設以此模式[安裝](#安裝)。
 
   # 安裝
-  ## 事前準備
+  
+  ## plum 安裝至方案中
+  
+  ```bash
+    # plugin in cangjie5
+    rime-install shewer/librime-lua-script@main:customize:schema=cangjie5
+    echo 'init_processor= require("init_processor")' >> rime.lua 
+    
+  ``` 
+  
+  ## 手動安裝事前準備
   ```bash
   cd  <user-data-dir>
   git clone https://github.com/shewer/librime-lua-script --depth=1
-  mv librime-lua-script/*  ./lua
-  cp lua/example/processor_plugin.yaml .
-  cp lua/example/essay-zh-hans.txt .
+  mv librime-lua-script/lua/*  ./lua
+  cp libryme-lua-script/processor_plugin.yaml .
+  cp librime-lua-script/example/essay-zh-hans.txt .
   ```
 
   ## 設定方法一 : 使用 yaml 設置
