@@ -6,41 +6,68 @@
 -- Distributed under terms of the MIT license.
 --
 --[[
-option  _debug   disable / enable
-property _debug   "type,quality"    key1,key2,key3
-key:  CandidateReg get    
-key:  dtype  get_dynamic_type
+<schema_name>.custom.yaml
+  engine/filters/@next: lua_filter@debug_filter
+
+enable switch:
+   option_name: _debug   disable / enable
+data output :
+   property _debug
+   cand data_name: type start _end comment quality preedit , dtype
+
+ex:
+  context:set_option("_debug", true)
+  context:set_property("_debug", "dtype,comment,_end,start,quality")
 
 --
 --]]
+
+local output_fmt="dtype,type,start,_end,preedit,quality"
+
 require 'tools/string'
 local List=require 'tools/list'
+local function config_list_to_set(config_list)
+  if not config_list then return config_list end
+  if config_list then
+    local tab ={}
+    for i=0,config_list.size-1 do
+      table.insert(tab, config_list:get_value_at(i).value)
+    end
+    return Set(tab)
+  end
+end
+
 local M={}
 function M.init(env)
   local context= env.engine.context
-  context:set_property("_debug", "dtype,type,start,_end,preedit,quality" )
+  local config= env.engine.schema.config
+  output_fmt= config:get_string(env.name_space .. "/output_format") or output_fmt
+  context:set_property("_debug", output_fmt )
+  env.tags = config_list_to_set( config:get_list( env.name_space .. "/tags"))
+  env.name = "_debug"
+
 end
 function M.fini(env)
 end
 
 function M.tags_match(seg,env)
-   return env.engine.context:get_option("_debug")
+  --  tags all : env.tags == nil or faile
+  local tags_match=  not env.tags or not (seg.tags * env.tags):empty()
+  return tags_match and env.engine.context:get_option(env.name)
 end
 
 function M.func(input, env)
-   local items = List(env.engine.context:get_property("_debug"):split(","))
-   items:each(print)
+   local items = List(env.engine.context:get_property(env.name):gsub(" ",""):split(","))
    for cand in input:iter() do
       if cand.type ~= "command" then
        cand.comment = cand.comment  ..
-       items:reduce(
-       function(elm,org) 
-         return  org .. ( elm == "dtype" and cand.get_dynamic_type(cand) or cand[elm] ) .. "|"
-       end
-         , "--")
+       items:reduce( function(elm,org)
+         return  org .. ( elm == "dtype" and cand.get_dynamic_type(cand)
+         or ( cand[elm] or ""  ))  .. "|"
+       end, "--")
       end
       yield(cand)
    end
-end 
+end
 return M
 
