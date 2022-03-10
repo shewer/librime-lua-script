@@ -272,14 +272,15 @@ function E:get_status()
   stat.paging= not empty and comp:back():has_tag("paging")
   return stat
 end
-function E:print_components()
+function E:print_components(out)
+  out = out or INFO
   local config= self:Config()
-  puts( INFO,"-----" ..self.engine.schema.schema_id,self.name_space .. " --------")
+  puts(out,"-----" ..self.engine.schema.schema_id,self.name_space .. " --------")
   local function list_print(conf,path)
-    puts( INFO,"-----" .. path .. " --------")
+    puts(out,"-----" .. path .. " --------")
     for i=0, conf:get_list_size(path) -1 do
       path_i= path .. "/@" .. i
-      puts(INFO, path_i ..":\t" .. conf:get_string(path_i) )
+      puts(out, path_i ..":\t" .. conf:get_string(path_i) )
     end
   end
   List({"processors","segmentors","translators","filters"})
