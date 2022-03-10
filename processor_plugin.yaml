@@ -12,6 +12,13 @@ patch:
     - { module: 'english', module_name: "english_proc", name_space: "english" }
     - { module: "conjunctive", module_name: "conjunctive_proc", name_space: "conjunctive" }
     - { module: 'multi_reverse', module_name: "multi_reverse__proc", name_space: "multi_reverse" }
+  # init_processor   append comopents
+  module1/comopnents:
+    filters:
+      - lua_filter@strock_count
+      - lua_filter@debug_filter
+    segments:
+    translators:
   switches/+:
     - name: conjunctive
       states: [ 無,聯]
