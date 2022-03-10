@@ -42,9 +42,11 @@ function M.init(env)
   local context= env.engine.context
   local config= env.engine.schema.config
   output_fmt= config:get_string(env.name_space .. "/output_format") or output_fmt
+  --init option property
+  env.option= "_debug"
+  context:set_option(env.option, context:get_option(env.option) or false)
   context:set_property("_debug", output_fmt )
   env.tags = config_list_to_set( config:get_list( env.name_space .. "/tags"))
-  env.name = "_debug"
 
 end
 function M.fini(env)
@@ -53,11 +55,11 @@ end
 function M.tags_match(seg,env)
   --  tags all : env.tags == nil or faile
   local tags_match=  not env.tags or not (seg.tags * env.tags):empty()
-  return tags_match and env.engine.context:get_option(env.name)
+  return tags_match and env.engine.context:get_option(env.option)
 end
 
 function M.func(input, env)
-   local items = List(env.engine.context:get_property(env.name):gsub(" ",""):split(","))
+   local items = List(env.engine.context:get_property(env.option):gsub(" ",""):split(","))
    for cand in input:iter() do
       if cand.type ~= "command" then
        cand.comment = cand.comment  ..

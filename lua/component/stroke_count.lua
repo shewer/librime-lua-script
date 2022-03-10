@@ -49,9 +49,13 @@ local M={}
 function M.init(env)
   local context=env.engine.context
   local config=env.engine.schema.config
+  -- init option
+  env.option= "stroke_count"
+  context:set_option(env.option, context:get_option(env.option) or false)
 
   env.str_fmt= config:get_string(env.name_space .. "/stroke_format" ) or str_fmt
   env.reversedb= ReverseDb( "build"  .. slash ..  "stroke.reverse.bin" )
+
   --  config_list to Set
   env.tags =  config_list_to_set( config:get_list(env.name_space .. "./tags"))
 end
@@ -61,7 +65,7 @@ end
 function M.tags_match(seg,env)
   --  tags all : env.tags == nil or faile
   local tags_match=  not env.tags or not (seg.tags * env.tags):empty()
-  return tags_match and env.engine.context:get_option("stroke_count")
+  return tags_match and env.engine.context:get_option(env.option)
 end
 
 function M.func(input,env)
