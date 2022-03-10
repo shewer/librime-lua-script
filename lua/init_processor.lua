@@ -133,16 +133,16 @@ local function config_list_append(dest_list,config_value)
   local match_flag
   for i=0 ,dest_list.size -1 do
     match_flag = dest_list:get_value_at(i).value == config_value.value
+    if match_flag then
+      puts(WARNING,__LINE__(), "cancel append duplicate component", config_value.value )
+      return false
+    end
   end
   -- append component
-  if not match_flag then
-    dest_list:append( config_value.element )
-    return true
-  end
-  return false
+  dest_list:append( config_value.element )
+  puts(INFO,__LINE__(), "append component",config_value.value )
+  return true
 end
-
-
 
 local function append_component(env,path)
   local config=env:Config()
