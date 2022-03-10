@@ -127,16 +127,38 @@ local function auto_load(env)
   end )
 
 end
+local function append_component(env,path)
+  local config=env:Config()
+  local context=env:Context()
+  for i,v in next ,{"segments", "translators", "filters"} do
+    local dest_list= config:get_list("engine/" .. v)
+    print( "------------>" , path .. "/" .. v )
+    local from_list= config:get_list(path .. "/" .. v)
+    if from_list then
+      for i=0,from_list.size-1 do
+        local compo= from_list:get_value_at(i).value
+        local module= compo:match("^lua_%a+@.*$"):split("@")[2]
+        print("luamodule : -------------------", module, _G[module])
+
+
+        dest_list:append(  from_list:get_at(i) )
+      end
+    end
+  end
+end
 
 local M={}
 function M.init(env)
   Env(env)
-  auto_load(env)
-  -- init self --
   local config=env:Config()
+  -- append component before modules
+  append_component(env, env.name_space .. "/before_modules")
 
   -- include module
   env.modules = init_module( env )
+
+  -- init self --
+
 
   -- call sub_processor
   env.modules:each( function(elm)
@@ -146,21 +168,30 @@ function M.init(env)
     end
   end)
 
+  -- append component after modules
+  append_component(env, env.name_space .. "/after_modules")
+  auto_load(env)
   -- init end
   -- print component
-  do
-    puts(INFO,"---submodules---" )
-    env.modules:each( function(elm)
-      puts(INFO, elm.module, elm.module_name .."@" .. elm.name_space)
-    end )
-    env:print_components()
-    local pattern_p= "recognizer/patterns"
-    puts(INFO, "---------" ..  pattern_p .. "-----------" )
-    List( config:get_map(pattern_p):keys())
-    :each(function(elm)
-      puts(INFO, pattern_p .. "/" .. elm .. ":\t" ..  config:get_string( pattern_p .. "/" .. elm  ) )
-    end )
+  local function log_out(out)
+    out = out or INFO
+    do
+      puts(out,"---submodules---" )
+      env.modules:each( function(elm)
+        puts(out, elm.module, elm.module_name .."@" .. elm.name_space)
+      end )
+      env:print_components(out)
+      local pattern_p= "recognizer/patterns"
+      puts(out, "---------" ..  pattern_p .. "-----------" )
+      List( config:get_map(pattern_p):keys())
+      :each(function(elm)
+        puts(out, pattern_p .. "/" .. elm .. ":\t" ..  config:get_string( pattern_p .. "/" .. elm  ) )
+      end )
+    end
   end
+  log_out(CONSOLE)
+  log_out(INFO)
+
 end
 
 
