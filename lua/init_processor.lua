@@ -127,21 +127,32 @@ local function auto_load(env)
   end )
 
 end
+
+local function config_list_append(dest_list,config_value)
+  -- check match component
+  local match_flag
+  for i=0 ,dest_list.size -1 do
+    match_flag = dest_list:get_value_at(i).value == config_value.value
+  end
+  -- append component
+  if not match_flag then
+    dest_list:append( config_value.element )
+    return true
+  end
+  return false
+end
+
+
+
 local function append_component(env,path)
   local config=env:Config()
   local context=env:Context()
-  for i,v in next ,{"segments", "translators", "filters"} do
+  for _,v in next ,{"segments", "translators", "filters"} do
     local dest_list= config:get_list("engine/" .. v)
-    print( "------------>" , path .. "/" .. v )
     local from_list= config:get_list(path .. "/" .. v)
     if from_list then
       for i=0,from_list.size-1 do
-        local compo= from_list:get_value_at(i).value
-        local module= compo:match("^lua_%a+@.*$"):split("@")[2]
-        print("luamodule : -------------------", module, _G[module])
-
-
-        dest_list:append(  from_list:get_at(i) )
+        config_list_append(dest_list, from_list:get_value_at(i) )
       end
     end
   end

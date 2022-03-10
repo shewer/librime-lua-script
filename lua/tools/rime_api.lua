@@ -40,7 +40,7 @@ local puts = require 'tools/debugtool'
 
 local function Version()
   local ver
-  if Opencc then 
+  if Opencc then
     ver = 147
   elseif KeySequence().repr then
     ver= 139
@@ -84,9 +84,9 @@ function Init_projection( config, path)
     return old_Init_projection(config,path)
   end
   local patterns= config:get_list( path )
-  if not patterns then 
+  if not patterns then
     puts(WARN, __FILE__(),__FUNC__(),__LINE__(), "configlist of " .. path .. "is null" )
-  elseif patterns.size <1 then 
+  elseif patterns.size <1 then
     puts(WARN, __FILE__(),__FUNC__(),__LINE__(), "configlist of " .. path .. "size is 0" )
   end
   local projection= Projection()
@@ -143,70 +143,70 @@ function CN.write_configlist(config,path,list)
   end )
   return #list
 end
--- 
+--
 function CN.find_index(config,path,str)
-  if not config:is_list(path) or 1 > config:get_list_size(path)   then 
-    return 
-  end 
+  if not config:is_list(path) or 1 > config:get_list_size(path)   then
+    return
+  end
   local size = config:get_list_size(path)
   for i=0,size -1 do
     local ipath= path .. "/@" .. i
-    if config:is_value(ipath) and  config:get_string(ipath ):match(str) then 
-      return i 
-    end 
-  end 
-end 
+    if config:is_value(ipath) and  config:get_string(ipath ):match(str) then
+      return i
+    end
+  end
+end
 -- just for list of string for now
 function CN.config_list_insert(config,path,obj,index)
-  if config:is_null(path) then 
+  if config:is_null(path) then
     local clist= ConfigList()
     clist:append( ConfigValue(str).element )
     config:set( path, clist.element )
-    return true 
-  end 
-  if not config:is_list(path) then return end 
-  local size = config:get_list_size(path) 
+    return true
+  end
+  if not config:is_list(path) then return end
+  local size = config:get_list_size(path)
   index = index and index <= size and index or size
   local ipath = path .. "/@before " ..index
-  local ctype= type(obj) 
-  if type(obj) == "string" then 
-    config:set_string(ipath , obj ) 
+  local ctype= type(obj)
+  if type(obj) == "string" then
+    config:set_string(ipath , obj )
     return true
-  end 
+  end
   return false
-end 
+end
 
-function CN.config_list_append(config ,path, str) 
+function CN.config_list_append(config ,path, str)
 
-  if config:is_null(path) then 
+  if config:is_null(path) then
     local clist= ConfigList()
     clist:append( ConfigValue(str).element )
     config:set_item( path, clist.element )
-    return true 
-  end 
+    return true
+  end
   local list = assert( config:get_list(path) , ("%s:%s: %s not a List"):format( __FUNC__(),__LINE__(), path))
-  if list and not index then 
+  if list and not index then
       list:append( ConfigValue(str).element )
       return true
-  else 
+  else
       return false
-  end 
-end 
+  end
+end
 
 function CN.config_list_replace(config,path, target, replace )
   --local index=config:find_index( path, target)
-  local size= config:is_list(path) and config:get_list_size(path) 
-  for i = 0,size - 1 do 
-    local ipath= path .. "/@" .. i 
-    local l_str= config:get_string( ipath ) 
+  local size= config:is_list(path) and config:get_list_size(path)
+  for i = 0,size - 1 do
+    local ipath= path .. "/@" .. i
+    local l_str= config:get_string( ipath )
     if l_str and l_str:match(target) then
       config:set_string(ipath, replace )
       return true
-    end 
-  end 
+    end
+  end
   return false
-end 
------ rime_api tools 
+end
+----- rime_api tools
 local M=rime_api
 M.Version=Version
 -- Context method
@@ -214,7 +214,7 @@ M.Version=Version
 --                    Unset_option("test") -- set option "test" false
 --                    Toggle_option("test")  -- toggle "test"
 --  Projection api
-M.Projection=Init_projection 
+M.Projection=Init_projection
 --  filter tools
 function M.load_reversedb(dict_name)
   -- loaded  ReverseDb
@@ -227,11 +227,11 @@ function M.load_reversedb(dict_name)
 end
 local function Wrap(obj,name,tab)
   local mt=getmetatable(obj)
-  for k,v in next,tab do 
+  for k,v in next,tab do
     mt[name][k]=v
-  end 
+  end
   return obj
-end 
+end
 function M.wrap_context(env)
     local context=env.engine.context
     return Wrap(context,"methods",C)
@@ -272,6 +272,7 @@ function E:get_status()
   stat.paging= not empty and comp:back():has_tag("paging")
   return stat
 end
+
 function E:print_components(out)
   out = out or INFO
   local config= self:Config()
