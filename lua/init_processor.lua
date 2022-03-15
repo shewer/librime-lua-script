@@ -59,12 +59,28 @@ init_cpath()
 require 'tools/string'
 require 'tools/rime_api'
 local puts=require'tools/debugtool'
-package.path= package.path .. ";./lua/component/?.lua"
+local slash = package.config:sub(1,1)
+local component_path= (";%s/%s"):format(rime_api.get_user_data_dir(), "./lua/component/?.lua"):gsub("/",slash)
+package.path= package.path -- .. component_path
 
 
 
 local List = require 'tools/list'
 local module_key=List("module","module_name","name_space")
+
+local function req_module(mod_name,rescue)
+  local slash= package.config:sub(1,1)
+  local ok,res
+  if _G[mod_name] then return _G[mod_name] end
+
+  ok,res = pcall(require, mod_name )
+  if ok then return res end
+
+  ok , res = pcall(require, 'component' .. slash .. mod_name )
+  if ok then return res end
+  puts(ERROR,__LINE__(), "require module failed ", mod_name , e )
+  return  rescue
+end
 
 local function load_config(env)
   local path= env.name_space .. "/modules"
@@ -84,27 +100,27 @@ local function load_config(env)
   end
   return #modules > 0 and modules or nil
 end
-
 local function init_module(env)
   local config = env:Config()
   -- load modules from  name_space/modules  or _G[name_space]
-  local modules=  load_config(env)
-      or  List( _G[env.name_space] )
+  local modules=  load_config(env) or  List( _G[env.name_space] )
   return modules:map(function(elm)
-    local proc_m={}
-    proc_m.module = _G[elm.module_name]
-    or require(elm.module)
-    or require("component/" .. elm.module  )
-    proc_m.module_name= elm.module_name
-    proc_m.name_space = elm.name_space
-    proc_m.env={}
-    proc_m.env.name_space= elm.name_space
-    proc_m.env.engine = env.engine
-    return proc_m
+    local m = req_module(elm.module)
+    m = type(m) == "function" and {func=m} or m
+    return  {
+      module_name= elm.module_name,
+      name_space = elm.name_space,
+      module = m,
+      env={
+        engine=env.engine,
+        name_space = elm.name_space,
+      }
+    }
   end)
 end
 
-local function auto_load(env)
+local function auto_load(env,tab_G)
+  tab_G = type(tab_G) == "table"  or _G
   local config=env.engine.schema.config
   local lua_components = List("processors","segments","translators","filters")
   :map(function(elm) return config:get_list("engine/" .. elm) end)
@@ -115,33 +131,33 @@ local function auto_load(env)
     return org
   end, List() )
   :each(function(elm)
-     local comp_name=elm:split("@")[2]
-     if not _G[ comp_name] then
-        local ok,res= pcall(require, comp_name)
-        if ok then
-          _G[comp_name] = res
-        else
-          puts(WARN,__FILE__(),__LINE__(), "failed require component of ", elm, comp_name )
-        end
-     end
+     local name_comp,name_module, name_space = table.unpack( elm:split("@"))
+     name_space = name_space or name_module
+     --  lua_translator  ---> Rescue_translator
+     local rescue= name_comp:gsub("^lua_", "Rescue_")
+     _G[name_module] = _G[name_module] or req_module(name_module, _G[rescue])
   end )
 
 end
 
-local function config_list_append(dest_list,config_value)
-  -- check match component
-  local match_flag
+local function check_duplicate_value(dest_list,config_value)
   for i=0 ,dest_list.size -1 do
-    match_flag = dest_list:get_value_at(i).value == config_value.value
-    if match_flag then
+    if  dest_list:get_value_at(i).value == config_value.value then
       puts(WARNING,__LINE__(), "cancel append duplicate component", config_value.value )
-      return false
+      return true
     end
   end
-  -- append component
-  dest_list:append( config_value.element )
-  puts(INFO,__LINE__(), "append component",config_value.value )
-  return true
+  return false
+end
+local function config_list_append(dest_list,config_value)
+  -- check match component
+  if check_duplicate_value(dest_list,config_value) then
+      puts(WARNING,__LINE__(), "cancel append duplicate component", config_value.value )
+  else
+    -- append component
+    dest_list:append( config_value.element )
+    puts(INFO,__LINE__(), "append component",config_value.value )
+  end
 end
 
 local function append_component(env,path)
@@ -157,6 +173,18 @@ local function append_component(env,path)
     end
   end
 end
+local function append_component(env,path)
+  local config=env:Config()
+  local dest_config= config:get_map("engine")
+  local from_config= config:get_map(path)
+  List( dest_config:keys() ):each(function(key)
+    local dest_list=dest_config:get(key):get_list()
+    local from_list=from_config:has_key(key) and from_config:get(key):get_list() or ConfigList()
+    for i=0,from_list.size -1 do
+      config_list_append(dest_list, from_list:get_value_at(i) )
+    end
+  end)
+end
 
 local M={}
 function M.init(env)
@@ -167,22 +195,21 @@ function M.init(env)
 
   -- include module
   env.modules = init_module( env )
-
-  -- init self --
-
-
   -- call sub_processor
-  env.modules:each( function(elm)
-    local ok,res=xpcall( elm.module.init,debug.traceback,( elm.env ))
-    if not ok then
-      puts(ERROR,__LINE__(), elm.env.name_space,res)
+  env.modules:each( function(elm,fn)
+    if elm.module[fn] then
+      local ok,res=xpcall( elm.module[fn], debug.traceback,( elm.env ))
+      if not ok then
+        puts(ERROR,__LINE__(), elm.env.name_space, fn,res)
+      end
     end
-  end)
+  end,"init")
 
   -- append component after modules
   append_component(env, env.name_space .. "/after_modules")
   auto_load(env)
   -- init end
+
   -- print component
   local function log_out(out)
     out = out or INFO
@@ -209,12 +236,14 @@ end
 function M.fini(env)
   -- modules fini
   env.modules:reverse()
-  :each( function(elm)
-    local ok,res=xpcall( elm.module.fini,debug.traceback,elm.env )
-    if not ok  then
-      puts(ERROR,__LINE__(), elm.env.name_space,res)
+  :each( function(elm,fn)
+    if elm.module[fn] then
+      local ok,res=xpcall( elm.module[fn],debug.traceback,elm.env )
+      if not ok  then
+        puts(ERROR,__LINE__(), elm.env.name_space, fn, res)
+      end
     end
-   end )  -- call fini
+  end, "fini" )  -- call fini
 
   -- self finit --
 end
@@ -229,19 +258,25 @@ function M.func(key,env)
     context:clear()
     return Accepted
   end
-  local res = env.modules:each(function(elm)
-      --local ret= elm.module.func(key,elm.env)
-      --if ret ~= 2  then return  ret end
 
-    local ok,res=xpcall( elm.module.func,debug.traceback,key, elm.env )
-    if not ok then
-      puts(ERROR,__LINE__(), elm.env.name_space,res )
-    else
-      if res ~= Noop then return res  end
+  local res = env.modules:each(function(elm,fn)
+    if elm.module[fn] then
+      local ok,res=xpcall( elm.module.func,debug.traceback,key, elm.env )
+      if not ok then
+        puts(ERROR,__LINE__(), elm.env.name_space, fn,res )
+      end
+      if res == nil then
+        puts(ERROR,__LINE__(), "processor_key  return nil expect number  " , elm.env.name_space )
+      elseif res ~= Noop then
+        return res
+      end
     end
-  end)
-  --
-  return res  or Noop
+  end, "func") or  Noop
+
+  if not res and res < Noop then return res  end
+  -- after modules process
+
+  return Noop
 end
 
 
