@@ -6,7 +6,7 @@
 -- Distributed under terms of the MIT license.
 --
 -- 自動加載 多字典反查碼filter
--- 
+--
 --
 -- lua_processor@multi_reverse   -- create lua_filter as below
 -- lua_filter@completion --  過濾 completion  switch   option: completion
@@ -15,7 +15,7 @@
 -- 此模組可以獨立載入 lua_processor@multi_reverse 或是 做爲init_processor 子模組
 -- function component() 自動載入 completion 且加入 engine/filter 用於過濾cand.type == "Completion"
 -- 自動載入 mfilter 查找 engine/translators 中 table_translator and script_translator 且加入 engine/filters
--- 
+--
 
 --
 --
@@ -77,6 +77,24 @@ local function component(env)
 	end )
 end
 
+local function reflash_candidate(ctx)
+  if ctx:has_menu() then
+    local segment=ctx.composition:toSegmentation():back()
+    puts(WARN, __LINE__(), "trace  reflash candi func has_menu", segment )
+    if segment then
+      local si=segment.selected_index
+      ctx:refresh_non_confirmed_composition()
+      segment=ctx.composition:toSegmentation():back()
+      segment.selected_index=si
+      local cand=ctx:get_selected_candidate()
+      if si == segment.selected_index  then
+        puts(WARN, __LINE__(), "----check index", si , segment.selected_index, si == segment.selected_index, cand.text,cand.comment)
+      else
+        puts(ERROR, __LINE__(), "----check index", si , segment.selected_index, si == segment.selected_index, cand.text,cand.comment)
+      end
+    end
+  end
+end
 local P={}
 function P.init(env)
   Env(env)
@@ -105,20 +123,23 @@ function P.init(env)
   context:set_option(Qcode, true)
   context:set_property(Multi_reverse, env.trans:status() )
 
-  -- init notifire  option  property  : for  reflash  menu  
-  local options= List(Qcode,Multi_reverse,Completion)
+  -- init notifire  option  property  : for  reflash  menu
+  --local options= Set(Qcode,Multi_reverse,Completion)
   local notifier_o= context.option_update_notifier:connect(function(ctx,name)
-      if options:find(name) then
-	ctx:refresh_non_confirmed_composition()
+      if name == Qcode or name == Multi_reverse then
+        reflash_candidate(ctx)
+      elseif name == Completion then
+        ctx:refresh_non_confirmed_composition()
       end
   end)
   local notifier_p= context.property_update_notifier:connect(function(ctx,name)
-      if name == Multi_reverse then
-	ctx:refresh_non_confirmed_composition()
-      end
+    if name == Multi_reverse then
+      reflash_candidate(ctx)
+      --ctx:refresh_non_confirmed_composition()
+    end
   end)
   env.notifier=List(notifier_o,notifier_p)
- 
+
 end
 
 function P.fini(env)
@@ -144,21 +165,24 @@ function P.func(key,env)
     elseif key:eq(env.keys.prev) then
       context:set_property(Multi_reverse, env.trans:prev())
     elseif key:eq(env.keys.m_sw) then
-      local m_sw = context:Toggle_option(Multi_reverse)
       context:set_property(Multi_reverse,
-			   m_sw and  env.trans:on() or env.trans:off() )
+      context:Toggle_option(Multi_reverse)
+			  and  env.trans:on() or env.trans:off() )
     elseif key:eq(env.keys.qcode) then
       context:Toggle_option(Qcode)
     elseif key:eq(env.keys.completion) then
       context:Toggle_option(Completion)
     else
       -- 使用 Shift_L 顯示字根
-      if not context:get_option(Multi_reverse) then
-	if key:eq(env.keys.shiftl) then
-	  context:set_property(Multi_reverse, env.trans:on() )
-	elseif key:eq(env.keys.shiftl_r) then
-	  context:set_property(Multi_reverse, env.trans:off() )
-	end
+      if not context:get_option(Multi_reverse) and key:eq(env.keys.shiftl)  then
+        context:set_option(Multi_reverse, true)
+        context:set_property(Multi_reverse, env.trans:on() )
+        env.shift_on=true
+      elseif env.shift_on and key:eq(env.keys.shiftl_r) then
+        env.shift_on= nil
+        context:set_option(Multi_reverse, false)
+        context:set_property(Multi_reverse, env.trans:off() )
+
       end
       return Noop
     end

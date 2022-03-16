@@ -107,6 +107,7 @@ end
 
 function M.init(env)
   local config=env.engine.schema.config
+  local context=env.engine.context
   env.tags= get_tags(env)
 
   env.projection= rime_api.Projection( config, env.name_space .. "/comment_format")
