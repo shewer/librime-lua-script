@@ -273,7 +273,7 @@ function M.func(key,env)
     end
   end, "func") or  Noop
 
-  if not res and res < Noop then return res  end
+  if res and res < Noop then return res  end
   -- after modules process
 
   return Noop
