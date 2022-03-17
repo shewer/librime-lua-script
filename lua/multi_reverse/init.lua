@@ -77,24 +77,15 @@ local function component(env)
 	end )
 end
 
-local function reflash_candidate(ctx)
-  if ctx:has_menu() then
-    local segment=ctx.composition:toSegmentation():back()
-    puts(WARN, __LINE__(), "trace  reflash candi func has_menu", segment )
-    if segment then
-      local si=segment.selected_index
-      ctx:refresh_non_confirmed_composition()
-      segment=ctx.composition:toSegmentation():back()
-      segment.selected_index=si
-      local cand=ctx:get_selected_candidate()
-      if si == segment.selected_index  then
-        puts(WARN, __LINE__(), "----check index", si , segment.selected_index, si == segment.selected_index, cand.text,cand.comment)
-      else
-        puts(ERROR, __LINE__(), "----check index", si , segment.selected_index, si == segment.selected_index, cand.text,cand.comment)
-      end
-    end
-  end
+local function reflash_candidate(ctx,index)
+  if not ctx:has_menu() then return end
+
+  local si= index  or ctx.composition:back().selected_index
+  ctx:refresh_non_confirmed_composition()
+  ctx.composition:back().selected_index = si
+  local cand=ctx:get_selected_candidate()
 end
+
 local P={}
 function P.init(env)
   Env(env)
@@ -125,51 +116,44 @@ function P.init(env)
 
   -- init notifire  option  property  : for  reflash  menu
   --local options= Set(Qcode,Multi_reverse,Completion)
-  local notifier_o= context.option_update_notifier:connect(function(ctx,name)
+  -- 取消 option reflash_non_composition  --  engine:OnOptionUpdate() 已執行
+  env.notifier=List()
+  env.notifire:push( 
+  context.option_update_notifier:connect(function(ctx,name)
       if name == Qcode or name == Multi_reverse then
-        reflash_candidate(ctx)
       elseif name == Completion then
-        ctx:refresh_non_confirmed_composition()
       end
-  end)
-  local notifier_p= context.property_update_notifier:connect(function(ctx,name)
+  end))
+  env.notifier:push(
+  context.property_update_notifier:connect(function(ctx,name)
     if name == Multi_reverse then
       reflash_candidate(ctx)
-      --ctx:refresh_non_confirmed_composition()
     end
-  end)
-  env.notifier=List(notifier_o,notifier_p)
-
+  end))
 end
 
 function P.fini(env)
   env.notifier:each(function(elm) elm:disconnect() end )
-  --[[
-    local g_backup= _schema[env.engine.schema.schema_id].filters
-    if g_backup and type(g_backup) == table then
-    write_configlist(env.schema.config,"engine/filters",g_backup)
-    end
-  --]]
 end
 
 function P.func(key,env)
   local Rejected,Accepted,Noop=0,1,2
   local context= env:Context()
-  -- puts("trace",__FILE__(),__FUNC__(),__LINE__(), key:repr() , env.keys.next:repr(), key:eq(env.keys.next))
 
   local status= env:get_status()
   -- 在has_menu時才可以設定，可以減少 hot key 衝突
   if status.has_menu then
+    local cand_index= context.composition:back().selected_index
     if key:eq(env.keys.next)  then
       context:set_property(Multi_reverse, env.trans:next())
     elseif key:eq(env.keys.prev) then
       context:set_property(Multi_reverse, env.trans:prev())
     elseif key:eq(env.keys.m_sw) then
-      context:set_property(Multi_reverse,
       context:Toggle_option(Multi_reverse)
-			  and  env.trans:on() or env.trans:off() )
+      context.composition:back().selected_index= cand_index
     elseif key:eq(env.keys.qcode) then
       context:Toggle_option(Qcode)
+      context.composition:back().selected_index= cand_index
     elseif key:eq(env.keys.completion) then
       context:Toggle_option(Completion)
     else
@@ -177,12 +161,13 @@ function P.func(key,env)
       if not context:get_option(Multi_reverse) and key:eq(env.keys.shiftl)  then
         context:set_option(Multi_reverse, true)
         context:set_property(Multi_reverse, env.trans:on() )
+        context.composition:back().selected_index= cand_index
         env.shift_on=true
       elseif env.shift_on and key:eq(env.keys.shiftl_r) then
         env.shift_on= nil
         context:set_option(Multi_reverse, false)
         context:set_property(Multi_reverse, env.trans:off() )
-
+        context.composition:back().selected_index= cand_index
       end
       return Noop
     end
