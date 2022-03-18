@@ -255,7 +255,8 @@ function M.func(key,env)
   -- self func
   -- sub_module func
   if context.input =="/ver" and key:repr() == "space" then
-    env.engine:commit_text( "Version: " .. _VERSION .. " librime-lua Version: " .. rime_api.Version() )
+    env.engine:commit_text( ( "(Ver)librime: %s, lua: %s, librime-lua: %s" ):format(
+    rime_api.get_rime_version(), _VERSION,  rime_api.Version() ) )
     context:clear()
     return Accepted
   end
