@@ -92,16 +92,16 @@ end
 M={}
 M.Name= ...
 local Multi_reverse="multi_reverse"
+local Multi_reverse_hold="multi_reverse_hold"
 local Qcode="qcode"
 -- 以 name_space 作爲開關
 -- has_tag and name_space match property  and multi_reverse == true  and reverdb not nil
 function M.tags_match(segment,env)
   local context=env.engine.context
   return _tags_match( segment, env)
-    and context:get_property(Multi_reverse) == env.name_space
-    and context:get_option(Multi_reverse)
     and env.reverdb
-    or false
+    and ( context:get_option(Multi_reverse) or context:get_option(Multi_reverse_hold) )
+    and context:get_property(Multi_reverse) == env.name_space
 end
 
 

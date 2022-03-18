@@ -251,6 +251,7 @@ end
 function M.func(key,env)
   local Rejected,Accepted,Noop=0,1,2
   local context=env:Context()
+  --puts(WARN,__LINE__(), "key", key, key:repr() ) -- check keyevent
   -- self func
   -- sub_module func
   if context.input =="/ver" and key:repr() == "space" then
@@ -261,19 +262,20 @@ function M.func(key,env)
 
   local res = env.modules:each(function(elm,fn)
     if elm.module[fn] then
-      local ok,res=xpcall( elm.module.func,debug.traceback,key, elm.env )
-      if not ok then
+      local ok,res=xpcall( elm.module[fn],debug.traceback,key, elm.env )
+      if ok then
+        if  type(res) == "number" then
+          if res < Noop then return res end
+        else
+          puts(WARN, __LINE__(), elm.env.name_space , "res expect number of 0,1,2" , type(res),res )
+        end
+      else
         puts(ERROR,__LINE__(), elm.env.name_space, fn,res )
-      end
-      if res == nil then
-        puts(ERROR,__LINE__(), "processor_key  return nil expect number  " , elm.env.name_space )
-      elseif res ~= Noop then
-        return res
       end
     end
   end, "func") or  Noop
 
-  if res and res < Noop then return res  end
+  if res < Noop then return res  end
   -- after modules process
 
   return Noop
