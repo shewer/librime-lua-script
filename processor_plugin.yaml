@@ -11,7 +11,7 @@ patch:
     - { module: 'command', module_name: "cammand_proc", name_space: "command" }
     - { module: 'english', module_name: "english_proc", name_space: "english" }
     - { module: "conjunctive", module_name: "conjunctive_proc", name_space: "conjunctive" }
-    - { module: 'multi_reverse', module_name: "multi_reverse__proc", name_space: "multi_reverse" }
+    - { module: 'multi_reverse', module_name: "multi_reverse_proc", name_space: "multi_reverse" }
   switches/+:
     - name: conjunctive
       states: [ 無,聯]
