@@ -51,14 +51,16 @@ end
 
 local T={}
 
-T._eng_dict=T._eng_dict or English_dict("english_tw.txt")
-T._nj= T._nj or njload()
-T._ext_dict= T.ext_dict or load_ext_dict("ext_dict.txt")
-puts(CONSOLE, __FILE__(),__LINE__(), package.cpath,"\n\n",  package.path )
 
 function T.init(env)
   local config= env.engine.schema.config
   env.tag= config:get_string(env.name_space .. "/tag") or English
+
+  local dict= config:get_string(env.name_space .. "/dictionary") or "english_tw"
+  T._eng_dict= T._eng_dict or English_dict(dict .. ".txt")
+  T._nj= T._nj or njload()
+  T._ext_dict= T.ext_dict or load_ext_dict("ext_dict.txt")
+  puts(CONSOLE, __FILE__(),__LINE__(), package.cpath,"\n\n",  package.path )
 end
 function T.fini(env)
 end
