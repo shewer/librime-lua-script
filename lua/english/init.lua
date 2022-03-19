@@ -23,7 +23,9 @@
 
 local English="english"
 local puts = require 'tools/debugtool'
+local List = require 'tools/list'
 local T= require'english/english_tran'
+local ASCII_PUNCT="ascii_punct"
 -- filetr of command
 
 -- lua segmentor
@@ -118,14 +120,26 @@ function P.init(env)
   context:set_option(English,false)
   env.history=List()
 
-  env.commit=context.commit_notifier:connect(function(ctx)
+  env.notifier= List(
+  context.commit_notifier:connect(function(ctx)
     env.history:clear()
-  end )
+  end),
+  context.option_update_notifier:connect(function(ctx,name)
+    if name == English then
+      if ctx:get_option(name) then
+        env.save_ascii_punct= ctx:get_option(ASCII_PUNCT)
+        ctx:set_option(ASCII_PUNCT,true)
+      else
+        ctx:set_opttion(ASCII_PUNCT,env.save_ascii_punct)
+      end
+    end
+  end))
+end
 
-end
 function P.fini(env)
-  env.commit:disconnect()
+  env.notifier:echo(function(elm) elm:disconnect() end)
 end
+
 function P.func(key,env)
   local Rejected,Accepted,Noop=0,1,2
   -- 過濾 release ctrl alt key 避免 key_char 重複加入input
