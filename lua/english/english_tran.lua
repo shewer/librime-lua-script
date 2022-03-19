@@ -51,14 +51,20 @@ end
 
 local T={}
 
-T._eng_dict=T._eng_dict or English_dict("english_tw.txt")
-T._nj= T._nj or njload()
-T._ext_dict= T.ext_dict or load_ext_dict("ext_dict.txt")
-puts(CONSOLE, __FILE__(),__LINE__(), package.cpath,"\n\n",  package.path )
 
 function T.init(env)
   local config= env.engine.schema.config
   env.tag= config:get_string(env.name_space .. "/tag") or English
+
+  local dict= config:get_string(env.name_space .. "/dictionary") or "english_tw"
+  T._eng_dict= T._eng_dict or English_dict(dict .. ".txt")
+  T._nj= T._nj or njload()
+  T._ext_dict= T.ext_dict or load_ext_dict("ext_dict.txt")
+  puts(CONSOLE, __FILE__(),__LINE__(), package.cpath,"\n\n",  package.path )
+  
+  env.gsub_fmt =  package.config:sub(1,1) == "/" and "\n" or "\r"
+
+  
 end
 function T.fini(env)
 end
@@ -87,10 +93,10 @@ function T.func(inp,seg,env)
   -- 使用 context.input 杳字典 type "english"
   for w in T._eng_dict:iter(inp:sub(seg.start,seg._end)) do
     -- 如果 與 字典相同 替換 first cand.comment
-    if input ==w.word and first.type == English then
-      first.comment= w.info
+    if first.type == English and input == w.word or input:lower() == w.word then
+      first.comment= w.info:gsub("\\n", env.gsub_fmt)
     else
-      yield( Candidate(English,seg.start,seg._end,w.word,w.info))
+      yield( Candidate(English,seg.start,seg._end,w.word,w.info:gsub("\\n",env.gsub_fmt)) )
     end
   end
   -- 使用 ninja 最後一佪字查字典 type "ninja"
@@ -100,7 +106,7 @@ function T.func(inp,seg,env)
 
     for w in T._eng_dict:iter(n_word) do
       -- seg.start =   seg.end - #m_word
-      yield( Candidate(Ninja, seg._end - #n_word , seg._end,w.word,"(Ninja) " .. w.info))
+      yield( Candidate(Ninja, seg._end - #n_word , seg._end,w.word,"(Ninja) " .. w.info:gsub("\\n",env.gsub_fmt)))
     end
   end
 end

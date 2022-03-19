@@ -12,6 +12,11 @@ patch:
     - { module: 'english', module_name: "english_proc", name_space: "english" }
     - { module: "conjunctive", module_name: "conjunctive_proc", name_space: "conjunctive" }
     - { module: 'multi_reverse', module_name: "multi_reverse_proc", name_space: "multi_reverse" }
+  #
+  english: # 
+    tag: abc #  中文模式調用 英文字典 default : none 
+    dictionary: english # defaul english_tw 字典橎位置 lua/tools/english.txt 
+
   # init_processor   append comopents
   module1/before_modules:
     filters:
