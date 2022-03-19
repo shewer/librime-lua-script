@@ -7,8 +7,8 @@
 patch:
   engine/processors/@after 0: lua_processor@init_processor@module1
   module1/modules:
-    - { module: 'component/select_character', module_name: "select_character", name_space: "translator" }
     - { module: 'command', module_name: "cammand_proc", name_space: "command" }
+    - { module: 'component/select_character', module_name: "select_character", name_space: "translator" }
     - { module: 'english', module_name: "english_proc", name_space: "english" }
     - { module: "conjunctive", module_name: "conjunctive_proc", name_space: "conjunctive" }
     - { module: 'multi_reverse', module_name: "multi_reverse_proc", name_space: "multi_reverse" }
