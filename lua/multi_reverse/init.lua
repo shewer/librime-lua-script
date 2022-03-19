@@ -6,7 +6,7 @@
 -- Distributed under terms of the MIT license.
 --
 -- 自動加載 多字典反查碼filter
--- 
+--
 --
 -- lua_processor@multi_reverse   -- create lua_filter as below
 -- lua_filter@completion --  過濾 completion  switch   option: completion
@@ -15,7 +15,7 @@
 -- 此模組可以獨立載入 lua_processor@multi_reverse 或是 做爲init_processor 子模組
 -- function component() 自動載入 completion 且加入 engine/filter 用於過濾cand.type == "Completion"
 -- 自動載入 mfilter 查找 engine/translators 中 table_translator and script_translator 且加入 engine/filters
--- 
+--
 
 --
 --
@@ -32,6 +32,8 @@ local Completion_sw="Control+8"
 local Qcode="qcode"
 local Qcode_sw="Control+7"
 -- 增加 hold key
+-- Multi_reverse_hold
+local Multi_reverse_hold="multi_reverse_hold"
 local Comment_enable="Shift_L"
 local Comment_disable="Shift" .. "+Release+" .. Comment_enable
 --local Comment_enable="Contorl_L"
@@ -77,6 +79,15 @@ local function component(env)
 	end )
 end
 
+local function reflash_candidate(ctx,index)
+
+  if ctx.composition:empty() then return end
+  local si= index  or ctx.composition:back().selected_index
+  ctx:refresh_non_confirmed_composition()
+  if ctx.composition:empty() then return end
+  ctx.composition:back().selected_index = si
+end
+
 local P={}
 function P.init(env)
   Env(env)
@@ -105,48 +116,38 @@ function P.init(env)
   context:set_option(Qcode, true)
   context:set_property(Multi_reverse, env.trans:status() )
 
-  -- init notifire  option  property  : for  reflash  menu  
-  local options= List(Qcode,Multi_reverse,Completion)
-  local notifier_o= context.option_update_notifier:connect(function(ctx,name)
-      if options:find(name) then
-	ctx:refresh_non_confirmed_composition()
-      end
-  end)
-  local notifier_p= context.property_update_notifier:connect(function(ctx,name)
-      if name == Multi_reverse then
-	ctx:refresh_non_confirmed_composition()
-      end
-  end)
-  env.notifier=List(notifier_o,notifier_p)
- 
+  -- init notifire  option  property  : for  reflash  menu
+  --local options= Set(Qcode,Multi_reverse,Completion)
+  -- 取消 option reflash_non_composition  --  engine:OnOptionUpdate() 已執行
+  env.notifier=List(
+  {
+    context.property_update_notifier:connect(function(ctx,name)
+    if name == Multi_reverse then
+      ctx:refresh_non_confirmed_composition()
+    end
+    end),
+  })
 end
 
 function P.fini(env)
   env.notifier:each(function(elm) elm:disconnect() end )
-  --[[
-    local g_backup= _schema[env.engine.schema.schema_id].filters
-    if g_backup and type(g_backup) == table then
-    write_configlist(env.schema.config,"engine/filters",g_backup)
-    end
-  --]]
 end
 
 function P.func(key,env)
   local Rejected,Accepted,Noop=0,1,2
   local context= env:Context()
-  -- puts("trace",__FILE__(),__FUNC__(),__LINE__(), key:repr() , env.keys.next:repr(), key:eq(env.keys.next))
 
   local status= env:get_status()
   -- 在has_menu時才可以設定，可以減少 hot key 衝突
   if status.has_menu then
+    local compos= context.composition
+    local cand_index= compos:empty() and 0 or compos:back().selected_index
     if key:eq(env.keys.next)  then
       context:set_property(Multi_reverse, env.trans:next())
     elseif key:eq(env.keys.prev) then
       context:set_property(Multi_reverse, env.trans:prev())
     elseif key:eq(env.keys.m_sw) then
-      local m_sw = context:Toggle_option(Multi_reverse)
-      context:set_property(Multi_reverse,
-			   m_sw and  env.trans:on() or env.trans:off() )
+      context:Toggle_option(Multi_reverse)
     elseif key:eq(env.keys.qcode) then
       context:Toggle_option(Qcode)
     elseif key:eq(env.keys.completion) then
@@ -154,14 +155,19 @@ function P.func(key,env)
     else
       -- 使用 Shift_L 顯示字根
       if not context:get_option(Multi_reverse) then
-	if key:eq(env.keys.shiftl) then
-	  context:set_property(Multi_reverse, env.trans:on() )
-	elseif key:eq(env.keys.shiftl_r) then
-	  context:set_property(Multi_reverse, env.trans:off() )
-	end
+        local state = context:get_option(Multi_reverse_hold)
+        local keymatch= key:eq(env.keys.shiftl)
+        if keymatch and not state then
+          context:set_option(Multi_reverse_hold,true)
+          compos:back().selected_index= cand_index
+        elseif not keymatch and state then
+          context:set_option(Multi_reverse_hold, false )
+          compos:back().selected_index= cand_index
+        end
       end
       return Noop
     end
+    compos:back().selected_index= cand_index
     return Accepted
   end -- has_menu
   return Noop
