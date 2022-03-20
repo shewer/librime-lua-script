@@ -7,7 +7,7 @@
 --
 local M={}
 local E={}
--- 
+--
 function E:set(env,comp)
   local id= env.engine.schema.schema_id
   self[id] = self[id] or {}
@@ -16,7 +16,7 @@ end
 function E:get(env)
   local id= env.engine.schema.schema_id
   local tab={}
-  for k,v in next , self[id] or {} do 
+  for k,v in next , self[id] or {} do
     table.insert(tab,  k  )
   end
   return table.concat( tab ,",")
@@ -41,7 +41,7 @@ function M.filter(input, env)
   E:set(env,"F@")
   for cand in input:iter() do
     if not cand.comment:match("- Err:") then
-      cand.comment = cand.comment .. "- Err:" .. E:get(env) 
+      cand.comment = cand.comment .. "- Err:" .. E:get(env)
     end
     yield(cand)
   end
