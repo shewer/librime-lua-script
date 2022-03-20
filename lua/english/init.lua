@@ -130,7 +130,7 @@ function P.init(env)
         env.save_ascii_punct= ctx:get_option(ASCII_PUNCT)
         ctx:set_option(ASCII_PUNCT,true)
       else
-        ctx:set_opttion(ASCII_PUNCT,env.save_ascii_punct)
+        ctx:set_option(ASCII_PUNCT,env.save_ascii_punct)
       end
     end
   end))
