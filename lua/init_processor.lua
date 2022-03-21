@@ -84,24 +84,34 @@ local function load_config(env)
   end
   return #modules > 0 and modules or nil
 end
+local function req_module( module, rescue_func)
+  local ok, res = pcall( require, module)
+  if ok then return res end
 
-local function init_module(env)
-  local config = env:Config()
+  local slash = package.config:sub(1,1)
+  ok, res = pcall( require, "component/" .. module )
+  if ok then return res end
+
+  puts(ERROR, __LINE__(), "require module failed ", mod_name, res )
+  return coscue_func
+end
+
+local function init_module(_env)
+  local config = _env:Config()
   -- load modules from  name_space/modules  or _G[name_space]
-  local modules=  load_config(env)
-      or  List( _G[env.name_space] )
-  return modules:map(function(elm)
-    local proc_m={}
-    proc_m.module = _G[elm.module_name]
-    or require(elm.module)
-    or require("component/" .. elm.module  )
-    proc_m.module_name= elm.module_name
-    proc_m.name_space = elm.name_space
-    proc_m.env={}
-    proc_m.env.name_space= elm.name_space
-    proc_m.env.engine = env.engine
-    return proc_m
-  end)
+  local modules_cfg = load_config(_env) or List( _G[_env.name_space] )
+  local function fn(elm)
+    return {
+      module = _G[elm.module_name] or req_module(elm.module) or {func=Rescue_processor},
+      module_name = elm.module_name,
+      name_space = elm.name_space,
+      env = {
+        name_space = elm.name_space,
+        engine = _env.engine,
+      },
+    }
+  end
+  return modules_cfg:map(fn)
 end
 
 local function auto_load(env)
@@ -187,6 +197,14 @@ function M.func(key,env)
   -- sub_module func
   if context.input =="/ver" and key:repr() == "space" then
     env.engine:commit_text( "Version: " .. _VERSION .. " librime-lua Version: " .. rime_api.Version() )
+    context:clear()
+    return Accepted
+  end
+  if context.input == "/modules" and key:repr() == "space" then
+    env.modules:each( function(elm)
+      local str = string.format("%s:%s:%s\n",elm.module_name, elm.env.name_space, elm.env.engine)
+      env.engine:commit_text(str )
+    end)
     context:clear()
     return Accepted
   end
