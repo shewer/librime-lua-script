@@ -70,10 +70,7 @@ local module_key=List("module","module_name","name_space")
 
 local function req_module(mod_name,rescue)
   local slash= package.config:sub(1,1)
-  local ok,res
-  if _G[mod_name] then return _G[mod_name] end
-
-  ok,res = pcall(require, mod_name )
+  local ok,res = pcall(require, mod_name )
   if ok then return res end
 
   ok , res = pcall(require, 'component' .. slash .. mod_name )
@@ -105,12 +102,10 @@ local function init_module(env)
   -- load modules from  name_space/modules  or _G[name_space]
   local modules=  load_config(env) or  List( _G[env.name_space] )
   return modules:map(function(elm)
-    local m = req_module(elm.module)
-    m = type(m) == "function" and {func=m} or m
     return  {
       module_name= elm.module_name,
       name_space = elm.name_space,
-      module = m,
+      module = _G[elm.module_name] or req_module(elm.module) or { func = Rescue_processor },
       env={
         engine=env.engine,
         name_space = elm.name_space,
@@ -177,7 +172,7 @@ local function append_component(env,path)
   local config=env:Config()
   local dest_config= config:get_map("engine")
   local from_config= config:get_map(path)
-  List( dest_config:keys() ):each(function(key)
+  List( from_config:keys() ):each(function(key)
     local dest_list=dest_config:get(key):get_list()
     local from_list=from_config:has_key(key) and from_config:get(key):get_list() or ConfigList()
     for i=0,from_list.size -1 do
