@@ -11,13 +11,15 @@
 
 enable switch:
    option_name: _debug   disable / enable
-data output :
-   property _debug
+
+candidate.comment output :
+   property: _debug
    cand data_name: type start _end comment quality preedit , dtype
 
 ex:
   context:set_option("_debug", true)
   context:set_property("_debug", "dtype,comment,_end,start,quality")
+
 
 --
 --]]
@@ -51,9 +53,16 @@ function M.init(env)
 end
 function M.fini(env)
 end
-
+local function tags_str(seg)
+  local tab={}
+  for k, _ in next, seg do table.insert(tab,k) end
+  return string.format("[tag: %s]", table.concat(tab," ") )
+end
 function M.tags_match(seg,env)
   --  tags all : env.tags == nil or faile
+  if env.engine.context:get_option(env.option) then
+    seg.prompt = seg.prompt .. tags_str(seg)
+  end
   local tags_match=  not env.tags or not (seg.tags * env.tags):empty()
   return tags_match and env.engine.context:get_option(env.option)
 end
