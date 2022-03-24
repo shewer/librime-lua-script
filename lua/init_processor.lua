@@ -42,29 +42,61 @@
 --
 --
 
-local function init_cpath()
-  local path= ("./lua/plugin/"):gsub("/",package.config:sub(1,1) )
-  local pattern = path:gsub("([.?/%\\])","%%%1")
-  --  pattern --> "%.%/lua%/plugin%/"  or "%.%\\lua%\\plugin%\\"
-  if not package.cpath:match( pattern ) then
-    local cp=package.cpath
-    local df= cp:match('?.so') or cp:match('?.dylib') or cp:match('?.dll')
-    package.cpath= package.cpath .. (df and ";" .. path .. df or "")
+local function init_path()
+  local slash = package.config:sub(1,1)
+  local df = package.cpath:match('?.so')
+  or package.cpath:match('?.dylib')
+  or package.cpath:match('?.dll')
+  local sf = "?.lua"
+
+  --local upath= rime_api.user_data_dir()
+  local function ap(path,file,up)
+    up = up or "."
+    local path = string.format(";%s/%s/%s",up, path, file)
+    :gsub("/",slash)
+    return  path
   end
+  -- append  ./lua/component/?lua to package.path
+  local function path_append(path)
+    path= ap(path,sf,upath)
+    if package.path:match(path) then
+      package.path = package.path .. path
+    end
+  end
+  -- append  ./lua/plugin/?.(so, dll, dylib) to package.cpath
+  local function cpath_append(path)
+    path= ap(path,df,upath)
+    if package.cpath:match(path) then
+      package.cpath = package.cpath .. path
+    end
+  end
+
+  --path_append("lua/component")
+  --cpath_append("lua/plugin")
 end
 -- append cpath <user_data_dir>/lua/plugin/?.(so|dll|dylib)
-init_cpath()
+init_path()
 
 -- librime-lua-script env
 require 'tools/string'
 require 'tools/rime_api'
 local puts=require'tools/debugtool'
-package.path= package.path .. ";./lua/component/?.lua"
 
 
 
 local List = require 'tools/list'
 local module_key=List("module","module_name","name_space")
+
+local function req_module(mod_name,rescue_func)
+  local slash= package.config:sub(1,1)
+  local ok,res = pcall(require, mod_name )
+  if ok then return res end
+
+  ok , res = pcall(require, 'component' .. slash .. mod_name )
+  if ok then return res end
+  puts(ERROR,__LINE__(), "require module failed ", mod_name , res )
+  return  rescue_func
+end
 
 local function load_config(env)
   local path= env.name_space .. "/modules"
@@ -84,77 +116,125 @@ local function load_config(env)
   end
   return #modules > 0 and modules or nil
 end
-local function req_module( module, rescue_func)
-  local ok, res = pcall( require, module)
-  if ok then return res end
 
-  local slash = package.config:sub(1,1)
-  ok, res = pcall( require, "component/" .. module )
-  if ok then return res end
 
-  puts(ERROR, __LINE__(), "require module failed ", mod_name, res )
-  return coscue_func
-end
-
-local function init_module(_env)
-  local config = _env:Config()
+local function init_module(env)
+  local config = env:Config()
   -- load modules from  name_space/modules  or _G[name_space]
-  local modules_cfg = load_config(_env) or List( _G[_env.name_space] )
+  local modules=  load_config(env) or  List( _G[env.name_space] )
   local function fn(elm)
-    return {
-      module = _G[elm.module_name] or req_module(elm.module) or {func=Rescue_processor},
-      module_name = elm.module_name,
+    return  {
+      module_name= elm.module_name,
       name_space = elm.name_space,
-      env = {
+      module = _G[elm.module_name] or req_module(elm.module) or { func = Rescue_processor },
+      env={
+        engine=env.engine,
         name_space = elm.name_space,
-        engine = _env.engine,
       },
     }
   end
-  return modules_cfg:map(fn)
+  return modules:map(fn)
+end
+--auto_load
+require '_rescue'
+local function auto_load(eng_config, tab_G)
+
+  local function req_component(item, tab_G)
+    if item.type ~= "kScalar" then return end
+    tab_G = type(tab_G) == "table" and tab_G or _G
+    local tab = item:get_value().value:split("@")
+    if tab[1]:match("^lua_(.+)$") and not tab_G [ tab[2]] then
+      tab[1] = tab[1]:match("^lua_(.+)$")
+      tab[3] = tab[3] or tab[2]
+      puts(DEBUG,__LINE__(), "=== engine compos list:", tab[1],tab[2],tab[3],
+      tab_G == _G, tab_G[ tab[2]], _G["Rescue_" .. tab[3]])
+      tab_G[ tab[2] ] =  req_module(tab[2], _G["Rescue_" .. tab[1]] )
+    end
+  end
+
+  local function item_to_list(cl)
+    local clist= cl:get_list()
+    local l = List()
+    if clist then
+      for i=0,clist.size-1 do
+        l:push( clist:get_at(i) )
+      end
+    end
+    return l
+  end
+  List( eng_config:keys() )
+  :map(function(elm) return eng_config:get(elm) end)
+  :select(function(elm) return elm.type == "kList" end)
+  :map(item_to_list)
+  :each(function(items)
+    items:each( req_component, tab_G)
+  end)
+end
+-----]]
+local function check_duplicate_value(dest_list,config_value)
+  for i=0 ,dest_list.size -1 do
+    if  dest_list:get_value_at(i).value == config_value.value then
+      puts(WARNING,__LINE__(), "cancel append duplicate component", config_value.value )
+      return true
+    end
+  end
+  return false
+end
+local function config_list_append(dest_list,config_value)
+  -- check match component
+  if check_duplicate_value(dest_list,config_value) then
+      puts(WARNING,__LINE__(), "cancel append duplicate component", config_value.value )
+  else
+    -- append component
+    dest_list:append( config_value.element )
+    puts(INFO,__LINE__(), "append component",config_value.value )
+  end
 end
 
-local function auto_load(env)
-  local config=env.engine.schema.config
-  local lua_components = List("processors","segments","translators","filters")
-  :map(function(elm) return config:get_list("engine/" .. elm) end)
-  :reduce(function(elm,org)
-    for i=0,elm.size-1 do
-        org:push( elm:get_value_at(i).value:match("^lua_%a+@.*$") )
+local function append_component(env,path)
+  local config=env:Config()
+  local context=env:Context()
+  for _,v in next ,{"segments", "translators", "filters"} do
+    local dest_list= config:get_list("engine/" .. v)
+    local from_list= config:get_list(path .. "/" .. v)
+    if from_list then
+      for i=0,from_list.size-1 do
+        config_list_append(dest_list, from_list:get_value_at(i) )
+      end
     end
-    return org
-  end, List() )
-  :each(function(elm)
-     local comp_name=elm:split("@")[2]
-     if not _G[ comp_name] then
-        local ok,res= pcall(require, comp_name)
-        if ok then
-          _G[comp_name] = res
-        else
-          puts(WARN,__FILE__(),__LINE__(), "failed require component of ", elm, comp_name )
-        end
-     end
-  end )
-
+  end
+end
+local function append_component(env,path)
+  local config=env:Config()
+  local dest_config= config:get_map("engine")
+  local from_config= config:get_map(path)
+  List( from_config:keys() ):each(function(key)
+    local dest_list=dest_config:get(key):get_list()
+    local from_list=from_config:has_key(key) and from_config:get(key):get_list() or ConfigList()
+    for i=0,from_list.size -1 do
+      config_list_append(dest_list, from_list:get_value_at(i) )
+    end
+  end)
 end
 
 local M={}
 function M.init(env)
   Env(env)
-  auto_load(env)
   -- init self --
   local config=env:Config()
 
-  -- include module
+  append_component(env, env.name_space .. "/before_modules")
   env.modules = init_module( env )
 
-  -- call sub_processor
+  --  init sub_processors
   env.modules:each( function(elm,fn)
-    if elm.module[fn] and not xpcall( elm.module[fn],debug.traceback,( elm.env )) then
+    if elm.module[fn] and not xpcall( elm.module[fn],debug.traceback, elm.env ) then
       puts(ERROR,__LINE__(), elm.env.name_space,res)
     end
   end,"init")
 
+  append_component(env, env.name_space .. "/after_modules")
+  auto_load(config:get_map("engine"))
   -- init end
   -- print component
 
