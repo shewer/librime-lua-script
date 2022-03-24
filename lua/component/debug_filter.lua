@@ -55,8 +55,8 @@ function M.fini(env)
 end
 local function tags_str(seg)
   local tab={}
-  for k, _ in next, seg do table.insert(tab,k) end
-  return string.format("[tag: %s]", table.concat(tab," ") )
+  for k, _ in next, seg.tags do table.insert(tab,k) end
+  return string.format(" [tags: %s]", table.concat(tab," ") )
 end
 function M.tags_match(seg,env)
   --  tags all : env.tags == nil or faile
