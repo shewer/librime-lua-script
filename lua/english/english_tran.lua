@@ -61,12 +61,24 @@ function T.init(env)
   T._nj= T._nj or njload()
   T._ext_dict= T.ext_dict or load_ext_dict("ext_dict.txt")
   puts(CONSOLE, __FILE__(),__LINE__(), package.cpath,"\n\n",  package.path )
-  
+
   env.gsub_fmt =  package.config:sub(1,1) == "/" and "\n" or "\r"
 
-  
+
 end
 function T.fini(env)
+end
+
+local function sync_case(input, candidate_word)
+  local is_first_char_cap = input:sub(1,1):upper() == input:sub(1,1)
+  local is_second_char_cap = input:sub(2,2):upper() == input:sub(2,2)
+  if is_first_char_cap and is_second_char_cap then
+    return candidate_word:upper()
+  elseif is_first_char_cap then
+    return candidate_word:sub(1,1):upper() .. candidate_word:sub(2)
+  else
+    return candidate_word
+  end
 end
 function T.func(inp,seg,env)
   local context=env.engine.context
@@ -96,7 +108,7 @@ function T.func(inp,seg,env)
     if first.type == English and input == w.word or input:lower() == w.word then
       first.comment= w.info:gsub("\\n", env.gsub_fmt)
     else
-      yield( Candidate(English,seg.start,seg._end,w.word,w.info:gsub("\\n",env.gsub_fmt)) )
+      yield( Candidate(English,seg.start,seg._end,sync_case(input,w.word),w.info:gsub("\\n",env.gsub_fmt)) )
     end
   end
   -- 使用 ninja 最後一佪字查字典 type "ninja"
