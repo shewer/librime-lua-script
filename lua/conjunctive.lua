@@ -289,7 +289,6 @@ end
 
 function P.init(env)
   Env(env)
-  assert(env.name_space == "conjunctive" , "name_space not match ( lua_processor@<module>@conjunctive)")
   local config= env:Config()
   -- add  lua_translator@conjunctive
   components(env)
