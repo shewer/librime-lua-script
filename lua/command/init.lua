@@ -53,9 +53,9 @@ local Command=require 'command/command_str'
 -- preload option and property
 local function load_data(env)
   context=env:Context()
-  env.options = List("ascii_mode","ascii_punct")
+  env.options = List("ascii_mode","ascii_punct","_debug")
   :reduce( function(elm,org)  org[elm]= context:get_option(elm) ;return org end ,{})
-  env.propertys= List("command","english")
+  env.propertys= List("command","english","_error")
   :reduce(function(elm,org)  org[elm] = context:get_property(elm) ; return org end ,{})
   env.funcs=funcs
 
