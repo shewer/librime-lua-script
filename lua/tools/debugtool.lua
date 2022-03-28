@@ -59,19 +59,37 @@ local function tran_msg(...)
   for i,k in next, {...} do msg = msg .. ": " .. tostring(k)  end
   return msg
 end
+local function  push_error_log(msg)
+  __ERROR_LIST_TAB = __ERROR_LIST_TAB or List()
+  __ERROR_LIST_TAB:push(msg)
+  local rm_size = #__ERROR_LIST_TAB - __ERROR_LIST
+  if rm_size >0 then
+    for i=1, rm_size do
+      __ERROR_LIST_TAB:shift()
+    end
+  end
+
+end
 local function puts( tag , ...)
   if type(tag) ~= "string" then return end
+  local msg = tag .. tran_msg(...)
 
   if INFO and tag:match("^" .. INFO) then
-    (log and log.info or print)( tag .. tran_msg(...))
+    (log and log.info or print)(msg)
   elseif WARN and tag:match("^" .. WARN) then
-    (log and log.warning or print)(tag .. tran_msg(...))
+    (log and log.warning or print)(msg)
   elseif ERROR and tag:match("^" .. ERROR) then
-    (log and log.error or print)(tag .. tran_msg(...))
+    (log and log.error or print)(msg)
+    if __ERROR_LIST then
+      push_error_log(msg)
+    end
   elseif DEBUG and tag:match("^" .. DEBUG) then
-    (log and log.error or print)(tag .. tran_msg(...))
+    (log and log.error or print)(msg)
+    if __ERROR_LIST then
+      push_error_log(msg)
+    end
   elseif  CONSOLE and tag:match( "^" .. CONSOLE ) then
-    ( print)( tag .. tran_msg(...))
+    ( print)(msg)
   else
     return
   end
