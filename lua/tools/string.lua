@@ -3,6 +3,7 @@
 --      string.utf8_len = utf8.len
 --      string.utf8_offset= utf8.offset
 --      string.utf8_sub= utf8.sub
+local List = require 'tools/list'
 function string.split( str, sp,sp1)
   sp =type(sp) == "string"  and sp or " "    
   if #sp == 0 then
@@ -15,7 +16,7 @@ function string.split( str, sp,sp1)
     sp=  "[^".. sp1 .. "]*"
   end 
 
-  local tab= {}
+  local tab= List()
   for v in str:gmatch(sp) do
     table.insert(tab,v)
   end 
