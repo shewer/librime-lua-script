@@ -209,6 +209,10 @@ end
 ----- rime_api tools
 local M=rime_api
 M.Version=Version
+function M.Ver_info()
+  return string.format("Ver: librime %s librime-lua %s lua %s",
+  rime_api.get_rime_version() , Version() ,_VERSION )
+end
 -- Context method
 -- Env(env):context():Set_option("test") -- set option "test" true
 --                    Unset_option("test") -- set option "test" false
