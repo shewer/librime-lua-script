@@ -72,27 +72,40 @@ local function  push_error_log(msg)
 end
 local function puts( tag , ...)
   if type(tag) ~= "string" then return end
-  local msg = tag .. tran_msg(...)
+  local func = print
+  local f_info=false
 
   if INFO and tag:match("^" .. INFO) then
-    (log and log.info or print)(msg)
+    func = log and log.info or print
   elseif WARN and tag:match("^" .. WARN) then
-    (log and log.warning or print)(msg)
+    func = log and log.warning or print
+    f_info=true
   elseif ERROR and tag:match("^" .. ERROR) then
-    (log and log.error or print)(msg)
+    func = log and log.error or print
+    f_info=true
     if __ERROR_LIST then
       push_error_log(msg)
     end
   elseif DEBUG and tag:match("^" .. DEBUG) then
-    (log and log.error or print)(msg)
+    func = log and log.error or print
+    f_info=true
     if __ERROR_LIST then
       push_error_log(msg)
     end
   elseif  CONSOLE and tag:match( "^" .. CONSOLE ) then
-    ( print)(msg)
+    func = print
   else
     return
   end
+  local msg = tran_msg(...)
+  if f_info then
+    local n=2
+    local info= debug.getinfo(n,'nSl')
+    msg = string.format("%s %s[%s](%s)",
+    tag, info.short_src:match(".?(lua[\\/].+)$"), info.name, info.currentline)
+    .. msg
+  end
+  func( msg )
 end
 
 return puts
