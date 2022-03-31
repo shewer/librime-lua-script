@@ -19,6 +19,7 @@ lua_filter@debug_filter 提供顯示 candidate 訊息和 tags
          - quality
          - input # context.input
          - ainput  # active_input  context.input:sub(_start +1 , _end)
+         - error  lua component error
   name_space/tags: 設置同 filter
 
   option: _debug  開關此功能
@@ -125,25 +126,26 @@ function M.tags_match(seg,env)
 end
 
 -- M.func
-local function debug_comment(items,cand,input)
-  local tab={
-    input=input,
-    ainput= input:sub(cand.start +1,cand._end),
-    dtype= cand:get_dynamic_type(),
-    quality = string.format("%6.4f",cand.quality),
-  }
+local function debug_comment(items,cand,tab)
+  tab = tab or { }
+  tab.ainput= tab.input and tab.input:sub(cand.start +1,cand._end) or ""
+  tab.dtype= cand:get_dynamic_type()
+  ext_data.quality = string.format("%6.4f",cand.quality)
   local function fn(elm) return tab[elm] or cand[elm]  or "" end
-  return "--" .. items:map(fn):concat("|")
+  return "--" ..  items:gsub(" ",""):split(","):map(fn):concat("|")
 end
 
 function M.func(input, env)
-   local config = env:Config()
    local context = env:Context()
-   local items = List(context:get_property(env.option):gsub(" ",""):split(","))
+   local items = context:get_property(env.option)
+   local ext_data= {
+     input = context.input,
+     error = context:get_property("_error")
+   }
+
    for cand in input:iter() do
-      if cand.type ~= "command" then
-       cand.comment = cand.comment  .. debug_comment(items,cand,context.input )
-      end
+      cand.comment = cand.type == "command" and cand.comment or cand.commend ..
+      debug_comment(items,cand,ext_data )
       yield(cand)
    end
 end
