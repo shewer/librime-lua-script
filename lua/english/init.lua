@@ -137,7 +137,7 @@ function P.init(env)
 end
 
 function P.fini(env)
-  env.notifier:echo(function(elm) elm:disconnect() end)
+  env.notifier:each(function(elm) elm:disconnect() end)
 end
 
 function P.func(key,env)
