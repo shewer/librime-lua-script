@@ -18,7 +18,7 @@ local function req_module(mod_name,rescue_func)
 
   ok , res = pcall(require, 'component' .. slash .. mod_name )
   if ok then return res end
-  puts(ERROR,__LINE__(), "require module failed ", mod_name , res )
+  puts(ERROR, "require module failed ", mod_name , res )
   return  rescue_func
 end
 
@@ -64,7 +64,7 @@ function L:init()
     if ok then 
       return 
     end
-    puts(ERROR,__LINE__(), "excute fint error",self.id,res)
+    puts(ERROR, "excute fint error",self.id,res)
   end
 end
 function L:fini()
@@ -73,7 +73,7 @@ function L:fini()
     if ok then 
       return 
     end
-    puts(ERROR,__LINE__(), "excute fini error",self.id,res)
+    puts(ERROR, "excute fini error",self.id,res)
   end
   self.module = nil
   self.env=nil
@@ -83,12 +83,12 @@ end
 function L:func(...)
   local ok,res = pcall(self.module.func,self:args(...) )
   if ok and self.chk_res(res) then return res end
-  puts(ERROR,__LINE__(), "excute func error",self.id,res)
+  puts(ERROR, "excute func error",self.id,res)
 
   if self.rescue_func then
     ok,res = pcall(self.rescue_func, self:args(...) )
     if ok and self.chk_res(res) then return res end
-    puts(ERROR,__LINE__(), "excute rescue_func error",self.id,res)
+    puts(ERROR, "excute rescue_func error",self.id,res)
   end
 end
 L.__index = L
@@ -112,6 +112,7 @@ function M.Processor(engine,prescription,module_str)
   obj.rescue_func = obj.rescue_func or Rescue_processor
   -- delegate func 
   obj.process_key_event=obj.func
+  puts(INFO,"create processor component ",prescription)
   return obj
 end
 
