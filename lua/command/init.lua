@@ -79,11 +79,6 @@ function T.init(env)
   env.commands:append("f", "func", env, env_funcs)
   env.commands:append("c", "config", config)
 
-
-
-
-
-
   -- init  notifier
   -- saved option and property
   env.option=context.option_update_notifier:connect(function(ctx,name)
@@ -97,7 +92,7 @@ function T.init(env)
     local cand=ctx:get_selected_candidate()
     local execute_str = cand and cand.type=="command" and cand.text=="" and cand.comment:match("^(.*)%-%-.*$")
     if execute_str  then
-      puts("log", "command executestr",execute_str)
+      puts(INFO, "command executestr",execute_str)
       env.commands:execute( execute_str)
     end
 
@@ -151,7 +146,6 @@ local function component(env)
   local path= "recognizer/patterns/" .. env.name_space
   local pattern = ("^%s[a-z]%s.*$"):format(prefix,suffix)
   config:set_string(path, pattern)
-  puts("log",__FILE__(),__LINE__(),__FUNC__(), path, config:get_string(path),  "prefix" , prefix,"suffix" , suffix)
 
   -- 加入 lua_translator@command
   local t_module = "command_tran"
