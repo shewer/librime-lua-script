@@ -42,7 +42,6 @@ local Comment_disable="Shift" .. "+Release+" .. Comment_enable
 -- get name_space of table_translator and script_translator
 local function get_trans_namespace(config)
   local path="engine/translators"
-
   local t_list=config:clone_configlist(path)
     :select( function(tran)
 	return  not tran:match("vcode$") and (  tran:match("^script_translator@") or tran:match("^table_translator@") )

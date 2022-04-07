@@ -130,7 +130,7 @@ local function debug_comment(items,cand,tab)
   tab = tab or { }
   tab.ainput= tab.input and tab.input:sub(cand.start +1,cand._end) or ""
   tab.dtype= cand:get_dynamic_type()
-  ext_data.quality = string.format("%6.4f",cand.quality)
+  tab.quality = string.format("%6.4f",cand.quality)
   local function fn(elm) return tab[elm] or cand[elm]  or "" end
   return "--" ..  items:gsub(" ",""):split(","):map(fn):concat("|")
 end
@@ -144,7 +144,7 @@ function M.func(input, env)
    }
 
    for cand in input:iter() do
-      cand.comment = cand.type == "command" and cand.comment or cand.commend ..
+      cand.comment = cand.type == "command" and cand.comment or cand.comment ..
       debug_comment(items,cand,ext_data )
       yield(cand)
    end
