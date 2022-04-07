@@ -21,6 +21,7 @@
 --
 --
 --
+
 local prefix="/"
 local suffix=":"
 local List=require 'tools/list'
@@ -32,6 +33,7 @@ local env_funcs={}
 function env_funcs.reload(self)
   local schema=self.engine.schema
   self.engine:apply_schema( Schema(schema.schema_id) )
+  -- reset()
 end
 function env_funcs.date(self)
   self.engine:commit_text( os.date() )
@@ -161,7 +163,7 @@ local function component(env)
   end
 
   -- 替換 uniquifier filter  --> lua_filter@uniquifier 或者加入
-
+  --[[
   local f_path= "engine/filters"
   local org_filter= "uniquifier"
   local u_ns = "uniquifier"
@@ -175,6 +177,7 @@ local function component(env)
   end
   --增加 reject_tags
   config:config_list_append( u_ns .. "/reject_tags", env.name_space )
+  --]]
 
   -- 加入 command filter  --> lua_filter@command_filter@command
   local c_module = "command_filter"

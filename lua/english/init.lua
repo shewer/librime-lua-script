@@ -90,7 +90,7 @@ local function component(env)
   end
 
   -- 替換 uniquifier filter  --> lua_filter@uniquifier 或者加入
-
+  --[[
   local f_path= "engine/filters"
   local org_filter= "uniquifier"
   local u_ns = "uniquifier"
@@ -104,7 +104,7 @@ local function component(env)
   end
   --增加 reject_tags
   config:config_list_append( u_ns .. "/reject_tags", env.name_space )
-
+  --]]
 end
 
 local P={}
