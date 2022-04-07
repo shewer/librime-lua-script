@@ -125,6 +125,13 @@ function M:select(func, ...)
   end
   return self:class()(tab)
 end
+function M:select_delete(func, ...)
+  local tab={}
+  for i,v in ipairs(self) do
+    if not func(v, ...) then table.insert(tab,v) end
+  end
+  return self:class()(tab)
+end
 function M:select_with_index(func, ...)
   local tab={}
   for i,v in ipairs(self) do
@@ -173,11 +180,11 @@ end
 
 function M:reverse()
   local obj=M()
-  for i= #self, 1 do 
-    obj[#self-i+1] = self[i] 
-  end 
+  for i= #self, 1 do
+    obj[#self-i+1] = self[i]
+  end
   return obj
-end 
+end
 function M:size()
   return #self
 end
@@ -238,11 +245,11 @@ end
 function M:sort_self(func,...)
   table.sort(self,func)
   return self
-end 
+end
 function M:sort(func,...)
   return self:clone():sort_self()
-end 
-  
+end
+
 
 
 
