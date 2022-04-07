@@ -162,9 +162,25 @@ local function component(env)
     config:config_list_append( t_path, t_component )
   end
 
+  local f_path= "engine/filters"
+  local org_filter= "uniquifier"
+  local r_filter = "lua_filter@uniquifier"
+  local u_ns = "uniquifier"
+
+  -- 加入 command filter  --> lua_filter@command_filter@command 
+  -- 且插入於uniqualifier 前
+  local c_module = "command_filter"
+  local c_component= "lua_filter@" .. c_module .. "@" .. env.name_space
+  _G[c_module] = _G[c_module] or F
+  if not  config:find_index(f_path, c_component) then
+    local findex= config:find_index(f_path, org_filter) or config:find_index(f_path, r_filter)
+    if findex then
+      -- insert before lua_filter@uniquifier
+      config:config_list_insert(f_path,c_component, findex )
+    end
+  end
   -- 替換 uniquifier filter  --> lua_filter@uniquifier 或者加入
   --[[
-  local f_path= "engine/filters"
   local org_filter= "uniquifier"
   local u_ns = "uniquifier"
   local r_filter = "lua_filter@uniquifier"
@@ -179,17 +195,6 @@ local function component(env)
   config:config_list_append( u_ns .. "/reject_tags", env.name_space )
   --]]
 
-  -- 加入 command filter  --> lua_filter@command_filter@command
-  local c_module = "command_filter"
-  local c_component= "lua_filter@" .. c_module .. "@" .. env.name_space
-  _G[c_module] = _G[c_module] or F
-  if not  config:find_index(f_path, c_component) then
-    local findex= config:find_index(f_path, r_filter)
-    if findex then
-      -- insert before lua_filter@uniquifier
-      config:config_list_insert(f_path,c_component, findex )
-    end
-  end
 
 end
 local P={}
