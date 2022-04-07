@@ -5,7 +5,7 @@
 --
 -- Distributed under terms of the MIT license.
 --
--- require sub_module tools 
+-- require sub_module tools
 -- M.Processor(engine, lua_processor@<module_name>@<name_space>,module_str, rescue_func)
 require 'tools/string'
 local puts=require 'tools/debugtool'
@@ -61,8 +61,8 @@ setmetatable(L,B)
 function L:init()
   if self.module.init then
     local ok ,res = pcall(self.module.init,self.env)
-    if ok then 
-      return 
+    if ok then
+      return
     end
     puts(ERROR, "excute fint error",self.id,res)
   end
@@ -70,8 +70,8 @@ end
 function L:fini()
   if self.module.fini then
     local ok ,res = pcall(self.module.fini,self.env)
-    if ok then 
-      return 
+    if ok then
+      return
     end
     puts(ERROR, "excute fini error",self.id,res)
   end
@@ -110,7 +110,7 @@ function M.Processor(engine,prescription,module_str)
   obj.args = proc_args
   obj.chk_res= proc_chk_res
   obj.rescue_func = obj.rescue_func or Rescue_processor
-  -- delegate func 
+  -- delegate func
   obj.process_key_event=obj.func
   puts(INFO,"create processor component ",prescription)
   return obj
