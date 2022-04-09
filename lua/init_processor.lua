@@ -207,6 +207,8 @@ function M.init(env)
   --auto_load_bak(config:get_map("engine"))
   auto_load(env)
 
+  local prtscr=config:get_string(env.name_space .. "/prtscr_key") or "Control+F10"
+  env.prtscr_key = KeyEvent(prtscr)
   -- init end
   -- print component
 
@@ -222,7 +224,7 @@ function M.init(env)
     list:push( "---- " ..  pattern_p .. " ----" )
     env:config_path_to_str_list(pattern_p):each(fn)
 
-    list:each(function(elm)  puts(CONSOLE,elm) end)
+    list:each(function(elm)  puts(INFO,elm) end)
   end
 end
 
@@ -299,12 +301,11 @@ function M.func(key,env)
   local active_input= context.input:match("^/(.+)$")
   if key:repr() == "space" and  F[active_input] then
     F[active_input](env)
-    print_cowsay(env)
     context:clear()
     return Accepted
   end
-  if status.has_menu and key:eq(KeyEvent("Control+F10")) then
-    screen_print(env)
+  if status.has_menu and key:eq(env.prtscr_key) then
+    F["screen_print"](env)
     return Accepted
   end
   -- sub_module func
