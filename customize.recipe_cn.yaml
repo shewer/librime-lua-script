@@ -1,0 +1,23 @@
+
+# encoding: utf-8
+---
+recipe:
+  Rx: customize
+  args:
+    - schema=luna_pinyin
+  description: >-
+    Customize input schema to input character based on a phrase
+install_files: >-
+  processor_plugin_cn.yaml
+  lua/init_processor.lua
+  lua/conjunctive.lua
+  lua/_rescue.lua
+  lua/command/*
+  lua/component/*
+  lua/english/*
+  lua/multi_reverse/*
+  lua/tools/*
+patch_files:
+  ${schema:-luna_pinyin}.custom.yaml:
+    - patch/+:
+        __include: processor_plugin_cn:/patch

@@ -1,0 +1,78 @@
+#--------------------------------
+# custom.yaml
+# patch:
+#   __include: processor_plugin:/patch
+#
+#--------------------------------
+patch:
+  engine/processors/@after 0: lua_processor@init_processor@module_cn
+  # init_processor config of name_space  
+  module_cn:
+    modules:
+      - { module: 'command', module_name: "cammand_proc", name_space: "command" }
+      - { module: 'component/select_character', module_name: "select_character", name_space: "translator" }
+      - { module: 'english', module_name: "english_proc", name_space: "english_cn" }
+      - { module: "conjunctive", module_name: "conjunctive_proc", name_space: "conjunctive_cn" }
+      - { module: 'multi_reverse', module_name: "multi_reverse_proc", name_space: "multi_reverse" }
+    prtscr_key: "Control+F10" # commit_text of menu list 
+    # init_processor   append comopents
+    before_modules:
+      filters:
+        #- lua_filter@stroke_count
+        #- lua_filter@debug_filter
+      segments:
+      translators:
+    after_modules:
+      filters:
+        - lua_filter@stroke_count
+        - lua_filter@debug_filter
+      segments:
+      translators:
+        - lua_translator@select_character_tran@select_character   # select_character 配件 模擬矩陣符號表 []1-0 選字 /emj /nu /sma /smb /smc
+  #-------------- modules initialize of name_space
+  multi_reverse:
+    toggle_key: "Control+6"
+    qcode_key: "Control+7"
+    completion_key: "Control+8"
+    next_key: "Control+9"
+    prev_key: "Control+0"
+
+  # select_character name_space translator 須要調用反查字典和 comment_format 設定 name_space :translator  
+  # name_space of select_character hot-key   
+  #
+  #translator/dictionary: 
+  #translator/comment_format:
+  #translator/preedit_format:
+  translator/select_character_next: "["  # --->
+  translator/select_character_prev: "]"  # <--  
+
+
+  english_cn: #
+    tag: abc #  中文模式調用 英文字典 default : none
+    dictionary: english # defaul english_tw 字典橎位置 lua/tools/english.txt
+    toggle_key: "F10" #  enable/disable key
+
+  #繁體使用者 simplifier/opencc_config: t2s.json (預設)  default: 繁體詞庫 enable: 簡體詞庫
+  #conjunctive_cn/files: [essay.txt, essay_cn.txt]
+  #簡體使用者 simplifier/opencc_config: s2t.json (預設)  default: 體簡詞庫 enable: 繁體詞庫
+  #conjunctive_cn/files: [essay_cn.txt, essay.txt]
+  conjunctive_cn:
+    files: [essay-cn.txt  essay.txt]
+    toggle_key : "F11"
+    escape_key : ".-"
+
+  debug_filter:
+    output_format: [dtype,type,start,_end,preedit,quality,input,ainput,error]
+    #tags:
+
+  switches/+:
+    - name: conjunctive
+      states: [ 无,联]
+    - name: english
+      states: [ 无,英]
+    - name: multi_reverse
+      states: [ 无,查]
+    - name: qcode
+      states: [ 无,短]
+    - name: completion
+      states: [ 无,未]
