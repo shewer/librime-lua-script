@@ -217,9 +217,9 @@ function M.init(env)
   local context=env.engine.context
 
   -- load  bindings
-  local nk=config:get_string(env.name_space .. "/next_key" ) or NEXT_KEY
+  local nk=config:get_string(env.name_space .. "/select_character_next" ) or NEXT_KEY
   env.head= KeyEvent(nk )
-  local pk=config:get_string(env.name_space .. "/prev_key" ) or PREV_KEY
+  local pk=config:get_string(env.name_space .. "/selcet_character_prev" ) or PREV_KEY
   env.tail= KeyEvent(pk )
   -- load preedit_mode  default
   env.projection_func= load_project_func(env)
@@ -242,6 +242,10 @@ function M.func(key,env)
     if cand.text:utf8_len() < 2 then  return Noop end
     -- entery  select_character  processor
 
+    if cand.type == "symble" then
+      env.cand = env.cand and env.cand or Warp_cand(cand, env.projection_func)
+    end
+
     if key:eq(env.head) then
       -- 往下定字  -->
       env.cand = env.cand and env.cand or Warp_cand(cand, env.projection_func)
@@ -252,8 +256,9 @@ function M.func(key,env)
       env.cand = env.cand and env.cand or Warp_cand(cand, env.projection_func)
       env.cand:dec()
       return Accepted
-    elseif  env.cand and (key.keycode> 0x30 and key.keycode < 0x3a or key.keycode == 0x20) then
+    elseif  env.cand and (key.keycode>= 0x30 and key.keycode < 0x3a or key.keycode == 0x20) then
       local n= key.keycode - 0x30
+      n = n == 0 and 10 or n
       -- 以詞定字模式標 定字上屏
       env.engine:commit_text( env.cand:select_org_character( n >0 and n or nil ) )
 
