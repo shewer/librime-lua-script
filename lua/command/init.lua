@@ -103,31 +103,30 @@ function T.init(env)
   env.commands:append("c", "config", config)
 
   -- init  notifier
+  env.notifiers= List(
   -- saved option and property
-  env.option=context.option_update_notifier:connect(function(ctx,name)
+  context.option_update_notifier:connect(function(ctx,name)
     env.options[name]= ctx:get_option(name) or false
-  end)
-  env.property=context.property_update_notifier:connect(function(ctx,name)
+  end),
+  context.property_update_notifier:connect(function(ctx,name)
     env.propertys[name] = ctx:get_property( name ) or ""
-  end)
+  end),
   --  execute command when commit
-  env.commit=context.commit_notifier:connect(function(ctx)
+  context.commit_notifier:connect(function(ctx)
     local cand=ctx:get_selected_candidate()
     local execute_str = cand and cand.type=="command" and cand.text=="" and cand.comment:match("^(.*)%-%-.*$")
     if execute_str  then
       puts(INFO, "command executestr",execute_str)
       env.commands:execute( execute_str)
     end
-
+  end ),
+  context.update_notifier:connect(function(ctx)
   end )
-  env.update=context.update_notifier:connect(function(ctx)
-  end )
+  )
 end
 function T.fini(env)
   -- disconnect notifier
-  for i,v in next, { "commit", "update","property", "option" } do
-    env[v]:disconnect()
-  end
+  env.notifiers:each(function(elm) elm:disconnect() end)
 end
 
 function T.func(input,seg,env)
