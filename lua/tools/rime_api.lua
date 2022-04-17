@@ -42,9 +42,9 @@ local function Version()
   local ver
   if Opencc then
     ver = 147
-  elseif KeySequence().repr then
+  elseif KeySequence and KeySequence().repr then
     ver= 139
-  elseif  ConfigMap().keys then
+  elseif  ConfigMap and ConfigMap().keys then
     ver= 127
   elseif Projection then
     ver= 102
@@ -269,7 +269,18 @@ function M.wrap_config(env)
     local config=env.engine.schema.config
     return Wrap(config,"methods",CN)
 end
+function M.req_module(mod_name,rescue_func)
+  local slash= package.config:sub(1,1)
+  local ok,res = pcall(require, mod_name )
+  if ok then return res end
 
+  ok , res = pcall(require, 'component' .. slash .. mod_name )
+  if ok then return res end
+  puts(ERROR, "require module failed ", mod_name , res )
+  return  rescue_func
+end
+function M.req_module_()
+end
 -- env metatable
 local E={}
 --
