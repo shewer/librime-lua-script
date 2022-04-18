@@ -277,10 +277,16 @@ local function components(env)
   end
   -- set module  conjunctive filter"
   _G[lua_tran_ns .. "_filter"]= _G[lua_tran_ns .. "_filter" ] or F
-  local path = "engine/filters"
-  local name = "lua_filter@" .. lua_tran_ns .. "_filter@" .. env.name_space
-  if not config:find_index(path,name) then
-    config:config_list_append(path, name)
+  -- append lua_filter@conjunctive_filter@<name_space> before uniquifier
+  local f_path = "engine/filters"
+  local comp = "lua_filter@" .. lua_tran_ns .. "_filter@" .. env.name_space
+  if not config:find_index(f_path, comp) then
+    local index = config:find_index(f_path, "uniquifier")
+    if index then
+      config:set_string(f_path .. "/@before " .. index , comp)
+    else
+      config:set_string(f_path .. "/@next" , comp)
+    end
   end
 
 
