@@ -43,10 +43,11 @@ local Comment_disable="Shift" .. "+Release+" .. Comment_enable
 local function get_trans_namespace(config)
   local path="engine/translators"
   local t_list=config:clone_configlist(path)
-    :select( function(tran)
-	return  not tran:match("vcode$") and (  tran:match("^script_translator@") or tran:match("^table_translator@") )
-	   end )
-    :map( function(tran)
+  :select( function(tran)
+    local ns= tran:match("table_translator@(.+)$") or tran:match("script_translator@(.+)$")
+    return ns and not config:get_bool(ns .. "/reverse_disable")
+  end)
+  :map( function(tran)
 	return  assert(tran:match("@([%a_][%a%d_]*)$"),"tran not match")
 	end )
   t_list:unshift( "translator" )
@@ -57,25 +58,24 @@ local function component(env)
   local config= env:Config()
   local t_path="engine/translators"
   local f_path="engine/filters"
-  -- append  lua_filter@completion
+  -- insert  lua_filter@completion at first
   _G[Completion] = _G[Completion] or require( 'multi_reverse/completion' )
   if not config:find_index(f_path, "lua_filter@" .. Completion ) then
-    if not config:find_index(f_path, "lua_filter@" .. Completion ) then
-      config:set_string( f_path .. "/@before 0" , "lua_filter@" .. Completion   )
-    end
+    config:set_string( f_path .. "/@before 0" , "lua_filter@" .. Completion   )
   end
-  -- append lua_filter@multi_reverse@<name_space>
+  -- append lua_filter@multi_reverse@<name_space> before uniquifier
   _G[Multi_reverse] = _G[Multi_reverse] or require( 'multi_reverse/mfilter' )
-  _=get_trans_namespace(config)
-    :map( function(elm)
-	local f_multi= "lua_filter@" .. Multi_reverse .. "@" .. elm
-	if not config:find_index(f_path, f_multi ) then
-	  if not config:find_index(f_path, f_multi ) then
-	    local index = config:get_list_size( f_path )
-	    config:set_string( f_path .. "/@before ".. index - 1 , f_multi )
-	  end
-	end
-	end )
+  get_trans_namespace(config):each(function(elm)
+    local comp= string.format("lua_filter@%s@%s",Multi_reverse,elm)
+    if not config:find_index(f_path, comp) then
+      local index = config:find_index(f_path, "uniquifier")
+      if index then
+        config:set_string(f_path .. "/@before " .. index , comp)
+      else
+        config:set_string(f_path .. "/@next" , comp)
+      end
+    end
+  end)
 end
 
 local function reflash_candidate(ctx,index)
