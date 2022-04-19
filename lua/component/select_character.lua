@@ -107,32 +107,26 @@ end
 ------ test
 function CM:index(index)
   if type(index) == "number" then
-    self._index = (index -1) % self:size()
+    self._index = (index -1) % self:size() + 1
   end
-  return self._index and self._index +1 or nil
+  return self._index
 end
 
 function CM:_update()
   if self:index() then
-    self:preedit(
-      self:_projection()
-    )
+    self:preedit( self:_projection())
   end
 end
 
 function CM:inc()
   local index= self:index() or  0
-  puts(C01,__LINE__(), "----------inc index" , self:index(),self._cand:get_dynamic_type(),self._org_cand:get_dynamic_type() )
   self:index( index +1  )
-  puts(C01,__LINE__(), "----------inc index after " , self:index() )
   self:_update()
   return self:index()
 end
 function CM:dec()
-  puts(C01,__LINE__(), "----------dec index" , self:index(),self._cand:get_dynamic_type(),self._org_cand:get_dynamic_type() )
   local index= self:index() or  self:size()+1
   self:index( index -1 )
-  puts(C01,__LINE__(), "----------dec index after " , self:index() )
   self:_update()
   return self:index()
 end
@@ -172,13 +166,10 @@ local function Warp_cand(cand, projection_func, index )
   obj._org_preedit=obj._cand.preedit
   obj._org_comment=obj._cand.comment
   obj._projection=projection_func
-  obj._index= index
+  obj._index= index or 0
   return setmetatable(obj, CM )
 end
 
---
---
---
 local function load_project_func(env)
   local config= env.engine.schema.config
   local use_reverse= config:get_int(env.name_space .. '/use_reverse') or  true
