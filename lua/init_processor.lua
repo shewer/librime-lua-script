@@ -260,11 +260,28 @@ function F.ver(env)
   env.engine:commit_text( rime_api.Ver_info() )
 end
 
+local function prtkey(key,env)
+  local context= env.engine.context
+  local prtkey = "prtkey"
+  local debug_mode= context:get_option("_debug")
+  local key_bind= KeyEvent("Shift+F12")
+  if debug_mode and key:eq(key_bind) then
+    context:set_option( prtkey, not context:get_option(prtkey) )
+  end
+  if debug_mode and context:get_option(prtkey) then
+    env.engine:commit_text(key:repr().. " ")
+    return true
+  end
+end
+
 function M.func(key,env)
   local Rejected,Accepted,Noop=0,1,2
   local context=env:Context()
   local status=env:get_status()
-
+  -- commit_text key:repr()
+  if prtkey(key,env) then
+    return Accepted
+  end
   -- self func
   -- /ver /modules /comps /cal /cowsay
   local active_input= context.input:match("^/(.+)$")
