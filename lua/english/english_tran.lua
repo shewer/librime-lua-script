@@ -23,7 +23,7 @@ local function load_ext_dict(filename)
   filename =  path ..  (filename or "english.txt" )
   local tab = {}
   for line in io.open(filename):lines() do
-    puts(D01, __FILE__(),__LINE__(), line)
+    puts(D01, __FILE__(), line)
     if not line:match("^#") then  -- 第一字 #  不納入字典
       local t=line:split("\t")
       if t then
@@ -45,7 +45,7 @@ function T.init(env)
   T._eng_dict= T._eng_dict or English_dict(dict .. ".txt")
   T._nj= T._nj or njload()
   T._ext_dict= T._ext_dict or load_ext_dict("ext_dict.txt")
-  puts(CONSOLE, __FILE__(),__LINE__(), package.cpath,"\n\n",  package.path )
+  puts(CONSOLE, __FILE__(), package.cpath,"\n\n",  package.path )
 
   env.gsub_fmt =  package.config:sub(1,1) == "/" and "\n" or "\r"
 
@@ -55,12 +55,10 @@ function T.fini(env)
 end
 
 local function sync_case(input, candidate_word)
-  local is_first_char_cap = input:sub(1,1):upper() == input:sub(1,1)
-  local is_second_char_cap = input:sub(2,2):upper() == input:sub(2,2)
-  if is_first_char_cap and is_second_char_cap then
+  if input:match("^%u%u") then
     return candidate_word:upper()
-  elseif is_first_char_cap then
-    return candidate_word:sub(1,1):upper() .. candidate_word:sub(2)
+  elseif input:match("^%u") then
+    return candidate_word:gsub("^%a",string.upper)
   else
     return candidate_word
   end
@@ -75,7 +73,7 @@ function T.func(inp,seg,env)
   input = input:match("^[%a][%a_.'/*:%-]*$") and input or ""
   if #input==0 then return end
 
-  --puts("trace",__FILE__(),__FUNC__(),__LINE__(),"----english-----", input  )
+  --puts("trace",__FILE__(),__FUNC__(),"----english-----", input  )
 
   local first=T._ext_dict[input:lower()]
      and Candidate("english_ext", seg.start, seg._end, input , "[".. T._ext_dict[input:lower()] .. "]")
