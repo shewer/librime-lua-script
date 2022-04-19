@@ -111,13 +111,14 @@ local P={}
 function P.init(env)
   Env(env)
   local context=env:Context()
+  local config= env:Config()
   --load_config(env)
   component(env)
   --recognizer/patterns/english: "^[a-zA-Z]+[*/:'._-].*"
   env.comp_key= KeyEvent("Tab")
-  env.uncomp_key= KeyEvent("Shift+Tab")
-  env.enable_key= KeyEvent("F10")
-  context:set_option(English,false)
+  env.uncomp_key= KeyEvent("Shift+ISO_Left_Tab")
+  env.enable_key= KeyEvent(config:get_string(env.name_space .."/toggle_key") or "F10")
+  --context:set_option(English,false)
   env.history=List()
 
   env.notifier= List(
@@ -176,9 +177,11 @@ function P.func(key,env)
   -- 補齊input   以cand.type "ninja" 替換部分字段 "english" 替換全字母串
   if status.has_menu  then
     local cand=context:get_selected_candidate()
-    --puts("trace" , __FILE__(),__LINE__() , cand.type , cand.info )
     if key:eq(env.comp_key)  then
-      env.history:push(context.input)
+      -- reject 
+      if cand.text == context.input then return Noop end
+
+      local history = context.input
       if cand.type == "english" then
         context.input = cand.text
       elseif cand.type== "ninja" then
@@ -190,6 +193,7 @@ function P.func(key,env)
       else
         return Noop
       end
+      env.history:push(history)
       return Accepted
     end
   end
