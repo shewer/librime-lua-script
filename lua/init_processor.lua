@@ -124,71 +124,40 @@ end
 
 --auto_load
 local function auto_load(env, tab_G)
-  tab_G= type(tab_G)=="table" and tab_G or _G
-  local function req_mod(comp_str,tab_G)
-    puts(WARN,"auto_load", "lua_" .. comp_str)
-    local comp_type, module_name, name_space = comp_str:split("@"):unpack()
-    name_space = name_space or module_name
-    local ok,res = pcall(require, module_name)
-    if ok then
-      tab_G[module_name]= res
-      return
+  env:config_path_to_str_list("engine"):each(
+  function (str, tab)
+    local comp_str = str:match("^.+:lua_(.+)$")
+    if comp_str then
+      local comp_type,module_name,name_space= comp_str:split("@"):unpack()
+      name_space = name_space or module_name
+      if not tab[module_name] then
+        puts(WARN,"auto_load", "lua_" .. comp_str)
+        tab[module_name] = rime_api.req_module(module_name, tab["Rescue_" .. comp_type])
+      end
     end
-    ok,res = pcall(require, "component/" .. module_name)
-    if ok then
-      tab_G[module_name] = res
-      return
-    else
-      puts(ERROR, "require module failed ",comp_str, res)
-      local context= env:Context()
-      tab_G[module_name] = _G["Rescue_" .. comp_type]
-    end
-  end
-  local function find_lua_comp(elm) return  elm:match("^.+:lua_(.+)$") end
-  local function chk_mod(elm,tab) return tab[ elm:split("@")[2] ]  end
-
-  env:config_path_to_str_list("engine")
-  :select(find_lua_comp)
-  :map(find_lua_comp)
-  :select_delete(chk_mod,tab_G)
-  :each(req_mod,tab_G)
+  end, type(tab_G)=="table" and tab_G or _G)
 end
 
 -- append components to config_map of engine
-local function check_duplicate_value(dist_list,config_value)
-  for i=0 ,dist_list.size -1 do
-    if dist_list:get_value_at(i).value == config_value.value then
-      return true
-    end
-  end
-  return false
-end
 
-local function append_config_list(dist_list, from_list)
-  if not dist_list or not from_list
-    or dist_list.type ~="kList" or from_list.type ~= "kList" then
-    return
-  end
-  for i=0 , from_list.size -1 do
-    local c_value  = from_list:get_value_at(i)
-    if not check_duplicate_value(dist_list, c_value ) then
-      dist_list:append( c_value.element )
-      puts(INFO, "append component", dist_list.size, c_value.value )
-    else
-      puts(WARNING, "cancel append duplicate component", c_value.value )
-    end
-  end
-end
 local function append_component(config, dist_path, from_path)
-  dist = dist_path and config:get_map(dist_path)
-  from = from_path and config:get_map(from_path)
-  if not dist or not from or dist.type ~="kMap" or from.type ~= "kMap" then return end
-  for i,key in next , from:keys() do
-    local dist_list=dist:get(key):get_list()
-    local from_list= from:get(key):get_list()
-    if dist_list and from_list then
-      append_config_list(dist_list, from_list)
+  local from = from_path and config:get_obj(from_path)
+  if not from then return end
+
+  local function fn(elm, path)
+    if not config:find_index(path , elm) then
+      -- path == engine/filters then find index of uniquifier
+      local index = path:match("filters$") and config:find_index(path, "uniquifier")
+      if index then
+        config:set_string(path .. "/@before " .. index , elm)
+      else
+        config:set_string(path .. "/@next" , elm)
+      end
     end
+  end
+  -- key={processors,segments,translators,filters}
+  for key, f_list in next , from do
+    List(f_list):each(fn, dist_path .. "/" .. key)
   end
 end
 
@@ -200,8 +169,8 @@ function M.init(env)
   -- init self --
   local config=env:Config()
   append_component(config, "engine", env.name_space .. "/before_modules")
-  env.modules = init_modules(env.engine,
-  List( config:get_obj( env.name_space .. "/modules") or _G[env.name_space] ))
+  local mods= List(config:get_obj(env.name_space .. "/modules") or _G[env.name_space])
+  env.modules = init_modules(env.engine, mods)
   append_component(config, "engine",env.name_space .. "/after_modules")
 
   --auto_load_bak(config:get_map("engine"))
