@@ -23,19 +23,32 @@ local puts=require'tools/debugtool'
 local List=require'tools/list'
 require 'tools/rime_api'
 
-local Multi_reverse='multi_reverse'
+
+local Keybinds={
+    toggle= "Control+6",
+    qcode= "Control+7",
+    completion= "Control+8",
+    next= "Control+9",
+    prev= "Control+0",
+    hold= "Shift_L",
+    --hold_release= nil
+  }
+--Keybinds.hold_release= ("%s+Release+%s"):format(Keybinds.hold:match("^(%a+)"),Keybinds.hold)
+--[[
 local Multi_reverse_sw="Control+6"
+local Qcode_sw="Control+7"
+local Completion_sw="Control+8"
 local Multi_reverse_next="Control+9"
 local Multi_reverse_prev="Control+0"
+--]]
 local Completion="completion"
-local Completion_sw="Control+8"
+local Multi_reverse='multi_reverse'
 local Qcode="qcode"
-local Qcode_sw="Control+7"
 -- 增加 hold key
 -- Multi_reverse_hold
 local Multi_reverse_hold="multi_reverse_hold"
-local Comment_enable="Shift_L"
-local Comment_disable="Shift" .. "+Release+" .. Comment_enable
+--local Comment_enable="Shift_L"
+--local Comment_disable="Shift" .. "+Release+" .. Comment_enable
 --local Comment_enable="Contorl_L"
 --local Comment_disable="Contorl" .. "+Release+" .. Comment_enable
 
@@ -86,6 +99,56 @@ local function reflash_candidate(ctx,index)
   if ctx.composition:empty() then return end
   ctx.composition:back().selected_index = si
 end
+local function init_keybinds(env)
+  local config = env:Config()
+  local MultiSwitch=require'multi_reverse/multiswitch'
+  env.trans= MultiSwitch( get_trans_namespace( config ))
+  local keys= config:get_obj(env.name_space .. "/keybinds")
+  local Func={}
+  function Func.next(env)
+      env:Context():set_property(Multi_reverse, env.trans:next())
+      return true
+  end
+  function Func.prev(env)
+      env:Context():set_property(Multi_reverse, env.trans:prev())
+      return true
+  end
+  function Func.toggle(env)
+    env:Context():Toggle_option(Multi_reverse)
+    return true
+  end
+  function Func.qcode(env)
+    env:Context():Toggle_option(Qcode)
+    return true
+  end
+  function Func.completion(env)
+    env:Context():Toggle_option(Completion)
+    return true
+  end
+  function Func:hold(env)
+      if not context:get_option(Multi_reverse) then
+        local state = context:get_option(Multi_reverse_hold)
+        local keymatch= key:eq(env.keys.hold)
+        if keymatch and not state then
+          context:set_option(Multi_reverse_hold,true)
+          compos:back().selected_index= cand_index
+        elseif not keymatch and state then
+          context:set_option(Multi_reverse_hold, false )
+          compos:back().selected_index= cand_index
+        end
+      end
+  end
+
+  --local hold= keys["hold"]
+  --keys["hold_release"] = hold and ("%s+Release+%s"):format(hold:match("^(%a+)"),hold) or nil
+
+  local list = List()
+  for k,v in next, keys do
+    puts(DEBUG,"----key and keyname:",k,"value : ["..v.."]")
+    keys[k]= KeyEvent(v)
+  end
+  return keys
+end
 
 local P={}
 function P.init(env)
@@ -100,7 +163,10 @@ function P.init(env)
 
   local MultiSwitch=require'multi_reverse/multiswitch'
   env.trans= MultiSwitch( get_trans_namespace(config) )
-  env.keys={}
+  env.keys= init_keybinds(env)
+
+
+--[[
   env.keys.next= KeyEvent(Multi_reverse_next)
   env.keys.prev= KeyEvent(Multi_reverse_prev)
   env.keys.m_sw= KeyEvent(Multi_reverse_sw)
@@ -108,7 +174,7 @@ function P.init(env)
   env.keys.qcode= KeyEvent(Qcode_sw)
   env.keys.shiftl=KeyEvent(Comment_enable)
   env.keys.shiftl_r=KeyEvent(Comment_disable)
-
+--]]
   -- initialize option  and property  of multi_reverse
   context:set_option(Multi_reverse,true)
   context:set_option(Completion,true)
@@ -145,7 +211,7 @@ function P.func(key,env)
       context:set_property(Multi_reverse, env.trans:next())
     elseif key:eq(env.keys.prev) then
       context:set_property(Multi_reverse, env.trans:prev())
-    elseif key:eq(env.keys.m_sw) then
+    elseif key:eq(env.keys.toggle) then
       context:Toggle_option(Multi_reverse)
     elseif key:eq(env.keys.qcode) then
       context:Toggle_option(Qcode)
@@ -155,12 +221,10 @@ function P.func(key,env)
       -- 使用 Shift_L 顯示字根
       if not context:get_option(Multi_reverse) then
         local state = context:get_option(Multi_reverse_hold)
-        local keymatch= key:eq(env.keys.shiftl)
-        if keymatch and not state then
-          context:set_option(Multi_reverse_hold,true)
-          compos:back().selected_index= cand_index
-        elseif not keymatch and state then
-          context:set_option(Multi_reverse_hold, false )
+        local keymatch= key:eq(env.keys.hold)
+        -- xor keymatch state   set not state
+        if (keymatch and not state) or (not keymatch and state)  then
+          context:set_option(Multi_reverse_hold,not state)
           compos:back().selected_index= cand_index
         end
       end
