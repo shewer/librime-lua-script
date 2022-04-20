@@ -15,6 +15,8 @@ local function req_module(mod_name,rescue_func)
   local slash= package.config:sub(1,1)
   local ok,res = pcall(require, mod_name )
   if ok then return res end
+  puts(WARN,"require module failed ", mod_name , res )
+  puts(WARN,"retry require module from ", "component".. slash .. mod_name)
 
   ok , res = pcall(require, 'component' .. slash .. mod_name )
   if ok then return res end
