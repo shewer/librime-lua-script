@@ -31,26 +31,13 @@ local Keybinds={
     next= "Control+9",
     prev= "Control+0",
     hold= "Shift_L",
-    --hold_release= nil
   }
---Keybinds.hold_release= ("%s+Release+%s"):format(Keybinds.hold:match("^(%a+)"),Keybinds.hold)
---[[
-local Multi_reverse_sw="Control+6"
-local Qcode_sw="Control+7"
-local Completion_sw="Control+8"
-local Multi_reverse_next="Control+9"
-local Multi_reverse_prev="Control+0"
---]]
+
 local Completion="completion"
 local Multi_reverse='multi_reverse'
 local Qcode="qcode"
--- 增加 hold key
 -- Multi_reverse_hold
 local Multi_reverse_hold="multi_reverse_hold"
---local Comment_enable="Shift_L"
---local Comment_disable="Shift" .. "+Release+" .. Comment_enable
---local Comment_enable="Contorl_L"
---local Comment_disable="Contorl" .. "+Release+" .. Comment_enable
 
 -- get name_space of table_translator and script_translator
 local function get_trans_namespace(config)
@@ -91,60 +78,9 @@ local function component(env)
   end)
 end
 
-local function reflash_candidate(ctx,index)
-
-  if ctx.composition:empty() then return end
-  local si= index  or ctx.composition:back().selected_index
-  ctx:refresh_non_confirmed_composition()
-  if ctx.composition:empty() then return end
-  ctx.composition:back().selected_index = si
-end
 local function init_keybinds(env)
-  local config = env:Config()
-  local MultiSwitch=require'multi_reverse/multiswitch'
-  env.trans= MultiSwitch( get_trans_namespace( config ))
-  local keys= config:get_obj(env.name_space .. "/keybinds")
-  local Func={}
-  function Func.next(env)
-      env:Context():set_property(Multi_reverse, env.trans:next())
-      return true
-  end
-  function Func.prev(env)
-      env:Context():set_property(Multi_reverse, env.trans:prev())
-      return true
-  end
-  function Func.toggle(env)
-    env:Context():Toggle_option(Multi_reverse)
-    return true
-  end
-  function Func.qcode(env)
-    env:Context():Toggle_option(Qcode)
-    return true
-  end
-  function Func.completion(env)
-    env:Context():Toggle_option(Completion)
-    return true
-  end
-  function Func:hold(env)
-      if not context:get_option(Multi_reverse) then
-        local state = context:get_option(Multi_reverse_hold)
-        local keymatch= key:eq(env.keys.hold)
-        if keymatch and not state then
-          context:set_option(Multi_reverse_hold,true)
-          compos:back().selected_index= cand_index
-        elseif not keymatch and state then
-          context:set_option(Multi_reverse_hold, false )
-          compos:back().selected_index= cand_index
-        end
-      end
-  end
-
-  --local hold= keys["hold"]
-  --keys["hold_release"] = hold and ("%s+Release+%s"):format(hold:match("^(%a+)"),hold) or nil
-
-  local list = List()
+  local keys= env:Config():get_obj(env.name_space .. "/keybinds")
   for k,v in next, keys do
-    puts(DEBUG,"----key and keyname:",k,"value : ["..v.."]")
     keys[k]= KeyEvent(v)
   end
   return keys
@@ -157,28 +93,16 @@ function P.init(env)
   local config= env:Config()
   component(env)
 
-  -- load key_binder file
   --env.keybind_tab=require 'multi_reverse/keybind_cfg'
-  --assert(env.keybind_tab)
-
   local MultiSwitch=require'multi_reverse/multiswitch'
   env.trans= MultiSwitch( get_trans_namespace(config) )
+  -- load key_binder file
   env.keys= init_keybinds(env)
 
-
---[[
-  env.keys.next= KeyEvent(Multi_reverse_next)
-  env.keys.prev= KeyEvent(Multi_reverse_prev)
-  env.keys.m_sw= KeyEvent(Multi_reverse_sw)
-  env.keys.completion= KeyEvent(Completion_sw)
-  env.keys.qcode= KeyEvent(Qcode_sw)
-  env.keys.shiftl=KeyEvent(Comment_enable)
-  env.keys.shiftl_r=KeyEvent(Comment_disable)
---]]
   -- initialize option  and property  of multi_reverse
-  context:set_option(Multi_reverse,true)
-  context:set_option(Completion,true)
-  context:set_option(Qcode, true)
+  --context:set_option(Multi_reverse,true)
+  --context:set_option(Completion,true)
+  --context:set_option(Qcode, true)
   context:set_property(Multi_reverse, env.trans:status() )
 
   -- init notifire  option  property  : for  reflash  menu
@@ -237,5 +161,4 @@ function P.func(key,env)
 end
 
 -- add module
-
 return P
