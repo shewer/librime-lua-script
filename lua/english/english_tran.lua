@@ -49,9 +49,18 @@ function T.init(env)
 
   env.gsub_fmt =  package.config:sub(1,1) == "/" and "\n" or "\r"
 
+  env.notifiers=List(
+  env.engine.context.option_update_notifier:connect(
+  function(ctx,name)
+    if name=="english_info_mode" then
+      env.mode= env.mode and (env.mode+1)   or 0
+    end
+  end) )
+
 
 end
 function T.fini(env)
+  env.notifiers:each(function(elm) elm:disconnect() end)
 end
 
 local function sync_case(input, candidate_word)
@@ -89,9 +98,9 @@ function T.func(inp,seg,env)
   for w in T._eng_dict:iter(inp:sub(seg.start,seg._end)) do
     -- 如果 與 字典相同 替換 first cand.comment
     if first.type == English and input == w.word or input:lower() == w.word then
-      first.comment= w.info:gsub("\\n", env.gsub_fmt)
+      first.comment= w:get_info(env.mode)
     else
-      yield( Candidate(English,seg.start,seg._end,sync_case(input,w.word),w.info:gsub("\\n",env.gsub_fmt)) )
+      yield( Candidate(English,seg.start,seg._end,sync_case(input,w.word),w:get_info(env.mode)) )
     end
   end
   -- 使用 ninja 最後一佪字查字典 type "ninja"
@@ -101,7 +110,7 @@ function T.func(inp,seg,env)
 
     for w in T._eng_dict:iter(n_word) do
       -- seg.start =   seg.end - #m_word
-      yield( Candidate(Ninja, seg._end - #n_word , seg._end,w.word,"(Ninja) " .. w.info:gsub("\\n",env.gsub_fmt)))
+      yield( Candidate(Ninja, seg._end - #n_word , seg._end,w.word,"(Ninja) " .. w:get_info(env.mode)))
     end
   end
 end
