@@ -102,45 +102,41 @@ function M.init(env)
   env.history=""
   env.history_back=""
 
-  env.commit_connect= env.engine.context.commit_notifier:connect(
-    function(ctx)
-      local conjunctive_mode = ctx:get_option(lua_tran_ns) and not ctx:get_option("ascii_mode")
-      if not conjunctive_mode then return end
+  env.notifiers=List(
+  env.engine.context.commit_notifier:connect(
+  function(ctx)
+    local conjunctive_mode = ctx:get_option(lua_tran_ns) and not ctx:get_option("ascii_mode")
+    if not conjunctive_mode then return end
 
-      local cand=ctx:get_selected_candidate()
-      local command_mode= cand and "history" == cand.type  and "" == cand.text
-      -- change env.history
-      if command_mode then
-        env.history_back=  env.history
-        env.history = cand.comment:match("^(.*)[-][-].*$") or env.history
-      end
+    local cand=ctx:get_selected_candidate()
+    local command_mode= cand and "history" == cand.type  and "" == cand.text
+    -- change env.history
+    if command_mode then
+      env.history_back=  env.history
+      env.history = cand.comment:match("^(.*)[-][-].*$") or env.history
+    end
 
-      -- update history
-      local commit_text= ctx:get_commit_text()
-      if  #commit_text>0 and  ctx.input ~= commit_text then
-        env.history = env.history .. commit_text
-        context:set_property(env.name_space,env.history)
-        env.history = env.history:utf8_sub(-10)
-
-
-        env.commit_trigger =  not env.dict:empty(env.history)
-      end
-  end  )
-
-
-
-  env.update_connect= env.engine.context.update_notifier:connect(
-    function(ctx)
-      if env.commit_trigger then
-        env.commit_trigger =nil
-        ctx.input=pattern_str
-      end
+    -- update history
+    local commit_text= ctx:get_commit_text()
+    if  #commit_text>0 and  ctx.input ~= commit_text then
+      env.history = env.history .. commit_text
+      context:set_property(env.name_space,env.history)
+      env.history = env.history:utf8_sub(-10)
+      env.commit_trigger =  not env.dict:empty(env.history)
+    end
+  end),
+  env.engine.context.update_notifier:connect(
+  function(ctx)
+    if env.commit_trigger then
+      env.commit_trigger =nil
+      ctx.input=pattern_str
+    end
   end )
+  )
 end
 
 function M.fini(env)
-  env.commit_connect:disconnect()
-  env.update_connect:disconnect()
+  env.notifiers:each(function(elm) elm:disconnect() end)
 end
 
 
@@ -293,7 +289,7 @@ local function components(env)
   -- add pattern "~~"
   config:set_string("recognizer/patterns/" .. lua_tran_ns , rec_pattern)
 
-  local switch_key = config:get_string(env.name_space .. "/toggle_key") or switch_key
+  local switch_key = config:get_string(env.name_space .. "/keybinds/toggle") or switch_key
   -- register keybinder {when: "always",accept: switch_key, toggle: conjunctive }
   add_keybind(config, {when= "always", accept= switch_key, toggle= lua_tran_ns } )
 end
