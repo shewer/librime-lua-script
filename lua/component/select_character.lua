@@ -208,9 +208,9 @@ function M.init(env)
   local context=env.engine.context
 
   -- load  bindings
-  local nk=config:get_string(env.name_space .. "/select_character_next" ) or NEXT_KEY
+  local nk=config:get_string(env.name_space .. "/keybinds/next" ) or NEXT_KEY
   env.head= KeyEvent(nk )
-  local pk=config:get_string(env.name_space .. "/selcet_character_prev" ) or PREV_KEY
+  local pk=config:get_string(env.name_space .. "/keybinds/prev" ) or PREV_KEY
   env.tail= KeyEvent(pk )
   -- load preedit_mode  default
   env.projection_func= load_project_func(env)
