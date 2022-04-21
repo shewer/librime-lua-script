@@ -23,7 +23,7 @@ local puts= require'tools/debugtool'
 --require 'tools/object'
 require 'tools/string'
 local List=require 'tools/list'
-
+local NR = package.config:sub(1,1):match("/") and "\n" or "\r"
 
 
 
@@ -93,7 +93,7 @@ end
 -- 轉換 reg 字串  字頭 全字 詞類
 local function conv_pattern(org_text)
   local pw,ww,p = split_str(org_text)
-  pw= "^" .. conver_rex(pw:lower())
+  pw= "^" .. conver_rex(pw:lower() or "")
   ww="^"  .. conver_rex(ww:lower())
   p= p:len() >0
     and   "%s" .. conver_rex(p:lower() ) .. "[%a%-%.]*%."
@@ -164,18 +164,22 @@ function Word:get_info(mode)
   mode= tonumber(mode)
   local info= self
   if not info then return  "" end
+  mode= mode and mode % 7 or 0
 
-  mode= mode or 1
   if mode == 1 then
-    return info.info
+    return (info.phonics .. info.info):gsub("\\n",NR)
   elseif mode == 2  then
-    return info.phonics
+    return info.info:gsub("\\n", " ")
   elseif mode == 3 then
+    return info.info:gsub("\\n", NR)
+  elseif mode == 4 then
+    return info.phonics
+  elseif mode == 5 then
     return info.word
-  elseif mode==4 then
+  elseif mode== 6 then
     return ""
   else
-    return info.phonics .. info.info
+    return (info.phonics .. info.info):gsub("\\n"," ")
   end
 
 end
