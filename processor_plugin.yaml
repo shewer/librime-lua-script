@@ -13,7 +13,10 @@ patch:
       - { module: 'english', module_name: "english_proc", name_space: "english" }
       - { module: "conjunctive", module_name: "conjunctive_proc", name_space: "conjunctive" }
       - { module: 'multi_reverse', module_name: "multi_reverse_proc", name_space: "multi_reverse" }
-    prtscr_key: "Control+F10" # commit_text of menu list
+    keybinds:
+      prtscr: "Control+F12" # commit_text of menu list
+      prtkey: "Shift+F12"
+
     # init_processor   append comopents
     before_modules:
       filters:
@@ -24,6 +27,7 @@ patch:
     after_modules:
       filters:
         - lua_filter@stroke_count
+        #- uniquifier
         - lua_filter@debug_filter
       segments:
       translators:
@@ -35,20 +39,24 @@ patch:
   #translator/dictionary:
   #translator/comment_format:
   #translator/preedit_format:
-  translator/select_character_next: "["  # --->
-  translator/select_character_prev: "]"  # <--
+  translator/keybinds:
+    next: bracketleft  # [ --->
+    prev: bracketright  # ] <--
   #-------------- modules initialize of name_space
   multi_reverse:
-    toggle_key: "Control+6"
-    qcode_key: "Control+7"
-    completion_key: "Control+8"
-    next_key: "Control+9"
-    prev_key: "Control+0"
-  #------------ english
+    keybinds:
+      toggle: "Control+6"
+      qcode: "Control+7"
+      completion: "Control+8"
+      next: "Control+9"
+      prev: "Control+0"
+      hold: "Shift_L"
+  #------------ english module
   english: #
     tag: abc #  中文模式調用 英文字典 default : none
-    dictionary: english_tw # defaul english_tw 字典橎位置 lua/tools/english.txt
-    toggle_key: "F10" #  enable/disable key
+      #dictionary: english # defaul english_tw 字典橎位置 lua/tools/english.txt
+    keybinds:
+      toggle: F10 #  enable/disable key
 
   #繁體使用者 simplifier/opencc_config: t2s.json (預設)  default: 繁體詞庫 enable: 簡體詞庫
   #conjunctive_cn/files: [essay.txt, essay_cn.txt]
@@ -56,16 +64,19 @@ patch:
   #conjunctive_cn/files: [essay_cn.txt, essay.txt]
   conjunctive:
     files: [essay.txt, essay_cn.txt]
-    toggle_key : "F11"
-    escape_key : ".-"
+    escape_char: ".-"
+    keybinds:
+      toggle: "F11"
 
   debug_filter:
     output_format: [dtype,type,start,_end,preedit,quality,input,ainput,error]
     #tags:
 
+  # switches default
   switches/+:
     - name: conjunctive
       states: [ 無,聯]
+      reset: 1
     - name: english
       states: [ 無,英]
     - name: multi_reverse
@@ -74,3 +85,5 @@ patch:
       states: [ 無,短]
     - name: completion
       states: [ 無,未]
+    - name: _debug
+      states: [ off, on]
