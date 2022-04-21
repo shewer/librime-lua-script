@@ -107,6 +107,14 @@ local function component(env)
   --]]
 end
 
+local function init_keybinds(env)
+  local keys= env:Config():get_obj(env.name_space .. "/keybinds")
+  for k,v in next, keys do
+    keys[k]= KeyEvent(v)
+  end
+  return keys
+end
+
 local P={}
 function P.init(env)
   Env(env)
@@ -115,9 +123,11 @@ function P.init(env)
   --load_config(env)
   component(env)
   --recognizer/patterns/english: "^[a-zA-Z]+[*/:'._-].*"
-  env.comp_key= KeyEvent("Tab")
-  env.uncomp_key= KeyEvent("Shift+ISO_Left_Tab")
-  env.enable_key= KeyEvent(config:get_string(env.name_space .."/toggle_key") or "F10")
+  env.keys= init_keybinds(env)
+
+  --env.comp_key= KeyEvent("Tab")
+  --env.uncomp_key= KeyEvent("Shift+ISO_Left_Tab")
+  --env.enable_key= KeyEvent(config:get_string(env.name_space .."/keybinds/toggle") or "F10")
   --context:set_option(English,false)
   env.history=List()
 
@@ -164,21 +174,24 @@ function P.func(key,env)
   end
 
   -- 反回上一次 input text
-  if key:eq(env.uncomp_key) and #env.history > 0  then
+  if key:eq(env.keys.completion_back) and #env.history > 0  then
     context.input = env.history:pop()
     return Accepted
   end
   -- enable English mode
-  if key:eq(env.enable_key) then
+  if key:eq(env.keys.toggle) then
     context:Toggle_option(English)
     context:refresh_non_confirmed_composition()
+    return Accepted
+  elseif key:eq(env.keys.mode) then
+    context:Toggle_option("english_info_mode")
     return Accepted
   end
   -- 補齊input   以cand.type "ninja" 替換部分字段 "english" 替換全字母串
   if status.has_menu  then
     local cand=context:get_selected_candidate()
-    if key:eq(env.comp_key)  then
-      -- reject 
+    if key:eq(env.keys.completion)  then
+      -- reject
       if cand.text == context.input then return Noop end
 
       local history = context.input
