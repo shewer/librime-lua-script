@@ -161,6 +161,13 @@ local function append_component(config, dist_path, from_path)
   end
 end
 
+local function init_keybinds(env)
+  local keys= env:Config():get_obj(env.name_space .. "/keybinds")
+  for k,v in next, keys do
+    keys[k]= KeyEvent(v)
+  end
+  return keys
+end
 -- init_processor
 
 local M={}
@@ -176,8 +183,8 @@ function M.init(env)
   --auto_load_bak(config:get_map("engine"))
   auto_load(env)
 
-  local prtscr=config:get_string(env.name_space .. "/prtscr_key") or "Control+F10"
-  env.prtscr_key = KeyEvent(prtscr)
+  -- prtscr prtkey keyevent
+  env.keys= init_keybinds(env)
   -- init end
   -- print component
 
@@ -260,26 +267,21 @@ function F.ver(env)
   env.engine:commit_text( rime_api.Ver_info() )
 end
 
-local function prtkey(key,env)
-  local context= env.engine.context
-  local prtkey = "prtkey"
-  local debug_mode= context:get_option("_debug")
-  local key_bind= KeyEvent("Shift+F12")
-  if debug_mode and key:eq(key_bind) then
-    context:set_option( prtkey, not context:get_option(prtkey) )
-  end
-  if debug_mode and context:get_option(prtkey) then
-    env.engine:commit_text(key:repr().. " ")
-    return true
-  end
-end
-
 function M.func(key,env)
   local Rejected,Accepted,Noop=0,1,2
   local context=env:Context()
   local status=env:get_status()
+  -- prtkey enable/disable
+  local debug_mode = context:get_option('_debug')
+  if debug_mode and key:eq(env.keys.prtkey) then
+    context:Toggle_option("prtkey")
+    return Accepted
+  elseif debug_mode and context:get_option("prtkey") then
+    env.engine:commit_text(key:repr().. " ")
+    return Accepted
   -- commit_text key:repr()
-  if prtkey(key,env) then
+  elseif status.has_menu and key:eq(env.keys.prtscr) then
+    F["screen_print"](env)
     return Accepted
   end
   -- self func
@@ -288,10 +290,6 @@ function M.func(key,env)
   if key:repr() == "space" and  F[active_input] then
     F[active_input](env)
     context:clear()
-    return Accepted
-  end
-  if status.has_menu and key:eq(env.prtscr_key) then
-    F["screen_print"](env)
     return Accepted
   end
   -- sub_module func
