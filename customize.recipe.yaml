@@ -6,9 +6,10 @@ recipe:
   args:
     - schema=luna_pinyin
   description: >-
-    Customize input schema to input character based on a phrase
+    Librime-lua-script plugin 
 install_files: >-
   processor_plugin.yaml
+  essay_cn.txt
   lua/init_processor.lua
   lua/conjunctive.lua
   lua/_rescue.lua
