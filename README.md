@@ -1,21 +1,34 @@
 # librime-lua-script 是一個利用 librime-lua 擴展 rime 輸入法的集成模組
   此模組須使用 librime-lua #131以上版本[下載rime.dll](https://github.com/shewer/librime-lua/releases )
+  init_processor.lua 為主要載入程式，使用者可以修改 processor_plugin.yaml 調整載入模組、設定模組熱鍵及參數(詳見該檔)；支援自載lua module 以省去再編輯rime.lua，井且支援載入失敗時提供救援程式繞過錯誤模組，錯誤模組名將存於 property:_error中(使用command module 輸入 /p:_error ) 。
+  ex:
+    lua_translator@date@date1 -- module_name: date  name_space: date1
+    lua_translator@date -- module_name: date  name_space: date
+    -- 檢查lua 環境是否存在 date 如果沒有將會試載入 date = [require](require)('date') or require('component/date')
+  
   * 以詞定字: select_character [以词定字](#以词定字)上屏模组
-  * 聯想詞輸入模組:
-  * 英打+英文字典模組: 20220124 增加 english/tag 預設 english 如果須要 tag:abc 輸出，可以在<方案>.custom.yaml
-    設定   english/tag: abc   or  abc_segmentor/extra_tags: [ english ]
+  * 聯想詞輸入模組: 
+  * 英打+英文字典模組: 
   * 主副字典反查模組: 此模組會查找 script_translator table_translator 可反杳方案內的字典
   * 命令模組: 此模組可以在輸入模式 set & get option property config 及執行function
   * 載入程序: 以上模組都可以獨立手動載入也可以利用, init_processor.lua 把需要載入模組設定於 <name_space>/modules: {list}. 預設以此模式[安裝](#安裝)。
+  
+  
+
 
   # 安裝
+   新增簡體版本設定檔( customize_cn.recipe.yaml , processor_plugin_cn.yaml )
+   window 版本請更換 rime.dll 至 librime-lua #131. 
   
   ## plum 安裝至方案中
   
   ```bash
-    # plugin in cangjie5
+    # plugin in cangjie5 
     rime-install shewer/librime-lua-script@main:customize:schema=cangjie5
     echo 'init_processor= require("init_processor")' >> rime.lua 
+    # 簡體
+    #rime-install shewer/librime-lua-script@main:customize_cn:schema=cangjie5
+    #echo 'init_processor= require("init_processor")' >> rime.lua 
     
   ``` 
   
@@ -23,272 +36,124 @@
   ```bash
   cd  <user-data-dir>
   git clone https://github.com/shewer/librime-lua-script --depth=1
-  mv librime-lua-script/lua/*  ./lua
-  cp libryme-lua-script/processor_plugin.yaml .
-  cp librime-lua-script/example/essay-zh-hans.txt .
+  cp librime-lua-script/lua/*  ./lua -a
+  cp librime-lua-script/processor_plug* .
+  cp librime-lua-script/essay_cn.txt .
+  echo 'init_processor = require("init_processor")' >> rime.lua
   ```
 
-  ## 設定方法一 : 使用 yaml 設置
-
-  append init_processor module in rime.lua
-
-  ```lua
-  -- append rime.lua
-  init_processor= require('init_processor')
-  ```
-  add to <方案>.custom.yaml
-
+  ## 方案設定
+  將以下文稿 yaml 加入 <schema>.custom.yaml
   ```yaml
-  #custom.yaml
-  patch:
-    __include: processor_plugin:/patch
+  __patch:
+  # Rx: shewer/librime-lua-script:customize:schema=whaleliu_ext {
+    - patch/+:
+        __include: processor_plugin:/patch      # 繁體
+        #__include: processor_plugin_cn:/patch  # 簡體
+  # }
   ```
 
-  edit processor_plugin.yaml
-
-  ```yaml
-  # processor_plugin.yaml 內容
-  # 可自行 remark 不要用的模組
-  # select_character 以詞定字
-  # command   命令模式
-  # english   英打
-  # conjunctive 聯想模式
-  # multi_reverse 主副字典反查模組
-  #
-  patch:
-    engine/processors/@after 0: lua_processor@init_processor@module1
-      module1/modules:
-        #  以詞定字  name_space: 可指定其他有 dictionary 反查 單字字根 (ex: cangjin5/dictionary)
-        - { module: 'component/select_character', module_name: 'select_character', name_space: "translator" }
-        - { module: 'command'      , module_name: "cammand_proc"       , name_space: "command" }
-        - { module: 'english'      , module_name: "english_proc"       , name_space: "english" }
-        - { module: "conjunctive"  , module_name: "conjunctive_proc"   , name_space: "conjunctive" }
-        - { module: 'multi_reverse', module_name: "multi_reverse__proc", name_space: "multi_reverse" }
-
-  ```
-
- ## 設定方法二: 由 rime.lua module2 載入
-
-   append init_processor module in rime.lua
-
-   ```lua
-   -- append rime.lua
-   module2={
-     {module='command', module_name="cammand_proc",name_space="command" },
-     {module='english', module_name="english_proc",name_space="english" },
-     {module="conjunctive", odule_name = "conjunctive_proc",name_space="conjunctive"},
-     { module= 'multi_reverse', module_name= "multi_reverse__proc", name_space= "multi_reverse" },
-   }
-
-   init_processor= require('init_processor')
-   ```
-
-   add to <方案>.custom.yaml
-
-   ```yaml
-   #custom.yaml
-   patch:
-     engine/processors/@after 0: lua_processor@init_processor@module2 # module2
-
-   ```
-# english_tran.lua 增加 優先載入 wordnanja-rs  , 只要把 wordninja.(dll/so/dylib) 放入 <user_data_dir>/lua/plugin
-# 增加 init_processor.lua
-  使用了 tags_match() and ConfigMap:keys() 只支援 librime-lua #131 以上版本 window版本rime.dll 可從 https://github.com/shewer/librime-lua/releases 下載
-  可由 yaml name_space 或 rime.lua 載入模組(以 yaml name_space 爲優先)
-
-  由 init_processor 導入模組
-  可用模組 english(包含wordninja) conjunctive command
-  化簡繁複 custom.yaml rime.lua 編輯
-
-  ## 以词定字
- 此模組 可以將詞組拆選井反查單字字根 ，用于单字不会拆时~~
-  ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E4%BB%A5%E8%A9%9E%E5%AE%9A%E5%AD%97.gif)
-
-
-  注意: Shadow Candidate（如繁簡轉換後) 無法變更 text preedit comment 所以無法顯示，但是定字上屏仍然有效.可以用[ + number 直接選字上屏
-
-  觸發條件  對選中的candidate 詞長>1  and  NEXT_KEY PREV_KEY
-
-  引用資料
-     * <name_space>/dictinary : 調用反查字典  預設: translator/dictionary
-     * <name_space>/preedit_fromat: 單字字根轉置 預設: translator/preedit_format
-     * 可以利用 name_space 選用其他反查字典及 preedit_format
-     * <name_space>/next_key  NEXT_KEY  : 觸發鍵   預設: '['
-     * <name_space>/prev_key  PREV_KEY  : 觸發鍵   預設: ']'
-###獨立安裝
-
-```lua
---rime.lua
--- module_name
-selcet_character = require 'component/select_character'
-```
-
-
-```yaml
-#<config>.custom.yaml
-#lua_processor@<module_name>@<name_space>
-patch:
-   engine/processors/@after 0: lua_processor@select_character@translator
-   #translator/next_key: "<" #  default: [
-   #translator/prev_key: ">" #  default: ]
-```
-
-
-  ## command 命令模組 顯示 設定 執行 命令 支援 Tab 補齊功能
-   可擴充 config func 設定 達到線上重載功能，後續再增加
-
-    * /<opcf>:<name>:<value>  o: option p:property c:config f:funcs
-    * /o: option 顯示/設定 true/false /o:<name>:<true/false>  (toggle/set/unset)
-    * /p: property 顯示/設定字串 /p:<name>:value
-    * /f: function 顯示 執行 /f:<name>:<argv1,argv2,....>
-    * /c: config 顯示 設定字串 /c:<path>:value  分隔符 /
-    * 範例
-       * /o:as{Tab}:t{Space} --> /o:ascii-mode:t
-       * /o:abcd:t --> 設定新值 option abcd= true
-       * /p:test:test{Space} 設定新值 property test= "test"
-       * /c:me{Tab}/p{Tab}:9{Space} 設定 menu/page_size
-       * /f:re(Tab}{Space} 重載   /f:reload execute
-       * /f:me{Tab}:5{Space} 設定meun/page_size 井重載 /f:menu_size:5
-
-
-  ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E5%91%BD%E4%BB%A4%E6%A8%A1%E5%BC%8Fdemo.gif)
-
-
-  ## english 英文字典模組 支援 Tab 補齊功能 及 wordninja
+  # 使用說明
+  ## init_processor
+    init_processor 提供載入 sub_module 及 功能，詳見 init_processor name_space
+    init_processor 將檢查 engine 下 lua_component 是否載入lua環境中，井嘗試載入
+    
+  ### 操作
+    * /ver : commit_text ver 
+    * /modules : commit_text 載入模組
+    * /comps : commit_text engine components
+    * /cal: commit_text 月曆
+    * Control+F12: commit_text menu candidate 
+    * Shift+F12: commit_text key:repr() ，在option "_debug" enable 時可以送出 鍵名字串
+   
+  ## command 模組
+    使用 input 設定及查詢相關環境, /c + /f:reload 可以做動態設定環境
+    
+  ### 操作
+    * "/o:" : set option  ex: toggle _debug ， /o:_debug{space}, set true /o:_deb{Tab}:true{space}
+    * "/p:" : set property 同上
+    * "/c:" : set config  ex: /c:eng{Tab}/tran{Tab}/@1:script_translator{space} 設定engine/translations/@1字串
+    * "/f:" : execute function ex: /f:relo{space}, /f:me{Tab}:5{space} 調整menu/page_size
+  
+  ## 以詞定字母
+    此模組 可以將詞組拆選井反查單字字根 ，用于单字不会拆时，選中詞組候選輸入 [ or ] 進入此模式 space 上屏。可以導入 lua_translator@select_character_tran 增加符號輸入
+    
+  ### 操作
+    * "[": 由左向右選字
+    * "]": 由右向左選字
+    * "[1-0" "]1-0": 直接選字
+    * /emj :  符號表選字 ex: /emj{Next}{Next}4 第三候選 第四字
+    * /sma /smb /smc : 同上
+  
+  ## 英文 字典+英打模式，支援 Tab 補齊功能 及 wordninja
+    ```
     * **注意** win10部份單字的comment 會造成崩潰，需要remark單字，linux 無此問題可以把 tools/english_tw.txt 內文
-      "#" 移除
-    * 英打模式 F10
-    * 支援 * / 字尾字根  /i ing /n ness /l less  /t tion /s sion /a able
-    * 詞類     :adv  :vt :v ....
-    * 空白鍵上屏井補上 空白字元
-    * 增加短語字典 lua/english/ext_dict.txt , 輸入短語字串時(cand.type == "english_ext")  按下 Tab 時交換 cand.text cand.coment
-      ex: input: btw   candidate:  btw [by the way]  candidate: by the way [btw]
-    *  20220124 增加 english/tag 預設 english : 如果須要在 tag:abc 輸出，可以在<方案>.custom.yaml
-      設定   english/tag: abc   or  abc_segmentor/extra_tags: [ english ]
-    * english_tran.lua 增加 優先載入 wordnanja-rs  , 只要把 wordninja.(dll/so/dylib) 放入 <user_data_dir>/lua/plugin
-
-
- ![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E8%8B%B1%E6%89%93%E6%A8%A1%E5%BC%8Fdemo.gif)
-
-
-
-
-## multi_reverse 主副字典反查(新版)  支持 librime-lua  新架構可能造成失效待修正
-自動導入 engine/translators/   script_translator table_translator   反查 lua_filter
-### 反查字典切換
-* Ctrl+6 反查開關
-* ctrl+7 反查碼顯示最短碼開關 較適合table_translator
-* ctrl+8 未完成碼上屏開關  -- 過濾 completion cand
-* Ctrl+9 反查碼filter 切換(正)
-* Ctrl+0 反查碼filter 切換(負)
-![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E4%B8%BB%E5%89%AF%E5%AD%97%E5%85%B8%E5%8F%8D%E6%9F%A5demo.gif)
-### 安裝獨立加載 模組
-
-* rime.lua
-
-```lua
-multi_reverse_proc = require 'multi_reverse'    -- 載入 multi_reverse_processor multi_reverse_filter
-assert( multi_reverse_processor)
-```
-
-* schema_id.custom.yaml
-
-```
-patch:
-   engine/processors/@after 0: lua_processor@multi_reverse_proc@multi_reverse
-
-```
-
-## 聯想詞彙 conjunctive.lua (支援librime-lua Commits on Oct 11, 2020 版本)
+    *   "#" 移除
+    * * 英打模式 F10
+    * * comment 輸出模式 Shift+F10
+    * * 支援 * / 字尾字根  /i ing /n ness /l less  /t tion /s sion /a able
+    * * 詞類     :adv  :vt :v ....
+    * * 空白鍵上屏井補上 空白字元
+    * * 增加短語字典 lua/english/ext_dict.txt , 輸入短語字串時(cand.type == "english_ext")  按下 Tab 時交換 cand.text cand.coment
+    *   ex: input: btw   candidate:  btw [by the way]  candidate: by the way [btw]
+    * *  20220124 增加 english/tag 預設 english : 如果須要在 tag:abc 輸出，可以在<方案>.custom.yaml
+    *   設定   english/tag: abc   or  abc_segmentor/extra_tags: [ english ]
+    * * english_tran.lua 增加 優先載入 wordnanja-rs  , 只要把 wordninja.(dll/so/dylib) 放入 <user_data_dir>/lua/plugin
+    * * 支援 camel upper case 轉換  
+      
+    ```
+  ## 反查模組
+    自動載入 table script translator 反查filter，免去設定 
+  ### 操作
+    * Ctrl+6 反查開關
+    * ctrl+7 反查碼顯示最短碼開關 較適合table_translator
+    * ctrl+8 未完成碼上屏開關 -- 過濾 completion cand
+    * Ctrl+9 反查碼filter 切換(正)
+    * Ctrl+0 反查碼filter 切換(負)
+ 
+  ## 聯想詞彙
    * 增加候選字聯想: 暫時不適用( 拼音類輸入法 候選字太多 )
-   * conjunctive 增加 导入switchs: simplifier  切换繁简体词库 請使用 essay.txt 轉換 這版本詞比essay.txt 少少 ~~[已修正格式 essay-zh-hans.txt ]  来源https://github.com/rime/rime-essay-simp~~
-    简体用户 如果使用此功能注意事項:
-       0 已知 簡體用戶會使用  simpllifier/opencc_config: s2t.jso
-       1 修改 rime.lua  __conjunctive_file  順序
-          ```lua
-              --   繁體使用者 simplifier/opencc_config: t2s.json (預設)  default: 繁體詞庫 enable: 簡體詞庫
-              --  __conjunctive_file={default="essay.txt",enable="essay_zh_han.txt"}
-              -- 簡體使用者 simplifier/opencc_config: s2t.json (預設)  default: 體簡詞庫 enable: 繁體詞庫
-              __conjunctive_file={default="eassay_cn.txt",enable="essay.txt"}
-          ```
-   * 上屏後啓動聯想
-   * 聯想開關(F11)
+   * conjunctive 增加 导入switchs: simplifier 切换繁简体词库, 須要提供 詞庫文檔， 己提供預設 essay_cn.txt, 修改 processor_plugin[_cn].yaml:conjunctive/files: [ file1.txt, file2.txt] 可以使用其他詞庫
+  聯想開關(F11)
    * ~ 觸發聯想
-     * [><~] : 刪字 ~ < 刪字尾   > 刪字首，變更時下面聯想詞也會更新重組， 織 backspace 恢復上一字元  space 變更 env.history
-     * C : 清除 space 變更 env.history=""
-     * B : 還原上次異動 space 變更 env.history= env.history_back
-     * H : user 常用詞 選屏上字
-![Alt Text](https://github.com/shewer/librime-lua-script/blob/main/example/%E8%81%AF%E6%83%B3%E8%A9%9Edemo.gif)
+   * [><~] : 刪字 ~ < 刪字尾 > 刪字首，變更時下面聯想詞也會更新重組， 織 backspace 恢復上一字元 space 變更 env.history
+      C : 清除 space 變更 env.history=""
+      B : 還原上次異動 space 變更 env.history= env.history_back
+      H : user 常用詞 選屏上字
+ 
+  ## debug 模式
+    提供顯示candidate info 於 comment 
+    
+    * "/o:_debug" : debug 開關
+    * "/p:_debug" : 設定顯示項目 dtype,type,start,_end,preedit,quality,input,ainput,error 
+    ```
+    (鯨)木十弓	 [tags: vcode cangjie5liu newcjliu abc]
+    ->檸	--Phrase|table|0|3|(鯨)木十弓|1.7018|tjk|tjk|
+      柠	--Phrase|table|0|3|(新)木十弓|1.4000|tjk|tjk|
+      𪜑	--Phrase|table|0|3|(倉)木十弓|1.3000|tjk|tjk|
+      末了	--Phrase|table|0|3|(鯨)木十弓|1.5000|tjk|tjk|
+      檸檬	[聯]--Simple|history|0|3|檸檬[聯]|0.0000|tjk|tjk|
+      檸檬汁	[聯]--Simple|history|0|3|檸檬汁[聯]|0.0000|tjk|tjk|
+      檸檬酸	[聯]--Simple|history|0|3|檸檬酸[聯]|0.0000|tjk|tjk|
+      檸檬茶	[聯]--Simple|history|0|3|檸檬茶[聯]|0.0000|tjk|tjk|
+      檸檬水	[聯]--Simple|history|0|3|檸檬水[聯]|0.0000|tjk|tjk|
+      檸檬片	[聯]--Simple|history|0|3|檸檬片[聯]|0.0000|tjk|tjk|
 
-### 單獨安裝
-
-```lua
---- rime.lua
--- <module_name>
-conjunctive_proc= require('conjunctive')
-```
-```yaml
----  custom.yaml
-patch:
-  # lua_processor@<module_name>
-  engine/processors/@after 0: lua_processor@conjunctive_proc
-
-```
-
-```bash
-cp example/essay-zh-hans.txt <user_data_dir>/essay-zh-hans.txt
-```
-
-使用 option simplification 判断繁简模式
-
-```yaml
-# 请确认方案是否设定 simplifier
-engine/filters:
-  - simplifier
-switches:
-  - name: simplification
-    states: [ 漢字,汉字 ]
-simplifier/opencc_config: s2t.json   # 简体用户
-simplifier/opencc_config: t2s.json   # 繁体用户  (預設值 可以不設)
-```
-
-### 設定值
-
-```lua
--- conjunctive.lua 設定參數
- -- 使用者常用詞
- _HISTORY={
- "發性進行性失語",
- "發性症狀",
- "發性行性失語症狀",
- "發性進行失語症狀",
- "發進行性失症狀",
- "發性進行失語症狀",
- "性進行失語症狀",
- "發性行性失語症狀",
- "進行性失語症狀",
- }
-
--- user define data
-local pattern_str="~"  -- 聯想觸發 keyevent
-local lua_tran_ns="conjunctive"
-local dict_file= 'essay.txt' -- 此为繁体字版  要用简体字可复制example/essay_cn.txt 到 <user_data_dir> 井修改此档名
-local switch_key="F11" -- 聯想詞開闢 預設 0  on  1 off , keybinder {when:always,accept: F11, toggle: conjunctive}
-
-```
-
-
-## [tools 常用工具](https://github.com/shewer/librime-lua-script/tools/README.md)
-* list.lua 提供 each map reduce select ...
-* string 擴充 utf8.sub string.split string.utf8_sub string.utf8_len string.utf8_offset
-* rime_api.lua 擴充 rime_api globl function Env(env) Init_projection(config,path)
-* dict.lua 聯想詞查表
-* key_binder.lua 類 keybind 提供 lua_processor 熱鍵
-* pattern.lua librime-lua 舊版無支援 ProjectionReg 改由 lua 實現 pattern 轉換   preedit_format commit_format
-* inspect.lua -- 源自 luarocks 安裝
-* json.lua  -- 源自 luarocks 安裝
-* luaunit.lua testunit  -- 源自 luarocks 安裝
-
-## test luaunit 測試資料夾
-
+    ```
+    
+  ## 筆劃數 stroke_count
+    利用 stroke字典計算筆劃數井加入 comment,此功能須要stroke.reverse.db ，使用 option: "stroke_count" 開關此功能(ex: /o:stro{Tab}{space} ) 
+    ```
+    (鯨)木十弓	 [tags: vcode cangjie5liu newcjliu abc]
+    ->檸	(總:18:18)--Phrase|table|0|3|(鯨)木十弓|1.7018|tjk|tjk|
+      柠	(總:9:9)--Phrase|table|0|3|(新)木十弓|1.4000|tjk|tjk|
+      𪜑	(總:6:6)--Phrase|table|0|3|(倉)木十弓|1.3000|tjk|tjk|
+      末了	(總:7:5,2)--Phrase|table|0|3|(鯨)木十弓|1.5000|tjk|tjk|
+      檸檬	[聯](總:35:18,17)--Simple|history|0|3|檸檬[聯]|0.0000|tjk|tjk|
+      檸檬汁	[聯](總:40:18,17,5)--Simple|history|0|3|檸檬汁[聯]|0.0000|tjk|tjk|
+      檸檬酸	[聯](總:49:18,17,14)--Simple|history|0|3|檸檬酸[聯]|0.0000|tjk|tjk|
+      檸檬茶	[聯](總:44:18,17,9)--Simple|history|0|3|檸檬茶[聯]|0.0000|tjk|tjk|
+      檸檬水	[聯](總:39:18,17,4)--Simple|history|0|3|檸檬水[聯]|0.0000|tjk|tjk|
+      檸檬片	[聯](總:39:18,17,4)--Simple|history|0|3|檸檬片[聯]|0.0000|tjk|tjk|
+    ```
 
