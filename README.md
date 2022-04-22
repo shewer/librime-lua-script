@@ -65,6 +65,7 @@
     * /cal: commit_text 月曆
     * Control+F12: commit_text menu candidate 
     * Shift+F12: commit_text key:repr() ，在option "_debug" enable 時可以送出 鍵名字串
+  
    
   ## command 模組
     使用 input 設定及查詢相關環境, /c + /f:reload 可以做動態設定環境
@@ -86,22 +87,19 @@
     * /sma /smb /smc : 同上
   
   ## 英文 字典+英打模式，支援 Tab 補齊功能 及 wordninja
-    ```
-    * **注意** win10部份單字的comment 會造成崩潰，需要remark單字，linux 無此問題可以把 tools/english_tw.txt 內文
-    *   "#" 移除
-    * * 英打模式 F10
-    * * comment 輸出模式 Shift+F10
-    * * 支援 * / 字尾字根  /i ing /n ness /l less  /t tion /s sion /a able
-    * * 詞類     :adv  :vt :v ....
-    * * 空白鍵上屏井補上 空白字元
-    * * 增加短語字典 lua/english/ext_dict.txt , 輸入短語字串時(cand.type == "english_ext")  按下 Tab 時交換 cand.text cand.coment
+    * **注意** win10部份單字的comment 會造成崩潰，需要remark單字，linux 無此問題可以把 tools/english_tw.txt 內 "#" 移除
+    *  英打模式: F10
+    *  comment 格式切換: Shift+F10
+    *  支援 * / 字尾字根  /i ing /n ness /l less  /t tion /s sion /a able
+    *  詞類     :adv  :vt :v ....
+    *  空白鍵上屏井補上 空白字元
+    *  增加短語字典 lua/english/ext_dict.txt , 輸入短語字串時(cand.type == "english_ext")  按下 Tab 時交換 cand.text cand.coment
     *   ex: input: btw   candidate:  btw [by the way]  candidate: by the way [btw]
-    * *  20220124 增加 english/tag 預設 english : 如果須要在 tag:abc 輸出，可以在<方案>.custom.yaml
-    *   設定   english/tag: abc   or  abc_segmentor/extra_tags: [ english ]
-    * * english_tran.lua 增加 優先載入 wordnanja-rs  , 只要把 wordninja.(dll/so/dylib) 放入 <user_data_dir>/lua/plugin
-    * * 支援 camel upper case 轉換  
+    *   english/tag 預設 english : 如果須要在 tag:abc 輸出，可以在 english/tag: abc   or  abc_segmentor/extra_tags: [ english ]
+    *  english_tran.lua 增加 優先載入 wordnanja-rs  , 只要把 wordninja.(dll/so/dylib) 放入 <user_data_dir>/lua/plugin
+    *  支援 camel upper case 轉換  
       
-    ```
+  
   ## 反查模組
     自動載入 table script translator 反查filter，免去設定 
   ### 操作
