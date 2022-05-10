@@ -75,8 +75,9 @@ cows.cat2 = [[
 ]]
 
 cows.eye= [[
-    $thoughts
-     $thoughts
+    %S
+    %S
+    %S
                                    .::!!!!!!!:.
   .!!!!!:.                        .:!!!!!!!!!!!!
   ~~~~!!!!!!.                 .:!!!!!!!!!UWWW\$\$\$
@@ -130,7 +131,7 @@ cows.koala = [[
 cows.stimpy = [[
 %s
 %s
-%
+%s
 
          .    _  .
          |\\_|/__/|
@@ -159,28 +160,26 @@ for k,v in next,cows do table.insert(cowsay_list,k) end
 
 local mday={31,28,31,30,31,30,31,31,30,31,30,31}
 
-local function cal()
-   local y,m,d,w = os.date("%Y %m %d %w"):split():unpack()
+local function cal(date_str)
+   date_str = str or os.date("%Y-%m-%d")
+   local y,m,d = date_str:split("-"):unpack()
    local mdays = mday[tonumber(m)] + (m == 2 and cgumirs(y) and 1 or 0) 
    local first_index = os.date("%w",os.time({year= y,month =m ,day=1}))
-   local head = " Su Mo Tu We Th Fr Sa "
-   local str = string.format("        %s-%s-%s\n %s \n",y,m,d,head)
-   str = str .. ("   "):rep(first_index)
+   local str = ""
    for i= 1 ,mdays do
-      --print(i , string.format("%3d",i))
       str = str .. string.format( "%3d", i)
-      --print(str)
-      
       if 0 == ((i + first_index ) % 7) then
-	str = str ..  " \n"
+        str = str ..  " \n"
       end
    end
-   
-   print(str)
-   local sday= string.format(" %2d " ,d)
-   local tday= string.format("(%2d)",d)
-   return str:gsub(sday,tday)
+
+   local sday= string.format(" %2d ", d)
+   local tday= string.format("(%2d)", d)
+   str = (" "):rep(first_index*3) .. str:gsub(sday,tday)  .. (" "):rep( (35 - mdays - first_index)*3 +1 )
+   local head = " Su Mo Tu We Th Fr Sa "
+   return  string.format("%6s%4d-%2d-%2d%6s\n%s\n%s","",y,m,d,"",head,str)
 end
+
 local function cowsay(str)
    str = str or cal()
    local n= cows[ cowsay_list[ math.random(#cowsay_list)]]
@@ -188,14 +187,11 @@ local function cowsay(str)
    local strr = str:split("\n")
       :map(function(elm)
 	    max = max < #elm and #elm or max
-	    return "| " .. elm  
-	  end)
-      :map(function(elm)
-	    return elm  .. (" "):rep(max +3-#elm) .."|" 
+	    return "|" .. elm  .. "|"
 	  end):concat("\n")
-
-   return string.format( n, ("-"):rep(max + 4) , strr , ("-"):rep(max + 4) )
+   local l_str = string.format("+%s+",("-"):rep(max) )
+   return string.format( n, l_str, strr, l_str)
 end
 
-return cowsay
+return  cowsay
    
