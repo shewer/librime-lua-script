@@ -42,7 +42,6 @@
 --
 --
 _NR = package.config:sub(1,1):match("/") and "\n" or "\r"
-_NR = "\r"
 do
   local function init_path()
     local slash = package.config:sub(1,1)
