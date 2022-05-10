@@ -64,7 +64,7 @@ local function load_data(env)
       options:push(elm.name)
     elseif elm.options then
       for i,selm in ipairs(elm.options) do
-        org:push(selm)
+        options:push(selm)
       end
     end
   end
