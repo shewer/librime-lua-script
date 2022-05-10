@@ -242,12 +242,20 @@ end
 --                    Unset_option("test") -- set option "test" false
 --                    Toggle_option("test")  -- toggle "test"
 --  Projection api
+local slash = package.config:sub(1,1)
 M.Projection=Init_projection
 --  filter tools
+local function file_exists(file)
+  local fn = io.open(file)
+  if fn then
+    fn:clone()
+    return true
+  end
+end
 function M.load_reversedb(dict_name)
   -- loaded  ReverseDb
-  local reverse_filename = "build/"  ..  dict_name .. ".reverse.bin"
-  local reversedb= ReverseDb( reverse_filename )
+  local reverse_filename = string.format("build/%s.reverse.bin", dict_name)
+  local reversedb = ReverseDb( reverse_filename)
   if not reversedb then
     log.warning( env.name_space .. ": can't load  Reversedb : " .. reverse_filename )
   end
