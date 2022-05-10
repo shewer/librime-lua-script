@@ -11,65 +11,35 @@
 --   uincode = require('component/unicode')
 --
 -- 3 schema.yaml
---   recognizer/patterns/unicode: "U[a-h0-9]+"
+--   recognizer/patterns/unicode: "U[a-f0-9]+"
 --   engine/translators
 --     - lua_translator@unicode  -- append
 --
 
-
---[[
---  unicode(number)  to utf8 (char)
-local function unicode(u)
-  if u >>7 == 0 then return string.char(u) end
-  local count = 0x80
-  local tab={}
-  repeat
-    count = count >> 1 | 0x80
-    table.insert(tab,1, u & 0x3f |0x80 )
-    u = u >> 6
-  until u < 0xc0
-  table.insert(tab,1,count | u )
-  for i,v in ipairs(tab) do print(i,v) end
-  return string.char( table.unpack(tab)  )
+local M={}
+function M.init(env)
 end
-
---]]
-
-
-local function init(env)
-end
-local function fini(env)
-end
--- Ucode,code,code....
--- patterns:
---    unicode: "U([a-h0-9]+,?)+"
-local function func1(input,seg,env)
-  if seg:has_tag("unicode") then
-    local ucodestr=  input:sub( seg.start+1+1, seg._end) -- lua index=1 , skip "U"
-    local comment= string.format("%s,%d,%d",ucodestr,seg.start,seg._end)
-
-    local codes={}
-    for item in ucodestr:gmatch("([a-f0-9]+),?") do
-      table.insert(codes,tonumber(item,16) )
-    end
-
-    local text = utf8.char(table.unpack(codes) )
-    yield(
-      Candidate( "unicode", seg.start, seg._end, text,comment ) )
-  end
+function M.fini(env)
 end
 -- Ucode
 -- patterns:
 --    unicode: "U([a-h0-9]+)"
-local function func2(input,env)
-  if seg:has_tag("unicode") then
-    local ucodestr=  input:sub( seg.start+1+1, seg._end) -- lua index=1 , skip "U"
-    local comment= string.format("%s,%d,%d",ucodestr,seg.start,seg._end)
-    local text = utf8.char( tonumber(uncodestr,16) )
+function M.func(input,seg,env)
+  local ucodestr = seg:has_tag("unicode") and input:match("U(%x+)")
+  if ucodestr and #ucodestr>1 then
+    local code= tonumber(ucodestr,16)
+    local text = utf8.char( code )
     yield(
-      Candidate( "unicode", seg.start, seg._end, text,comment ) )
+    Candidate( "unicode", seg.start, seg._end, text, string.format("U%x",code) ))
+    if #ucodestr < 5 then
+      for i=0,15 do
+        local text = utf8.char( code * 16 + i)
+        yield(
+        Candidate( "unicode", seg.start, seg._end, text, string.format("U%x~%x",code,i) ))
+      end
+    end
   end
 end
 
-return {init=init,fini=fini,func=func1 }
+return M
 
