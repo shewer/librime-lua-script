@@ -89,8 +89,10 @@ function T.func(inp,seg,env)
      or Candidate(English, seg.start, seg._end, input , "[english]")
   yield(first)
 
-  local commit= input:match("^[%a%_%.%']+$")  and T._nj.split(input) or {}
-  if #commit > 1 then
+  puts(DEBUG, "---------input -----",input)
+  local commit= input:match("^[%a%_%.%']+$")  and T._nj.split(input) 
+  puts(DEBUG, "---------input -----",input,commit)
+  if commit then
     yield( Candidate(Ninja, seg.start,seg._end, commit, "[ninja]"))
   end
 
@@ -104,9 +106,11 @@ function T.func(inp,seg,env)
     end
   end
   -- 使用 ninja 最後一佪字查字典 type "ninja"
-  if #commit > 1 then
-    --local n_word= commit[#commit]
-    local n_word= commit:match(".* (.+)$")
+  --local n_word= commit[#commit]
+  local n_word = commit and commit:split():pop()
+  if n_word and n_word ~= commit then 
+  --if #commit > 1 then
+    --local n_word= commit and commit:match(".* (.+)$")
 
     for w in T._eng_dict:iter(n_word) do
       -- seg.start =   seg.end - #m_word
