@@ -180,11 +180,9 @@ local function deepcompare(t1,t2,ignore_mt)
 end
 
 function M:reverse()
-  local obj=M()
-  for i= #self, 1 do
-    obj[#self-i+1] = self[i]
-  end
-  return obj
+  return self:reduce(function(elm,org)
+    return org:unshift(elm)
+  end,M()) 
 end
 function M:size()
   return #self
