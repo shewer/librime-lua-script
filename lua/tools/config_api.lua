@@ -20,6 +20,9 @@ M.to_list_with_path= function(obj,path) -- obj , path
 
 --]]
 -- return lua type 0 , ConfigItem 1, Configdata 2 , nul 3
+local ok, res = pcall(require,'tools/debugtools')
+local puts = ok and res or print
+
 local function ctype(cobj)
   if cobj == nil then return 3
   elseif type(cobj) ~= "userdata" then return 0
@@ -122,11 +125,15 @@ local function _obj_to_list_with_path(obj,path,tab,loopchk)
     return tab
   end
 end
-local puts = require 'tools/debugtool'
+-- return lua type 0 , ConfigItem 1, Configdata 2 , nul 3
 local function conver_type(cobj,_type,...) -- cobj ,type:0  1 2 
-  _type = _type and _type or 0
   local t = ctype(cobj)
   if t == 3 then return nil end
+  
+  if not _type then 
+    _type = t == 0 and 1 or 0
+  end
+
   if _type == t then return cobj end
   -- conver to lua_data
   if _type == 0 then 
@@ -154,8 +161,5 @@ M.to_obj = function(obj) return conver_type(obj,0) end
 M.to_item = function(obj) return conver_type(obj,1) end
 M.to_cdata = function(obj) return conver_type(obj,2) end
 M.to_list_with_path = function(obj,path) return conver_type(obj,4,path) end
-M.to_list_with_path= function(obj)
-  return _obj_to_list_with_path( conver_type(obj,0),path)
-end
 
 return M
