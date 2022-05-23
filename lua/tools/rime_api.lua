@@ -36,6 +36,12 @@
 --
 List = require'tools/list'
 local puts = require 'tools/debugtool'
+do
+  if not package.path:split(";"):find("%./component/") then
+    package.path = package.path .. ";./lua/component/?.lua"
+  end
+end
+
 
 
 local function Version()
@@ -281,9 +287,10 @@ function M.req_module(mod_name,rescue_func)
   local slash= package.config:sub(1,1)
   local ok,res = pcall(require, mod_name )
   if ok then return res end
-
+--[[
   ok , res = pcall(require, 'component' .. slash .. mod_name )
   if ok then return res end
+--]]
   puts(ERROR, "require module failed ", mod_name , res )
   return  rescue_func
 end
@@ -345,29 +352,100 @@ function E:config_path_to_str_list(path,list)
   return self:tab_to_str_list(tab,path,list)
 end
 
-function E:components_str(list)
-  list= list or List()
-  local tab = self:Config():get_obj( path,0 )
+
+local Config_api =require 'tools/config_api'
+
+-- Config_get_obj(path[,type])  return obj , args: path , type( i
+--    type( 1 : ConfigItem 2 : Config of Value or List or Map )
+--    type 4 只能單向轉換
+function E:Config_conver(obj,_type,path)
+  return Config_api.conver_type(obj,_type,path)
+end
+function E:Config_data_with_path(obj, path)
+  return Config_api.to_list_with_path(obj,path)
+end
+function E:Config_get(path, _type, tpath)
+  local pp = _type == 4 and ( tpath or path) or nil
+  local o =Config_api.conver_type(
+    self.engine.schema.config:get_item(path),
+    _type,
+    _type == 4 and (tpath or path ) or nil )
+  return o
+end
+function E:Config_set(path, obj)
+  return self.engine.schema.config:set_item(path,
+  Config_api.to_item(obj))
+end
+
+function E:config_path_to_str_list(path)
+  return List( self:Config_get(path) )
+  :map(function(elm) return elm.path .. ": " .. elm.value end)
+end
+-- Get_tag  args :  ()  , (nil, "translator") ,("date")
+function E:Get_tag(def_tag , ns)
+  def_tag = def_tag or "abc" -- default "abc"
+  ns = ns or self.name_space -- default env.name_space
+  return self.engine.schema.config:get_string( ns .. "/tag") or def_tag
+end
+function E:Get_tags(ns)
+  ns = ns or self.name_space
+  return Set(
+    self:Config_get( ns .. "/tags"))
+end
+
+-- option function
+
+function E:Set_option(name)
+  self.engine.context:set_option(name,true)
+end
+function E:Unset_option(name)
+  self.engine.context:set_option(name,false)
+end
+function E:Toggle_option(name)
+  local context= self.engine.context
+  context:set_option(name, not context:get_option(name))
+  return context:get_option(name)
+end
+function E:Get_option(name)
+  return self.engine.context:get_option(name)
+end
+-- property function
+function E:Get_property(name)
+  return self.engine.context:get_property(name)
+end
+function E:Set_property(name,str)
+  self.engine.context:set_property(name,str)
+end
+
+-- processor function  config
+function E:get_keybinds(path)
+  path = path or self.name_space .. "/keybinds"
+  local tab = self:Config_get(path)
+  tab = type(tab) == "table" and tab or {}
+  for key,name in next, tab do
+    tab[key] = KeyEvent(name)
+  end
+  return tab
+end
+function E:components_str()
   return List("processors","segmentors","translators","filters")
   :map(function(elm) return "engine/" .. elm end)
-  :reduce(function(elm,org)
-    return self:config_path_to_str_list(elm,org)
-  end,list)
-
+  :reduce(function(path,list)
+    return list + self:Config_get(path, 4)
+  end,List())
+  :map(function(elm) return elm.path .. ": " .. elm.value end)
 end
 
 function E:print_components(out)
   puts(out,  string.format("----- %s : %s ----", self.engine.schema.schema_id,self.name_space) )
-  self:components_str("engine"):each(function(elm)
+  self:components_str():each(function(elm)
     puts(out,elm)
   end)
 end
-
+---  delete
 function E:components(path)
-  return self:Config():get_obj(path or "engine")
+  return self:Config_get(path or "engine")
 end
-
-
 E.__index=E
 
 
