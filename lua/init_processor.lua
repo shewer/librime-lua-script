@@ -41,6 +41,12 @@
 --   engine/processor/lua_processor@init_processor@module2
 --
 --
+-- librime-lua-script env
+require 'tools/string'
+require 'tools/rime_api'
+local puts=require'tools/debugtool'
+local List = require 'tools/list'
+
 _NR = package.config:sub(1,1):match("/") and "\n" or "\r"
 do
   local function init_path()
@@ -50,79 +56,34 @@ do
     or package.cpath:match('?.dll')
     local sf = "?.lua"
 
-    --local upath= rime_api.user_data_dir()
-    local function ap(path,file,up)
-      up = up or "."
-      local path = string.format(";%s/%s/%s",up, path, file)
-      :gsub("/",slash)
-      return  path
+    local function append_path(paths,path)
+      return paths:split(";"):find(path) and paths or paths .. ";" .. path
     end
-    -- append  ./lua/component/?lua to package.path
-    local function path_append(path)
-      path= ap(path,sf,upath)
-      if package.path:match(path) then
-        package.path = package.path .. path
-      end
-    end
-    -- append  ./lua/plugin/?.(so, dll, dylib) to package.cpath
-    local function cpath_append(path)
-      path= ap(path,df,upath)
-      if package.cpath:match(path) then
-        package.cpath = package.cpath .. path
-      end
-    end
-
-    ---
-    --path_append("lua/component")
-    --cpath_append("lua/plugin")
+    package.path = append_path(package.path,"./lua/component/?.lua")
+    package.cpath = append_path(package.cpath, "./lua/plugin/".. df )
   end
-  -- append cpath <user_data_dir>/lua/plugin/?.(so|dll|dylib)
   init_path()
 end
 
--- librime-lua-script env
-require 'tools/string'
-require 'tools/rime_api'
-local puts=require'tools/debugtool'
-local List = require 'tools/list'
 
 
 -- init_module
--- -- remove load_config
-local function load_config(mod_configs)
-
-  if not mod_configs or mod_configs.type ~= "kList" then return end
-  local modules=List()
-
-  local function map_to_table(cmap_item)
-    if not cmap_item or  cmap_item.type ~= "kMap" then return end
-    local cmap = cmap_item:get_map()
-    local tab={}
-    for i,key in next, cmap:keys() do
-      tab[key] = cmap:get_value(key).value
-    end
-    return tab
-  end
-  for i=0 , mod_configs.size - 1 do
-    modules:push( map_to_table(mod_configs:get_at(i) ) or {} )
-  end
-  return modules
-end
 
 local function init_modules(engine, modules)
   local Components = require 'tools/_component'
   return modules
   :map(function(elm)
-    local ns = elm.name_space and "@" .. elm.name_space or ""
-    local mn = elm.module_name and "@" .. elm.module_name or ""
-    local p = "lua_processor" ..  mn ..  ns
-    local obj= Components.Processor(engine, p, elm.module )
-    return obj
+    _G[elm.module_name] = _G[elm.module_name] or rime_api.req_module(elm.module)
+    local pres= elm.prescription or ("%s@%s@%s"):format("lua_processor", elm.module_name, elm.name_space)
+    local ticket=Ticket(engine,"processor", pres)
+    return  Components.Processor(ticket) 
   end)
 end
 
 --auto_load
+--[[
 local function auto_load(env, tab_G)
+  puts(DEBUG,"[31;45m;--------------------------------->>>>> [0m")
   env:config_path_to_str_list("engine"):each(
   function (str, tab)
     local comp_str = str:match("^.+:lua_(.+)$")
@@ -136,37 +97,59 @@ local function auto_load(env, tab_G)
     end
   end, type(tab_G)=="table" and tab_G or _G)
 end
+--]]
+local function auto_load(env, tab_G)
+  tab_G = tab_G or _G
+  local comps=List(env:Config_get("engine",4))
+  :select(function(elm) return elm.value:match("^lua_(.+)@(.+)$") end)
+  :map(function(elm)
+    local tab = elm.value:match("^lua_(.+)"):split("@")
+    return  { type=tab[1], module_name= tab[2], name_space = tab[3] or tab[2], }
+  end)
+  :select(function(elm) return not tab_G[ elm.module_name ] end )
+  :each(function(elm)
+    tab_G[elm.module_name]= rime_api.req_module(elm.module_name,tab_G["Rescue_" .. elm.type])
+  end,tab_G)
+end
+
 
 -- append components to config_map of engine
+--local function append_value_before(self,path,value,mvalue)
+local function _append_value_before(elm, env, path, mvalue)
+  local obj = env:Config_get(path)
+  if type(obj) ~= "table" or #obj < 1 then return end
+  local list = List( env:Config_get(path))
+  if list:find( elm) then return end
+  local index = list:find(mvalue)
+  local dpath = index and path .. "/@before " .. index -1 or path .. "/@next"
 
-local function append_component(config, dist_path, from_path)
-  local from = from_path and config:get_obj(from_path)
+  if not env:Config_set(dpath, elm) then
+    puts(ERROR, "config set ver error","path", path, "value", elm)
+  end
+end
+
+local function append_component(env, from_path,dist_path)
+  local from = from_path and env:Config_get(from_path)
   if not from then return end
+  dist_path = dist_path or "engine"
 
-  local function fn(elm, path)
-    if not config:find_index(path , elm) then
-      -- path == engine/filters then find index of uniquifier
-      local index = path:match("filters$") and config:find_index(path, "uniquifier")
-      if index then
-        config:set_string(path .. "/@before " .. index , elm)
-      else
-        config:set_string(path .. "/@next" , elm)
+  for key, f_list in pairs(from) do
+      local obj = env:Config_get(dist_path .."/"..key)
+      if type(obj) == "table" and #obj >0 then
+        local list = List(obj)
+        local index = key == "filters" and list:find("uniquifier") 
+        local path = dist_path .. "/" .. key
+        -- dpath  = append component before uniquifier or append after next
+        local dpath = index and path .. "/@before " .. index -1 or path .. "/@after " .. #list -1
+        List(f_list):select(function(elm) return not List(env:Config_get(path)):find(elm) end)
+        :reverse()
+        :each(function(elm) env:Config_set(dpath, elm) end)
       end
-    end
-  end
-  -- key={processors,segments,translators,filters}
-  for key, f_list in next , from do
-    List(f_list):each(fn, dist_path .. "/" .. key)
+    --List(f_list)
+    --:each(_append_value_before, env, dist_path .. "/".. key, key == "filters" and "uniquifier")
   end
 end
-
-local function init_keybinds(env)
-  local keys= env:Config():get_obj(env.name_space .. "/keybinds")
-  for k,v in next, keys do
-    keys[k]= KeyEvent(v)
-  end
-  return keys
-end
+--]]
 -- init_processor
 
 local M={}
@@ -174,16 +157,19 @@ function M.init(env)
   Env(env)
   -- init self --
   local config=env:Config()
-  append_component(config, "engine", env.name_space .. "/before_modules")
-  local mods= List(config:get_obj(env.name_space .. "/modules") or _G[env.name_space])
+  append_component(env, env.name_space .. "/before_modules")
+  local mods= List(env:Config_get(env.name_space .. "/modules") or _G[env.name_space])
   env.modules = init_modules(env.engine, mods)
-  append_component(config, "engine",env.name_space .. "/after_modules")
+  --env.modules = List()--init_modules(env.engine, mods)
+  puts(DEBUG,"[31;45m;--------------------------------->>>>> [0m",Ticket)
+  append_component(env, env.name_space .. "/after_modules")
+
 
   --auto_load_bak(config:get_map("engine"))
   auto_load(env)
 
   -- prtscr prtkey keyevent
-  env.keys= init_keybinds(env)
+  env.keys= env:get_keybinds(env.name_space .. "/keybinds")
   -- init end
   -- print component
 
@@ -194,7 +180,7 @@ function M.init(env)
     list:push( "---- submodules ----" )
     env.modules:each(function(elm) list:push(elm.id) end)
     list:push("---- engine components ----" )
-    env:components_str():each(fn)
+    env:print_components(INFO)--:each(fn)
     local pattern_p= "recognizer/patterns"
     list:push( "---- " ..  pattern_p .. " ----" )
     env:config_path_to_str_list(pattern_p):each(fn)
