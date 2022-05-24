@@ -283,17 +283,14 @@ function M.wrap_config(env)
     local config=env.engine.schema.config
     return Wrap(config,"methods",CN)
 end
+
 function M.req_module(mod_name,rescue_func)
-  local slash= package.config:sub(1,1)
   local ok,res = pcall(require, mod_name )
   if ok then return res end
---[[
-  ok , res = pcall(require, 'component' .. slash .. mod_name )
-  if ok then return res end
---]]
-  puts(ERROR, "require module failed ", mod_name , res )
+  puts(ERROR, "require module failed ", mod_name )
   return  rescue_func
 end
+
 function M.req_module_()
 end
 -- env metatable
