@@ -59,8 +59,10 @@ do
     local function append_path(paths,path)
       return paths:split(";"):find(path) and paths or paths .. ";" .. path
     end
-    package.path = append_path(package.path,"./lua/component/?.lua")
-    package.cpath = append_path(package.cpath, "./lua/plugin/".. df )
+    package.path = append_path(package.path,rime_api.get_user_data_dir().. "/lua/component/?.lua")
+    package.path = append_path(package.path,rime_api.get_shared_data_dir().. "/lua/component/?.lua")
+    package.cpath = append_path(package.cpath,rime_api.get_user_data_dir() ..  "/lua/plugin/".. df )
+    package.cpath = append_path(package.cpath,rime_api.get_shared_data_dir() ..  "/lua/plugin/".. df )
   end
   init_path()
 end
@@ -71,12 +73,16 @@ end
 
 local function init_modules(engine, modules)
   local Components = require 'tools/_component'
-  return modules
-  :map(function(elm)
-    _G[elm.module_name] = _G[elm.module_name] or rime_api.req_module(elm.module)
+  return modules:map(function(elm)
     local pres= elm.prescription or ("%s@%s@%s"):format("lua_processor", elm.module_name, elm.name_space)
+    -- loading module to _G[module_name]
+    if pres:match("^lua_(.+)@(.+)") then
+      local tp,nm,ns = pres:split("@"):unpack()
+      ns = ns or nm
+      _G[nm] = _G[nm] or rime_api.req_module(elm.module)
+    end
     local ticket=Ticket(engine,"processor", pres)
-    return  Components.Processor(ticket) 
+    return  Components.Processor(ticket)
   end)
 end
 
@@ -135,16 +141,21 @@ local function append_component(env, from_path,dist_path)
 
   for key, f_list in pairs(from) do
       local obj = env:Config_get(dist_path .."/"..key)
+      List(f_list)
+      :reverse()
       if type(obj) == "table" and #obj >0 then
         local list = List(obj)
-        local index = key == "filters" and list:find("uniquifier") 
+        local index = key == "filters" and list:find("uniquifier")
         local path = dist_path .. "/" .. key
         -- dpath  = append component before uniquifier or append after next
         local dpath = index and path .. "/@before " .. index -1 or path .. "/@after " .. #list -1
-        List(f_list):select(function(elm) return not List(env:Config_get(path)):find(elm) end)
+
+        List(f_list)
+        :select(function(elm) return not List(env:Config_get(path)):find(elm) end)
         :reverse()
         :each(function(elm) env:Config_set(dpath, elm) end)
       end
+
     --List(f_list)
     --:each(_append_value_before, env, dist_path .. "/".. key, key == "filters" and "uniquifier")
   end
@@ -160,10 +171,7 @@ function M.init(env)
   append_component(env, env.name_space .. "/before_modules")
   local mods= List(env:Config_get(env.name_space .. "/modules") or _G[env.name_space])
   env.modules = init_modules(env.engine, mods)
-  --env.modules = List()--init_modules(env.engine, mods)
-  puts(DEBUG,"[31;45m;--------------------------------->>>>> [0m",Ticket)
   append_component(env, env.name_space .. "/after_modules")
-
 
   --auto_load_bak(config:get_map("engine"))
   auto_load(env)
@@ -171,21 +179,18 @@ function M.init(env)
   -- prtscr prtkey keyevent
   env.keys= env:get_keybinds(env.name_space .. "/keybinds")
   -- init end
-  -- print component
 
   -- print component
   do
-    local list=List()
-    local function fn(elm) list:push(elm) end
-    list:push( "---- submodules ----" )
-    env.modules:each(function(elm) list:push(elm.id) end)
-    list:push("---- engine components ----" )
-    env:print_components(INFO)--:each(fn)
-    local pattern_p= "recognizer/patterns"
-    list:push( "---- " ..  pattern_p .. " ----" )
-    env:config_path_to_str_list(pattern_p):each(fn)
-
-    list:each(function(elm)  puts(INFO,elm) end)
+    ( List()
+    + "---- submodules ----"
+    + env.modules:map(function(elm) return elm.id end)
+    + "---- engine components ----"
+    + env:components_str()
+    + "---- recognize/patterns  ----"
+    + List(env:Config_get("recognizer/patterns",4)):map(function(elm)
+      return elm.path .. ": " .. elm.value end)
+    ):each(function(elm,out)  puts(out,elm) end, CONSOLE)
   end
 end
 
@@ -207,17 +212,31 @@ function F.screen_print(env)
   local seg = context.composition:back()
   local s_index = seg.selected_index
   local st = s_index - s_index % page_size
-
+  --[[
   engine:commit_text( context:get_selected_candidate().preedit .. "\t" .. seg.prompt .. _NR )
-  for i=st , st+page_size do
+  for i=st , st+page_size -1  do
     local cand = seg:get_candidate_at(i)
     if not cand then return end
     local head = i == s_index and "->" or "  "
-    local out = head .. cand.text .. "\t" .. cand.comment .. _NR
+    local out = ("%s%s\t%s%s"):format(i == s_index and "->" or "  ", cand.text, cand.comment,_NR)
     engine:commit_text(out)
   end
   engine:commit_text(_NR)
+  --]]
+  do
+    (List()
+    + engine:commit_text( context:get_selected_candidate().preedit .. "\t" .. seg.prompt .. _NR )
+    + List.Range(st,st+page_size -1 ):map(function(elm)
+      local c= seg:get_candidate_at(elm)
+      if c then
+        local head = elm == s_index and "-->" or "   "
+        return ("%s%s:\t%s%s"):format(head, c.text, c.comment, _NR)
+      end
+    end)
+    ):each(function(elm) engine:commit_text(elm) end)
+  end
 end
+
 function F.modules(env)
   env.modules:each( function(elm)
     local str = string.format("%s: %s%s", elm.id, elm.env.engine, _NR)
@@ -254,12 +273,12 @@ end
 
 function M.func(key,env)
   local Rejected,Accepted,Noop=0,1,2
-  local context=env:Context()
+  local context=env.engine.context
   local status=env:get_status()
   -- prtkey enable/disable
   local debug_mode = context:get_option('_debug')
   if debug_mode and key:eq(env.keys.prtkey) then
-    context:Toggle_option("prtkey")
+    env:Toggle_option("prtkey")
     return Accepted
   elseif debug_mode and context:get_option("prtkey") then
     env.engine:commit_text(key:repr().. " ")
