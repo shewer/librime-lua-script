@@ -390,6 +390,18 @@ function E:Get_tags(ns)
     self:Config_get( ns .. "/tags"))
 end
 
+function E:append_value_before(env, path, elm, mvalue)
+  local obj = env:Config_get(path)
+  if type(obj) ~= "table" or #obj < 1 then return end
+  local list = List( env:Config_get(path))
+  if list:find( elm) then return end
+  local index = list:find(mvalue)
+  local dpath = index and path .. "/@before " .. index -1 or path .. "/@next"
+
+  if not env:Config_set(dpath, elm) then
+    puts(ERROR, "config set ver error","path", path, "value", elm)
+  end
+end
 -- option function
 
 function E:Set_option(name)
