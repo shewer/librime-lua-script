@@ -24,12 +24,6 @@ Ticket = Ticket or fake_Ticket
 local function req_module(mod_name,rescue_func)
   local ok,res =  pcall(require, mod_name )
   if ok then return res end
-  --[[
-  puts(WARN,"require module failed ", mod_name  )
-  puts(WARN,"retry require module from ", "component/" .. mod_name)
-  ok , res = pcall(require, 'component/'  .. mod_name )
-  if ok then return res end
-  --]]
   puts(ERROR, "require module failed ", mod_name )
   return  rescue_func
 end
@@ -44,7 +38,7 @@ local function fake_lua_component( obj, ticket)
   local rescue = _G["Rescue_" .. ticket.klass:match("^lua_(.+)$")]
 
   -- init module
-  if not _G[module_name] then 
+  if not _G[module_name] then
     puts(WRAN, "lua module not found " , module_name )
     _G[module_name] = req_module(module_name) --or rescue
     if not _G[module_name] then
@@ -76,18 +70,17 @@ local function _distory(self)
 end
 local function _initialize(self,ticket)
   fake_lua_component(self,ticket)
-  puts(INFO,"created processor component ",self.id)
+  puts(INFO,"created processor component ",self.id,self)
   self:init()
-  puts(DEBUG,"created processor component ",self.id,self)
   --self.module.init(self.env)
   -- create delegate func   obj:init() obj:func(key) obj:finit() ...
-  --for k,v in next, self.module do 
+  --for k,v in next, self.module do
     --self[k] = function(obj,...)
       --return obj.module[k](..., obj.env)
-    --end 
-  --end 
+    --end
+  --end
   return self
-end 
+end
 
 local B={}
 B._initialize= _initialize
@@ -96,18 +89,23 @@ B.__index=B
 
 -- Lua_component functions
 
-local function comm_init(self) 
-  return self.module.init and 
-  self.module.init(self.env) 
+local function comm_init(self)
+  local ok,res =pcall( self.module and self.module.init and  self.module.init,self.env)
+  if not ok then
+    puts(ERROR,
+    ("component: %s, module: %s, init.func( %s)"):format(self.id,self.module,
+    self.module and self.module.init), res)
+  end
 end
-local function comm_fini(self) 
-  return self.module.fini and self.module.fini(self.env) 
+
+local function comm_fini(self)
+  return self.module.fini and self.module.fini(self.env)
 end
 local function pfunc(self,key) return self.module.func(key, self.env) end
 local function sfunc(self,segs) return self.module.func(segs, self.env) end
 local function tfunc(self,input,seg) return self.module.func(input,seg, self.env) end
 local function ffunc(self,tran) return self.module.func(tran, self.env) end
-local function ftags_match(self,seg) 
+local function ftags_match(self,seg)
   return sself.module.tags_match and elf.module.tags_match(seg) or true
 end
 
@@ -117,7 +115,7 @@ local function lua_comp(funcs)
    init = comm_init,
    fini = comm_fini,
   }
-  for k,v in next,funcs do 
+  for k,v in next,funcs do
     obj[k] = v
   end
   obj.__index = obj
@@ -162,24 +160,24 @@ end
 local M={}
 
 function M.Processor(ticket)
-   if ticket.klass == "lua_processor" then 
-     return  LuaP( ticket) 
-   end 
+   if ticket.klass == "lua_processor" then
+     return  LuaP( ticket)
+   end
 end
 function M.Segmentor(ticket)
-   if ticket.klass == "lua_segmentor" then 
-     return  LuaS( ticket) 
-   end 
+   if ticket.klass == "lua_segmentor" then
+     return  LuaS( ticket)
+   end
 end
 function M.Translator(ticket)
-   if ticket.klass == "lua_translator" then 
-     return  LuaT( ticket) 
-   end 
+   if ticket.klass == "lua_translator" then
+     return  LuaT( ticket)
+   end
 end
 function M.Filter(ticket)
-   if ticket.klass == "lua_filter" then 
-     return  LuaF( ticket) 
-   end 
+   if ticket.klass == "lua_filter" then
+     return  LuaF( ticket)
+   end
 end
 
 local comp={
@@ -188,9 +186,8 @@ local comp={
   lua_translator = LuaT,
   lua_filter = LuaF,
 }
-function M.Require(ticket) 
-  puts(DEBUG, "------debug Require ----------",ticket.klass, comp[ticket.klass],LuaP)-- , comp[ticket.klass](ticket))
-  local c = comp[ticket.klass] 
+function M.Require(ticket)
+  local c = comp[ticket.klass]
   return c and c(ticket) or nil
 end
 return M
