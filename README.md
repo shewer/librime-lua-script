@@ -6,6 +6,7 @@
     lua_translator@date -- module_name: date  name_space: date
     -- 檢查lua 環境是否存在 date 如果沒有將會試載入 date = [require](require)('date') or require('component/date')
   
+  * 英打模組:增加自動編譯固態字典檔以改善載入字典時間(減少90%時間)，共用字典table 減少記憶體使用及再次載入時間
   * 以詞定字: select_character [以词定字](#以词定字)上屏模组
   * 聯想詞輸入模組: 
   * 英打+英文字典模組: 
@@ -98,6 +99,7 @@
     *   english/tag 預設 english : 如果須要在 tag:abc 輸出，可以在 english/tag: abc   or  abc_segmentor/extra_tags: [ english ]
     *  english_tran.lua 增加 優先載入 wordnanja-rs  , 只要把 wordninja.(dll/so/dylib) 放入 <user_data_dir>/lua/plugin
     *  支援 camel upper case 轉換  
+    *  增加固態字典手動編譯 tools/compile_dict.sh dictfile.txt ... 
       
   
   ## 反查模組
