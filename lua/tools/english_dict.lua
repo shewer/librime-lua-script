@@ -373,7 +373,7 @@ function English:_initialize(filename,level)
   self._dict_tree=dictdb.tree
   return self
 end
-function English:save_file()
+function English:make_chunk()
   if self._filename then
     -- object
     local filen= get_path( self._filename .. ".txtl")
@@ -385,7 +385,6 @@ function English:save_file()
       save_table( filen , v)
     end
   end
-
 end
 function English:reload(force)
   self._dictdb[self._filename] =  init_dict(self._filename,self._level,force)
