@@ -24,10 +24,10 @@
 local English="english"
 local puts = require 'tools/debugtool'
 local List = require 'tools/list'
-local T= require'english/english_tran'
 local ASCII_PUNCT="ascii_punct"
 -- filetr of command
 
+local T= require'english/english_tran'
 -- lua segmentor
 local S={}
 function S.func(segs ,env) -- segmetation:Segmentation,env_
@@ -71,22 +71,26 @@ local function component(env)
   --puts("log",__FILE__(),__LINE__(),__FUNC__(), path, config:get_string(path),  "prefix" , prefix,"suffix" , suffix)
 
   -- 加入 lua_sgement
-  local s_module= "english_seg"
-  _G[s_module] = _G[s_module] or S
-  local s_path= "engine/segmentors"
-  local s_component= ("%s@%s@%s"):format( "lua_segmentor", s_module, env.name_space)
-  if not config:find_index( s_path, s_component) then
-    config:set_string(s_path .. "/@bedore 1", s_component )
+  do
+    local module= "english_seg"
+    _G[module] = _G[module] or S
+    local path= "engine/segmentors"
+    local component= ("%s@%s@%s"):format( "lua_segmentor", module, env.name_space)
+    if not config:find_index( path, component) then
+      config:set_string(path .. "/@bedore 1", component )
+    end
   end
 
 
   -- 加入 lua_translator@english_tran@english
-  local t_module = "english_tran"
-  _G[t_module]= _G[t_module] or T
-  local t_path= "engine/translators"
-  local t_component= ("%s@%s@%s"):format( "lua_translator", t_module, env.name_space)
-  if not config:find_index( t_path, t_component) then
-    config:config_list_append( t_path, t_component )
+  do
+    local module = "english_tran"
+    _G[module]= _G[module] or T
+    local path= "engine/translators"
+    local component= ("%s@%s@%s"):format( "lua_translator", module, env.name_space)
+    if not config:find_index( path, component) then
+      config:config_list_append( path, component )
+    end
   end
 
   -- 替換 uniquifier filter  --> lua_filter@uniquifier 或者加入
