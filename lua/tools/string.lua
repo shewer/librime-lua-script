@@ -3,23 +3,24 @@
 --      string.utf8_len = utf8.len
 --      string.utf8_offset= utf8.offset
 --      string.utf8_sub= utf8.sub
+local List = require 'tools/list'
 function string.split( str, sp,sp1)
-  sp =type(sp) == "string"  and sp or " "    
+  sp =type(sp) == "string"  and sp or " "
   if #sp == 0 then
     sp= "([%z\1-\127\194-\244][\128-\191]*)"
-  elseif #sp == 1 then 
-    sp= "[^" ..  (sp=="%" and "%%" or sp) .. "]*"  
-  else 
+  elseif #sp == 1 then
+    sp= "[^" ..  (sp=="%" and "%%" or sp) .. "]*"
+  else
     sp1= sp1 or "^"
     str=str:gsub(sp,sp1)
     sp=  "[^".. sp1 .. "]*"
-  end 
+  end
 
-  local tab= {}
+  local tab= List()
   for v in str:gmatch(sp) do
     table.insert(tab,v)
-  end 
-  return tab 
+  end
+  return tab
 end
 
 function utf8.sub(str,si,ei)

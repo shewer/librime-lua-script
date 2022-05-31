@@ -23,7 +23,9 @@ local puts= require'tools/debugtool'
 --require 'tools/object'
 require 'tools/string'
 local List=require 'tools/list'
-
+-- 設定 存入bin格式
+--local chunk_bin= true
+local NR = package.config:sub(1,1):match("/") and "\n" or "\r"
 
 
 
@@ -93,7 +95,7 @@ end
 -- 轉換 reg 字串  字頭 全字 詞類
 local function conv_pattern(org_text)
   local pw,ww,p = split_str(org_text)
-  pw= "^" .. conver_rex(pw:lower())
+  pw= "^" .. conver_rex(pw:lower() or "")
   ww="^"  .. conver_rex(ww:lower())
   p= p:len() >0
     and   "%s" .. conver_rex(p:lower() ) .. "[%a%-%.]*%."
@@ -160,22 +162,30 @@ function Word:Parse(line)
   end
   return self(tab)
 end
+
+
+-- 利用此func 設定comment 輸出格式
+--
 function Word:get_info(mode)
   mode= tonumber(mode)
   local info= self
   if not info then return  "" end
+  mode= mode and mode % 7 or 0
 
-  mode= mode or 1
   if mode == 1 then
-    return info.info
+    return (info.phonics .. info.info):gsub("\\n",NR)
   elseif mode == 2  then
-    return info.phonics
+    return info.info:gsub("\\n", " ")
   elseif mode == 3 then
+    return info.info:gsub("\\n", NR)
+  elseif mode == 4 then
+    return info.phonics
+  elseif mode == 5 then
     return info.word
-  elseif mode==4 then
+  elseif mode== 6 then
     return ""
   else
-    return info.phonics .. info.info
+    return (info.phonics .. info.info):gsub("\\n"," ")
   end
 
 end
@@ -192,24 +202,64 @@ Word.is_match= Word.match
 
 
 
-
-
--- when  commit  clean
-local function openfile(filename)
-
-  -- 取得目前路逕
+local function file_exists(filename)
+  local fn = io.open(filename)
+  if fn then fn:close() end
+  return fn and true or false
+end
+local function get_path(filename)
   local path= string.gsub(debug.getinfo(1).source,"^@(.+/)[^/]+$", "%1")
-  filename =  path ..  (filename or "english.txt" )
-  puts("log",path,filename)
-  local dict_file =  io.open(filename)
-  if dict_file  then
-    puts("log","english module : open file:" .. filename )
-  else
-    puts("log","english module : open file failed :" .. filename )
-  end
-  return dict_file
+  return  path ..  (filename or "english.txt" )
 end
 
+-- 將英文字典資料存成chunk 加速載入
+local function save_table(filename,obj)
+
+  local function serialize(fn,o)
+    if type(o) == "number" then
+      fn:write(o)
+    elseif type(o) == "string" then
+      fn:write(string.format("%q", o))
+    elseif type(o) == "table" then
+      fn:write("{\n")
+
+      for k,v in pairs(o) do
+        local tp= type(k)
+        if tp == "number" then
+          fn:write( "  [" , k , "] = ")
+        else
+          fn:write(" [ [[",k, "]] ] = ")
+        end
+        serialize(fn,v)
+        fn:write(",\n")
+      end
+      fn:write("}\n")
+    else
+      error("cannot serialize a " .. type(o))
+    end
+  end
+  local fn,res = io.open(filename,"w")
+  if not fn then
+    puts(ERROR, "save_table: openfile error" ,res)
+    return
+  end
+  fn:write("local index = ")
+  serialize(fn, obj.index)
+  fn:write("local tree = ")
+  serialize(fn, obj.tree)
+  fn:write("local info= {}\n for i,v in next, index do info[v.word] = v end\n")
+  fn:write("return {index = index , tree = tree, info =info} \n")
+  fn:close()
+  -- chunk_bin 可設定 luac bin
+  if chunk_bin then
+    local f = loadfile(filename)
+    fn = io.open(filename,'w')
+    fn:write( string.dump(f) )
+    fn:close()
+  end
+end
+-- when  commit  clean
+--
 local function dict_tree_insert_index(self,word,level)
   level = level or 3
   local len= word.word:len()
@@ -223,48 +273,121 @@ local function dict_tree_insert_index(self,word,level)
     end
   end
 end
-local function init_dict(filename,level)
-  level= level or 3
-  local dictfile =  openfile(filename)
-  if not dictfile then return end  --- open file failed
 
-  local  dict_index = List()
-  local  dict_info = {}
-  local  dict_tree = {}
-  dict_tree.insert_index= dict_tree_insert_index
+local function init_dict_from_txt(filename,level)
+  puts(INFO, "init_dict from txt",filename)
+  if not file_exists(filename) then
+    puts(ERROR, "dict file not faund",filename)
+    return
+  end
+  level= level or 3
+
+  local dictfile,res =  io.open(filename)
+  if not dictfile then
+    puts(ERROR, "dict file open failed",filename,res)
+    return
+  end
+
+  local dict= {
+    index = List(),
+    info = {},
+    tree = {},
+  }
+  --dict_tree.insert_index= dict_tree_insert_index
 
   for line in dictfile:lines() do
     if not line:match("^#") then  -- 第一字 #  不納入字典
       local w = Word:Parse(line)
       if w then
-        dict_index:push(w)
-        w.index= #dict_index
-        dict_info[w.word] = w
-        dict_tree:insert_index(w,level)
+        dict.index:push(w)
+        w.index= #dict.index
+        dict.info[w.word] = w
+        dict_tree_insert_index(dict.tree,w,level)
       end
     end
   end
   dictfile:close()
-  return dict_index ,dict_info, dict_tree
+  -- mack dict of chunk
+  --save_table( get_path(filename .. ".txtl"), dict)
+  return dict -- dict.index ,dict.info, dict.tree
+end
+
+local function init_dict_from_chunk(filename)
+  puts(INFO, "init_dict from chunk",filename)
+  local ok,res = pcall(dofile, filename)
+  if ok then
+    local dict = res
+    setmetatable(dict.index,List)
+    dict.info= {}
+    for i,v in next, dict.index do
+      setmetatable(v,Word)
+      dict.info[v.word]= v
+    end
+    return dict -- dict.index ,dict.info, dict.tree
+  else
+    puts(ERROR, 'load dict chunk faild' ,  filename, res)
+  end
+end
+local function init_dict(dict_name,level,force)
+  -- force (true) init_dict form txt
+    local cfilen = get_path( dict_name .. ".txtl" )
+    local cf_exists = file_exists(cfilen)
+
+  if not force and cf_exists then
+    local dict = init_dict_from_chunk(cfilen)
+    if dict then return dict end
+    puts(WARN,'---init_dict_frome_chunk faild',dict_name,cfilen,res)
+    -- init from_chunk faild  and recall  from txt
+    return init_dict(dict_name,level,true)
+  else
+    local filen = get_path( dict_name .. ".txt")
+    local dict  = init_dict_from_txt( filen )
+    if dict then
+      if not cf_exists then save_table(cfilen,dict) end
+      return dict
+    end
+    puts(ERROR, 'dict file not found', dict_name,filen,res) end
 end
 
 --local English =Class("English")
 local English =setmetatable({},MT)
 English.__index=English
 English.__name="English"
+English._dictdb={}
+function English:_getdb()
+  return self._dictdb[self._filename]
+end
 
 function English:_initialize(filename,level)
-  self._filename= filename or "english_tw.txt"
+  self._filename= filename or "english_tw"
   self._level= level or 3
   self._mode=0
-  self:reload()
+  --local dictdb = self:_getdb()
+  if not self:_getdb() then
+    self:reload()
+  end
+  local dictdb = assert( self:_getdb() )
+
+  self._dict_index=dictdb.index
+  self._dict_info=dictdb.info
+  self._dict_tree=dictdb.tree
   return self
 end
-function English:reload()
-  local index,info,tree= init_dict(self._filename,self._level)
-  self._dict_index=index
-  self._dict_info=info
-  self._dict_tree=tree
+function English:make_chunk()
+  if self._filename then
+    -- object
+    local filen= get_path( self._filename .. ".txtl")
+    save_table( filen , self:_getdb())
+  else
+    -- class
+    for k,v in next, self._dictdb do
+      local filen= get_path( k .. ".txtl")
+      save_table( filen , v)
+    end
+  end
+end
+function English:reload(force)
+  self._dictdb[self._filename] =  init_dict(self._filename,self._level,force)
 end
 function English:next_mode()
   return self:mode(   self:mode() + 1 )
@@ -352,7 +475,6 @@ English.Conver_rex=conver_rex
 English.Split=split_str
 English.Conver_pattern= conv_pattern
 English.Word=Word
-
 
 return English
 

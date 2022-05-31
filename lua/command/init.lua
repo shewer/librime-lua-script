@@ -21,6 +21,7 @@
 --
 --
 --
+
 local prefix="/"
 local suffix=":"
 local List=require 'tools/list'
@@ -32,6 +33,7 @@ local env_funcs={}
 function env_funcs.reload(self)
   local schema=self.engine.schema
   self.engine:apply_schema( Schema(schema.schema_id) )
+  -- reset()
 end
 function env_funcs.date(self)
   self.engine:commit_text( os.date() )
@@ -52,11 +54,34 @@ local Command=require 'command/command_str'
 
 -- preload option and property
 local function load_data(env)
-  context=env:Context()
-  env.options = List("ascii_mode","ascii_punct")
-  :reduce( function(elm,org)  org[elm]= context:get_option(elm) ;return org end ,{})
-  env.propertys= List("command","english")
-  :reduce(function(elm,org)  org[elm] = context:get_property(elm) ; return org end ,{})
+  local context = env:Context()
+  local config = env:Config()
+  -- init options
+  local options = List("ascii_mode","ascii_punct","_debug")
+  -- load switches
+  for i,elm in next, config:get_obj("switches") do
+    if elm.name then
+      options:push(elm.name)
+    elseif elm.options then
+      for i,selm in ipairs(elm.options) do
+        options:push(selm)
+      end
+    end
+  end
+  env.options = options:reduce( function(elm,org)
+    org[elm]= context:get_option(elm) or false
+    return org
+  end ,{})
+
+
+
+  -- init propertys
+  env.propertys= List("command","english","_error"):reduce(function(elm,org)
+    org[elm] = context:get_property(elm)
+    return org
+  end ,{})
+
+  -- init funcs
   env.funcs=funcs
 
 end
@@ -77,44 +102,40 @@ function T.init(env)
   env.commands:append("f", "func", env, env_funcs)
   env.commands:append("c", "config", config)
 
-
-
-
-
-
   -- init  notifier
+  env.notifiers= List(
   -- saved option and property
-  env.option=context.option_update_notifier:connect(function(ctx,name)
-    env.options[name]= ctx:get_option(name)
-  end)
-  env.property=context.property_update_notifier:connect(function(ctx,name)
-    env.propertys[name] = ctx:get_property( name )
-  end)
+  context.option_update_notifier:connect(function(ctx,name)
+    env.options[name]= ctx:get_option(name) or false
+  end),
+  context.property_update_notifier:connect(function(ctx,name)
+    env.propertys[name] = ctx:get_property( name ) or ""
+  end),
   --  execute command when commit
-  env.commit=context.commit_notifier:connect(function(ctx)
+  context.commit_notifier:connect(function(ctx)
     local cand=ctx:get_selected_candidate()
     local execute_str = cand and cand.type=="command" and cand.text=="" and cand.comment:match("^(.*)%-%-.*$")
     if execute_str  then
-      puts("log", "command executestr",execute_str)
+      puts(INFO, "command executestr",execute_str)
       env.commands:execute( execute_str)
     end
-
+  end ),
+  context.update_notifier:connect(function(ctx)
   end )
-  env.update=context.update_notifier:connect(function(ctx)
-  end )
+  )
 end
 function T.fini(env)
   -- disconnect notifier
-  for i,v in next, { "commit", "update","property", "option" } do
-    env[v]:disconnect()
-  end
+  env.notifiers:each(function(elm) elm:disconnect() end)
 end
 
 function T.func(input,seg,env)
   if not seg:has_tag(env.name_space) then return end
   local ative_input= input:sub(2)
   for cmd in env.commands:iter(ative_input)   do
-    yield( Candidate(env.name_space, seg.start, seg._end , "" , cmd ))
+    local text,comment= cmd:split("%-%-"):unpack()
+    --puts(DEBUG,type(cmd) , cmd,text,"--",comment)
+    yield( Candidate(env.name_space, seg.start, seg._end , text , comment ))
   end
 end
 -- filetr of command
@@ -134,7 +155,10 @@ function F.func(inp,env)
   local context=env:Context()
   local ative_input= context.input:gsub("^" .. prefix , "" )
   for cand in inp:iter() do
-    if cand.type == "command" and cand.comment:match( ative_input ) then
+    if cand.type == "command" and cand.text:match( ative_input ) then
+      local gcand = cand:get_genuine()
+      gcand.comment= gcand.text .. "--" .. gcand.comment
+      gcand.text=""
       yield(cand)
     end
   end
@@ -149,7 +173,6 @@ local function component(env)
   local path= "recognizer/patterns/" .. env.name_space
   local pattern = ("^%s[a-z]%s.*$"):format(prefix,suffix)
   config:set_string(path, pattern)
-  puts("log",__FILE__(),__LINE__(),__FUNC__(), path, config:get_string(path),  "prefix" , prefix,"suffix" , suffix)
 
   -- 加入 lua_translator@command
   local t_module = "command_tran"
@@ -160,9 +183,26 @@ local function component(env)
     config:config_list_append( t_path, t_component )
   end
 
-  -- 替換 uniquifier filter  --> lua_filter@uniquifier 或者加入
-
   local f_path= "engine/filters"
+  local org_filter= "uniquifier"
+  local r_filter = "lua_filter@uniquifier"
+  local u_ns = "uniquifier"
+
+  -- 加入 command filter  --> lua_filter@command_filter@command
+  -- 且插入於uniqualifier 後
+  -- 避開 uniqualifier
+  local c_module = "command_filter"
+  local c_component= "lua_filter@" .. c_module .. "@" .. env.name_space
+  _G[c_module] = _G[c_module] or F
+  if not  config:find_index(f_path, c_component) then
+    local findex= config:find_index(f_path, org_filter) or config:find_index(f_path, r_filter)
+    if findex then
+      -- insert before lua_filter@uniquifier
+      config:config_list_insert(f_path,c_component, findex+1 )
+    end
+  end
+  -- 替換 uniquifier filter  --> lua_filter@uniquifier 或者加入
+  --[[
   local org_filter= "uniquifier"
   local u_ns = "uniquifier"
   local r_filter = "lua_filter@uniquifier"
@@ -175,18 +215,8 @@ local function component(env)
   end
   --增加 reject_tags
   config:config_list_append( u_ns .. "/reject_tags", env.name_space )
+  --]]
 
-  -- 加入 command filter  --> lua_filter@command_filter@command
-  local c_module = "command_filter"
-  local c_component= "lua_filter@" .. c_module .. "@" .. env.name_space
-  _G[c_module] = _G[c_module] or F
-  if not  config:find_index(f_path, c_component) then
-    local findex= config:find_index(f_path, r_filter)
-    if findex then
-      -- insert before lua_filter@uniquifier
-      config:config_list_insert(f_path,c_component, findex )
-    end
-  end
 
 end
 local P={}

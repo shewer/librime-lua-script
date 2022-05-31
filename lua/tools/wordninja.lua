@@ -115,7 +115,7 @@ end
 
 --   Module
 local M={}
-function M.split(s,sp)
+function split(s,sp)
   sp= sp or " "
   local tab= setmetatable({},{__index=table})
   --    "abe,.p,.poeu-,a" -> {abe p poeu a}
@@ -127,19 +127,15 @@ function M.split(s,sp)
   return table.concat(tab,sp)
 end
 
-local ss="WethepeopleoftheunitedstatesinordertoformamoreperfectunionestablishjusticeinsuredomestictranquilityprovideforthecommondefencepromotethegeneralwelfareandsecuretheblessingsoflibertytoourselvesandourposteritydoordainandestablishthisconstitutionfortheunitedstatesofAmerica"
-local ss_res="We the people of the united states in order to form a more perfect union establish justice in sure domestic tranquility provide for the common defence promote the general welfare and secure the blessings of liberty to ourselves and our posterity do ordain and establish this constitution for the united states of America"
 
-local function time_count(func,...)
-  local t1=os.clock()
-  local res = func(...)
-  return res,(os.clock() - t1)
-end
-function M.test(s)
-  s = type(s) == "string" and s or ss
-  local res,time = time_count( split,s)
-  print(("--%s--\n--%s--\n%s"):format(s,res,time) )
-  return rstr
+function M.test()
+  str="WethepeopleoftheunitedstatesinordertoformamoreperfectunionestablishjusticeinsuredomestictranquilityprovideforthecommondefencepromotethegeneralwelfareandsecuretheblessingsoflibertytoourselvesandourposteritydoordainandestablishthisconstitutionfortheunitedstatesofAmerica"
+  res="We the people of the united states in order to form a more perfect union establish justice in sure domestic tranquility provide for the common defence promote the general welfare and secure the blessings of liberty to ourselves and our posterity do ordain and establish this constitution for the united states of America"
+
+  local t1= os.clock()
+  local r = M.split(str)
+  local time = os.clock() - t1
+  return r == res,time
 end
 
 function M.init(filename,...)
@@ -153,10 +149,22 @@ function M.init(filename,...)
     files[i] = path .. v
   end
   M.dict,M.maxlen= dictload( table.unpack(files))
+  M.split=split
 end
 
-M.tc=time_count
-M.ts=ss
+
+local is_windows = package.cpath:match("?.dll") and true or false
+if is_windows then
+  M.init()
+else
+  local ok, res = pcall(require, 'wordninja')
+  if ok then
+    M.split = res.split
+  else
+    M.init()
+  end
+end
+
 
 return M
 

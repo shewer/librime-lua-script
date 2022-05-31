@@ -125,6 +125,13 @@ function M:select(func, ...)
   end
   return self:class()(tab)
 end
+function M:select_delete(func, ...)
+  local tab={}
+  for i,v in ipairs(self) do
+    if not func(v, ...) then table.insert(tab,v) end
+  end
+  return self:class()(tab)
+end
 function M:select_with_index(func, ...)
   local tab={}
   for i,v in ipairs(self) do
@@ -143,12 +150,13 @@ function M:find(func,...)
   end
   for i,v in ipairs(self) do
     if func(v,argv) then
-      return v
+      return i,v
     end
   end
   return nil
 end
-
+function M:find_index(func,...)
+end
 
 -- not use
 local function deepcompare(t1,t2,ignore_mt)
@@ -172,12 +180,10 @@ local function deepcompare(t1,t2,ignore_mt)
 end
 
 function M:reverse()
-  local obj=M()
-  for i= #self, 1 do 
-    obj[#self-i+1] = self[i] 
-  end 
-  return obj
-end 
+  return self:reduce(function(elm,org)
+    return org:unshift(elm)
+  end,M()) 
+end
 function M:size()
   return #self
 end
@@ -238,23 +244,34 @@ end
 function M:sort_self(func,...)
   table.sort(self,func)
   return self
-end 
+end
 function M:sort(func,...)
   return self:clone():sort_self()
-end 
-  
-
-
-
-local append_func=function(elm,org) org:push(elm) ; return org end
-function M:__add(...)
-	return M(...):reduce(
-		append_func,
-		self:clone()
-		)
 end
+
+
+
+
+local append_func=function(elm,org) return org:push(elm)  end
+function M:__add(...)
+  return M(...):reduce(append_func, self:clone())
+end
+--[[
+  for i,l in next , {...} do
+    M(l):reduce
+    return M(...):reduce( append_func, self:clone())
+  end
+end
+--]]
 function M:__shl(...)
 	return M(...):reduce(append_func,self)
+end
+function M:__shr(num)
+  local l =M()
+  for i = 1,num do
+    l:unshift( self:pop())
+  end
+  return l
 end
 
 function M:__eq(list)
@@ -262,8 +279,29 @@ function M:__eq(list)
          table.concat(self,"|") == table.concat(list,"|")
 end
 
+function M:__mul(num)
+  local l=M()
+  for i=1,num do l = l + self end
+  return l
+end
 
-
+function M.Range(num1,num2,step)
+  if not num2 then
+    num1,num2 = 1 ,num1
+  end
+  step =  (step and step or 1) *  (num1 <= num2 and 1 or -1)
+  local l= M()
+  print(num1,num2,step)
+  for i=num1,num2 ,step do
+    l:push(i)
+  end
+  return l
+end
+function M.Parse(obj,num)
+  local l =M()
+  for i=1,num do l:push(obj) end
+  return l
+end
 
 
 

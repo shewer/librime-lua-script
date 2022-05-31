@@ -24,10 +24,10 @@
 local English="english"
 local puts = require 'tools/debugtool'
 local List = require 'tools/list'
-local T= require'english/english_tran'
 local ASCII_PUNCT="ascii_punct"
 -- filetr of command
 
+local T= require'english/english_tran'
 -- lua segmentor
 local S={}
 function S.func(segs ,env) -- segmetation:Segmentation,env_
@@ -71,26 +71,30 @@ local function component(env)
   --puts("log",__FILE__(),__LINE__(),__FUNC__(), path, config:get_string(path),  "prefix" , prefix,"suffix" , suffix)
 
   -- 加入 lua_sgement
-  local s_module= "english_seg"
-  _G[s_module] = _G[s_module] or S
-  local s_path= "engine/segmentors"
-  local s_component= ("%s@%s@%s"):format( "lua_segmentor", s_module, env.name_space)
-  if not config:find_index( s_path, s_component) then
-    config:set_string(s_path .. "/@bedore 1", s_component )
+  do
+    local module= "english_seg"
+    _G[module] = _G[module] or S
+    local path= "engine/segmentors"
+    local component= ("%s@%s@%s"):format( "lua_segmentor", module, env.name_space)
+    if not config:find_index( path, component) then
+      config:set_string(path .. "/@bedore 1", component )
+    end
   end
 
 
   -- 加入 lua_translator@english_tran@english
-  local t_module = "english_tran"
-  _G[t_module]= _G[t_module] or T
-  local t_path= "engine/translators"
-  local t_component= ("%s@%s@%s"):format( "lua_translator", t_module, env.name_space)
-  if not config:find_index( t_path, t_component) then
-    config:config_list_append( t_path, t_component )
+  do
+    local module = "english_tran"
+    _G[module]= _G[module] or T
+    local path= "engine/translators"
+    local component= ("%s@%s@%s"):format( "lua_translator", module, env.name_space)
+    if not config:find_index( path, component) then
+      config:config_list_append( path, component )
+    end
   end
 
   -- 替換 uniquifier filter  --> lua_filter@uniquifier 或者加入
-
+  --[[
   local f_path= "engine/filters"
   local org_filter= "uniquifier"
   local u_ns = "uniquifier"
@@ -104,20 +108,31 @@ local function component(env)
   end
   --增加 reject_tags
   config:config_list_append( u_ns .. "/reject_tags", env.name_space )
+  --]]
+end
 
+local function init_keybinds(env)
+  local keys= env:Config():get_obj(env.name_space .. "/keybinds")
+  for k,v in next, keys do
+    keys[k]= KeyEvent(v)
+  end
+  return keys
 end
 
 local P={}
 function P.init(env)
   Env(env)
   local context=env:Context()
+  local config= env:Config()
   --load_config(env)
   component(env)
   --recognizer/patterns/english: "^[a-zA-Z]+[*/:'._-].*"
-  env.comp_key= KeyEvent("Tab")
-  env.uncomp_key= KeyEvent("Shift+Tab")
-  env.enable_key= KeyEvent("F10")
-  context:set_option(English,false)
+  env.keys= init_keybinds(env)
+
+  --env.comp_key= KeyEvent("Tab")
+  --env.uncomp_key= KeyEvent("Shift+ISO_Left_Tab")
+  --env.enable_key= KeyEvent(config:get_string(env.name_space .."/keybinds/toggle") or "F10")
+  --context:set_option(English,false)
   env.history=List()
 
   env.notifier= List(
@@ -137,7 +152,7 @@ function P.init(env)
 end
 
 function P.fini(env)
-  env.notifier:echo(function(elm) elm:disconnect() end)
+  env.notifier:each(function(elm) elm:disconnect() end)
 end
 
 function P.func(key,env)
@@ -163,22 +178,27 @@ function P.func(key,env)
   end
 
   -- 反回上一次 input text
-  if key:eq(env.uncomp_key) and #env.history > 0  then
+  if key:eq(env.keys.completion_back) and #env.history > 0  then
     context.input = env.history:pop()
     return Accepted
   end
   -- enable English mode
-  if key:eq(env.enable_key) then
+  if key:eq(env.keys.toggle) then
     context:Toggle_option(English)
     context:refresh_non_confirmed_composition()
+    return Accepted
+  elseif key:eq(env.keys.mode) then
+    context:Toggle_option("english_info_mode")
     return Accepted
   end
   -- 補齊input   以cand.type "ninja" 替換部分字段 "english" 替換全字母串
   if status.has_menu  then
     local cand=context:get_selected_candidate()
-    --puts("trace" , __FILE__(),__LINE__() , cand.type , cand.info )
-    if key:eq(env.comp_key)  then
-      env.history:push(context.input)
+    if key:eq(env.keys.completion)  then
+      -- reject
+      if cand.text == context.input then return Noop end
+
+      local history = context.input
       if cand.type == "english" then
         context.input = cand.text
       elseif cand.type== "ninja" then
@@ -190,6 +210,7 @@ function P.func(key,env)
       else
         return Noop
       end
+      env.history:push(history)
       return Accepted
     end
   end

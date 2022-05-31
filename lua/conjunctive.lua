@@ -60,17 +60,18 @@ local simplification= "simplification"
 
 -- 词库设定 : 如果不需要 繁简转换 remark dict_file_cn
 -- 繁简转换原则以 simplifier 工作原则 以 option simplification 切换繁简约
-local dict_file = __conjunctive_file and __conjunctive_file.default or 'essay.txt'
-local dict_file_cn = __conjunctive_file and __conjunctive_file.enable or 'essay_cn.txt'
+--local dict_file = __conjunctive_file and __conjunctive_file.default or 'essay.txt'
+--local dict_file_cn = __conjunctive_file and __conjunctive_file.enable or 'essay_cn.txt'
 --dict_file= '/usr/share/rime-data/essay.txt'  -- debug
 local switch_key ="F11"
-local escape_key = ".-"
+--local ESCAPE_KEY = ".-"
 local path_ch= package.config:sub(1,1)
 
 
 local Dict = require 'tools/dict'
 local function load_dict( filename)
-  puts(INFO,__FILE__(),"load dict .........",filename)
+
+  puts(INFO,"load dict .........",filename)
   local t1=os.clock()
   local dict=  Dict( "." .. path_ch .. filename)
   or Dict( rime_api.get_user_data_dir() .. path_ch  .. filename)
@@ -78,62 +79,64 @@ local function load_dict( filename)
   if not dict then
     puts(WARNING, __FILE__(),__LINE__(), "open dict faild",  filename)
   end
-  puts(INFO,__FILE__(),"loaded dict .........",os.clock() - t1 )
+  puts(INFO,"loaded dict .........",os.clock() - t1 )
   return dict
 end
 
 -- lua_translator@conjunctive
 local M={}
 
-M._dict= M._dict or load_dict( dict_file)
-M._dict_cn= M.dict_cn or load_dict( dict_file_cn)  or M._dict
 
 function M.init(env)
+  env = Env(env)
+  local config=env:Config()
+  local context=env:Context()
+  local files = config:get_obj(env.name_space .. "/files")
+  local files = type(files) == "table" and files or {"essay.txt","essay_cn.txt"}
+
+  M._dict= M._dict or load_dict( files[1] )
+  M._dict_cn= M._dict_cn or load_dict( files[2] ) or M._dict
   env.dict= M._dict
   env.dict_cn= M._dict_cn
 
   env.history=""
   env.history_back=""
 
-  env.commit_connect= env.engine.context.commit_notifier:connect(
-    function(ctx)
-      local conjunctive_mode = ctx:get_option(lua_tran_ns) and not ctx:get_option("ascii_mode")
-      if not conjunctive_mode then return end
+  env.notifiers=List(
+  env.engine.context.commit_notifier:connect(
+  function(ctx)
+    local conjunctive_mode = ctx:get_option(lua_tran_ns) and not ctx:get_option("ascii_mode")
+    if not conjunctive_mode then return end
 
-      local cand=ctx:get_selected_candidate()
-      local command_mode= cand and "history" == cand.type  and "" == cand.text
-      -- change env.history
-      if command_mode then
-        env.history_back=  env.history
-        env.history = cand.comment:match("^(.*)[-][-].*$") or env.history
-      end
+    local cand=ctx:get_selected_candidate()
+    local command_mode= cand and "history" == cand.type  and "" == cand.text
+    -- change env.history
+    if command_mode then
+      env.history_back=  env.history
+      env.history = cand.comment:match("^(.*)[-][-].*$") or env.history
+    end
 
-      -- update history
-      local commit_text= ctx:get_commit_text()
-      if  #commit_text>0 and  ctx.input ~= commit_text then
-        env.history = env.history .. commit_text
-        context:set_property(env.name_space,env.history)
-        env.history = env.history:utf8_sub(-10)
-
-
-        env.commit_trigger =  not env.dict:empty(env.history)
-      end
-  end  )
-
-
-
-  env.update_connect= env.engine.context.update_notifier:connect(
-    function(ctx)
-      if env.commit_trigger then
-        env.commit_trigger =nil
-        ctx.input=pattern_str
-      end
+    -- update history
+    local commit_text= ctx:get_commit_text()
+    if  #commit_text>0 and  ctx.input ~= commit_text then
+      env.history = env.history .. commit_text
+      context:set_property(env.name_space,env.history)
+      env.history = env.history:utf8_sub(-10)
+      env.commit_trigger =  not env.dict:empty(env.history)
+    end
+  end),
+  env.engine.context.update_notifier:connect(
+  function(ctx)
+    if env.commit_trigger then
+      env.commit_trigger =nil
+      ctx.input=pattern_str
+    end
   end )
+  )
 end
 
 function M.fini(env)
-  env.commit_connect:disconnect()
-  env.update_connect:disconnect()
+  env.notifiers:each(function(elm) elm:disconnect() end)
 end
 
 
@@ -200,6 +203,9 @@ function F.init(env)
 end
 function F.fini(env)
 end
+function F.tags_match(seg,env)
+  return env.engine.context:get_option(env.name_space)
+end
 function F.func(input,env)
   local context= env.engine.context
   local history=context:get_property(env.name_space)
@@ -207,32 +213,32 @@ function F.func(input,env)
   local list=List()
   local comp_cand
   for cand in input:iter() do
-    if cand.type == "completion" then 
+    if cand.type == "completion" then
       comp_cand= cand
       break
     end
     if cand.type ~= "history" and #cand.text > 0 then list:push(cand) end
     yield(cand)
-  end 
-  -- conjunctive filter 
+  end
+  -- conjunctive filter
   list:each(function(elm)
     local count = 0
     for w,wt in dict:reduce_iter( history .. elm.text ) do
       count = count +1
-      if wt >= env.weight and count < env.max then -- weight 
+      if wt >= env.weight and count < env.max then -- weight
         local cand= Candidate( "history" , elm.start,elm._end, elm.text .. w, env.preedit )
-        if cand then 
+        if cand then
           cand.preedit=elm.text .. w .. env.preedit
-          yield(cand) 
-        end 
+          yield(cand)
+        end
       end
     end
   end)
   -- campletion cand
   if comp_cand then yield(comp_cand) end
-  for ccand in input:iter() do 
+  for ccand in input:iter() do
     yield(ccand)
-  end 
+  end
 
 
 end
@@ -267,16 +273,23 @@ local function components(env)
   end
   -- set module  conjunctive filter"
   _G[lua_tran_ns .. "_filter"]= _G[lua_tran_ns .. "_filter" ] or F
-  local path = "engine/filters"
-  local name = "lua_filter@" .. lua_tran_ns .. "_filter@" .. env.name_space
-  if not config:find_index(path,name) then
-    config:config_list_append(path, name)
+  -- append lua_filter@conjunctive_filter@<name_space> before uniquifier
+  local f_path = "engine/filters"
+  local comp = "lua_filter@" .. lua_tran_ns .. "_filter@" .. env.name_space
+  if not config:find_index(f_path, comp) then
+    local index = config:find_index(f_path, "uniquifier")
+    if index then
+      config:set_string(f_path .. "/@before " .. index , comp)
+    else
+      config:set_string(f_path .. "/@next" , comp)
+    end
   end
 
 
   -- add pattern "~~"
   config:set_string("recognizer/patterns/" .. lua_tran_ns , rec_pattern)
 
+  local switch_key = config:get_string(env.name_space .. "/keybinds/toggle") or switch_key
   -- register keybinder {when: "always",accept: switch_key, toggle: conjunctive }
   add_keybind(config, {when= "always", accept= switch_key, toggle= lua_tran_ns } )
 end
@@ -289,7 +302,6 @@ end
 
 function P.init(env)
   Env(env)
-  assert(env.name_space == "conjunctive" , "name_space not match ( lua_processor@<module>@conjunctive)")
   local config= env:Config()
   -- add  lua_translator@conjunctive
   components(env)
@@ -297,6 +309,7 @@ function P.init(env)
 
   env.select_key= convert_excape_char( config:get_string("menu/alternative_select_keys") or "" )
 
+  local escape_key = config:get_string(env.name_space .. "/escape_key") or ""
   env.escape_regex = ("^[%s%s ]$"):format(
     convert_excape_char( rec_char .. env.select_key .. " " .. escape_key) , "%d" )
   -- set alphabet string

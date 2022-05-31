@@ -80,7 +80,7 @@ end
 CM.size= CM.len
 
 function CM:text()
-  return self._cand.text
+  return self._text
 end
 function CM:type()
   return self._cand.type
@@ -105,36 +105,27 @@ function CM:preedit(text)
 end
 
 ------ test
-function CM:index(index)
-  if type(index) == "number" then
-    self._index = (index -1) % self:size()
+function CM:_update()
+  if self._index then
+    self:preedit( self:_projection())
   end
-  return self._index and self._index +1 or nil
+end
+function CM:index(index)
+  if type(index) == "number" and self._index ~= index then
+    self._index = (index -1) % self:size() + 1
+    self:_update()
+  end
+  return self._index
 end
 
-function CM:_update()
-  if self:index() then
-    self:preedit(
-      self:_projection()
-    )
-  end
-end
 
 function CM:inc()
   local index= self:index() or  0
-  puts(C01,__LINE__(), "----------inc index" , self:index(),self._cand:get_dynamic_type(),self._org_cand:get_dynamic_type() )
-  self:index( index +1  )
-  puts(C01,__LINE__(), "----------inc index after " , self:index() )
-  self:_update()
-  return self:index()
+  return  self:index( index +1  )
 end
 function CM:dec()
-  puts(C01,__LINE__(), "----------dec index" , self:index(),self._cand:get_dynamic_type(),self._org_cand:get_dynamic_type() )
   local index= self:index() or  self:size()+1
-  self:index( index -1 )
-  puts(C01,__LINE__(), "----------dec index after " , self:index() )
-  self:_update()
-  return self:index()
+  return self:index( index -1 )
 end
 
 --- test end
@@ -142,18 +133,20 @@ end
 
 function CM:select_character(index)
   index = self:index(index)
-  local word=  self._cand.text:utf8_sub(index,index)
+  local word=  self._text:utf8_sub(index,index)
   return word
 end
 function CM:select_org_character(index)
   index = self:index(index)
-  local word=  self._org_cand.text:utf8_sub(index,index)
+  --local word=  self._org_cand.text:utf8_sub(index,index)
+  local word=  self._text:utf8_sub(index,index)
   return word
 end
 
 function CM:clear()
   self._cand.preedit= self._org_preedit
   self._cand.comment= self._org_comment
+  self._text = nil
   self._cand=nil
   self._index=nil
   self._size=nil
@@ -166,19 +159,22 @@ local function Warp_cand(cand, projection_func, index )
     return nil
   end
   local obj={}
+  if cand.type == "unicode" then
+    obj._text = cand.comment:match("| (.*)$")
+  else
+    obj._text = cand.text
+  end
+  --obj._size=cand.text:utf8_len()
+  obj._size=obj._text:utf8_len()
   obj._org_cand=cand
   obj._cand=cand:get_genuine()
-  obj._size=cand.text:utf8_len()
   obj._org_preedit=obj._cand.preedit
   obj._org_comment=obj._cand.comment
   obj._projection=projection_func
-  obj._index= index
+  obj._index= index or 0
   return setmetatable(obj, CM )
 end
 
---
---
---
 local function load_project_func(env)
   local config= env.engine.schema.config
   local use_reverse= config:get_int(env.name_space .. '/use_reverse') or  true
@@ -217,9 +213,9 @@ function M.init(env)
   local context=env.engine.context
 
   -- load  bindings
-  local nk=config:get_string(env.name_space .. "/next_key" ) or NEXT_KEY
+  local nk=config:get_string(env.name_space .. "/keybinds/next" ) or NEXT_KEY
   env.head= KeyEvent(nk )
-  local pk=config:get_string(env.name_space .. "/prev_key" ) or PREV_KEY
+  local pk=config:get_string(env.name_space .. "/keybinds/prev" ) or PREV_KEY
   env.tail= KeyEvent(pk )
   -- load preedit_mode  default
   env.projection_func= load_project_func(env)
@@ -239,8 +235,15 @@ function M.func(key,env)
     -- check selected candidate
     local cand= context:get_selected_candidate()
     if not cand  then return Noop end
-    if cand.text:utf8_len() < 2 then  return Noop end
+    if cand.type == "unicode" then
+    elseif cand.text:utf8_len() < 2 then
+      return Noop
+    end
     -- entery  select_character  processor
+
+    if cand.type == "symble" then
+      env.cand = env.cand and env.cand or Warp_cand(cand, env.projection_func)
+    end
 
     if key:eq(env.head) then
       -- 往下定字  -->
@@ -252,10 +255,11 @@ function M.func(key,env)
       env.cand = env.cand and env.cand or Warp_cand(cand, env.projection_func)
       env.cand:dec()
       return Accepted
-    elseif  env.cand and (key.keycode> 0x30 and key.keycode < 0x3a or key.keycode == 0x20) then
-      local n= key.keycode - 0x30
-      -- 以詞定字模式標 定字上屏
-      env.engine:commit_text( env.cand:select_org_character( n >0 and n or nil ) )
+    elseif  env.cand and ( key:repr():match("^%x$") or key.keycode == 0x20) then
+      local n= tonumber(key:repr():match("^%x$") or "" ,16) --key.keycode - 0x30
+      -- 以詞定字模式標 定字上屏 n= 0-f   index = 1-16
+      n = n and n+1 or nil
+      env.engine:commit_text( env.cand:select_org_character( n  ))
 
       -- clear env.cand
       env.cand:clear()

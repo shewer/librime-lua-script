@@ -42,9 +42,9 @@ local function Version()
   local ver
   if Opencc then
     ver = 147
-  elseif KeySequence().repr then
+  elseif KeySequence and KeySequence().repr then
     ver= 139
-  elseif  ConfigMap().keys then
+  elseif  ConfigMap and ConfigMap().keys then
     ver= 127
   elseif Projection then
     ver= 102
@@ -85,15 +85,15 @@ function Init_projection( config, path)
   end
   local patterns= config:get_list( path )
   if not patterns then
-    puts(WARN, __FILE__(),__FUNC__(),__LINE__(), "configlist of " .. path .. "is null" )
+    puts(WARN, "configlist of " .. path .. "is null" )
   elseif patterns.size <1 then
-    puts(WARN, __FILE__(),__FUNC__(),__LINE__(), "configlist of " .. path .. "size is 0" )
+    puts(WARN, "configlist of " .. path .. "size is 0" )
   end
   local projection= Projection()
   if  patterns then
     projection:load(patterns)
   else
-    puts(WARN, __FILE__(),__FUNC__(), __LINE__(), "ConfigList of  " .. path  ..
+    puts(WARN, "ConfigList of  " .. path  ..
       " projection of comment_format could not loaded. comment_format type: " ..
       tostring(patterns) )
   end
@@ -101,7 +101,7 @@ function Init_projection( config, path)
 end
 
 
-
+-- context warp
 local C={}
 function C.Set_option(self,name)
   self:set_option(name,true)
@@ -115,7 +115,31 @@ function C.Toggle_option(self,name)
   self:set_option(name, not self:get_option(name))
   return self:get_option(name)
 end
+-- ConfigItem
+local CI={}
+function CI.Config_item_to_obj(config_item,level)
+    level = level or 99
+    if level <1 then return config_item end
 
+    if not config_item or not config_item.type then return nil end
+    if config_item.type == "kList" then
+      local cl= config_item:get_list()
+      local tab={}
+      for i=0,cl.size-1 do
+        table.insert(tab, CI.Config_item_to_obj( cl:get_at(i), level -1 ))
+      end
+      return tab
+    elseif config_item.type == "kMap" then
+      local cm = config_item:get_map()
+      local tab={}
+      for i,k in next,cm:keys() do
+        tab[k] = CI.Config_item_to_obj( cm:get(k), level -1)
+      end
+      return tab
+    elseif config_item.type == "kScalar" then
+      return config_item:get_value().value
+    else return nil end
+end
 -- Config method clone_configlist write_configlist
 -- Env(env):config():clone_configlist("engine/processors") -- return list of string
 -- Env(env):config():write_configlist("engine/processors",list)
@@ -123,18 +147,18 @@ end
 local CN={}
 -- clone ConfigList of string to List
 
+
+function CN.get_obj(config,path,level)
+  return CI.Config_item_to_obj( config:get_item(path or ""),level)
+end
 function CN.clone_configlist(config,path)
   if not config:is_list(path) then
-    log.warning( "clone_configlist: ( " .. path  ..  " ) was not a ConfigList " )
+    puts(WARN, "clone_configlist: ( " .. path  ..  " ) was not a ConfigList " )
     return nil
   end
-
-  local list=List()
-  for i=0, config:get_list_size(path)-1 do
-    list:push( config:get_string( path .. "/@" .. i ) )
-  end
-  return list
+  return List( CI.Config_item_to_obj(config:get_item(path)) )
 end
+
 -- List write to Config
 function CN.write_configlist(config,path,list)
   list:each_with_index(
@@ -209,17 +233,29 @@ end
 ----- rime_api tools
 local M=rime_api
 M.Version=Version
+function M.Ver_info()
+  return string.format("Ver: librime %s librime-lua %s lua %s",
+  rime_api.get_rime_version() , Version() ,_VERSION )
+end
 -- Context method
 -- Env(env):context():Set_option("test") -- set option "test" true
 --                    Unset_option("test") -- set option "test" false
 --                    Toggle_option("test")  -- toggle "test"
 --  Projection api
+local slash = package.config:sub(1,1)
 M.Projection=Init_projection
 --  filter tools
+local function file_exists(file)
+  local fn = io.open(file)
+  if fn then
+    fn:clone()
+    return true
+  end
+end
 function M.load_reversedb(dict_name)
   -- loaded  ReverseDb
-  local reverse_filename = "build/"  ..  dict_name .. ".reverse.bin"
-  local reversedb= ReverseDb( reverse_filename )
+  local reverse_filename = string.format("build/%s.reverse.bin", dict_name)
+  local reversedb = ReverseDb( reverse_filename)
   if not reversedb then
     log.warning( env.name_space .. ": can't load  Reversedb : " .. reverse_filename )
   end
@@ -241,7 +277,18 @@ function M.wrap_config(env)
     local config=env.engine.schema.config
     return Wrap(config,"methods",CN)
 end
+function M.req_module(mod_name,rescue_func)
+  local slash= package.config:sub(1,1)
+  local ok,res = pcall(require, mod_name )
+  if ok then return res end
 
+  ok , res = pcall(require, 'component' .. slash .. mod_name )
+  if ok then return res end
+  puts(ERROR, "require module failed ", mod_name , res )
+  return  rescue_func
+end
+function M.req_module_()
+end
 -- env metatable
 local E={}
 --
@@ -272,21 +319,52 @@ function E:get_status()
   stat.paging= not empty and comp:back():has_tag("paging")
   return stat
 end
-
-function E:print_components(out)
-  out = out or INFO
-  local config= self:Config()
-  puts(out,"-----" ..self.engine.schema.schema_id,self.name_space .. " --------")
-  local function list_print(conf,path)
-    puts(out,"-----" .. path .. " --------")
-    for i=0, conf:get_list_size(path) -1 do
-      path_i= path .. "/@" .. i
-      puts(out, path_i ..":\t" .. conf:get_string(path_i) )
+function E:tab_to_str_list(obj, path,list)
+  --local obj = self:Config():to_obj(path)
+  path = path or ""
+  list= list or List()
+  local tp=type(obj)
+  if tp == "string" then
+    list:push( string.format("%s:%s",path,obj) )
+  elseif  tp == "table"  then
+    local is_list= #obj> 0
+    for i,v in next, obj do
+      local sub_path =  is_list and type(i) == "number"  and "@" .. i - 1 or i
+      if type(v) == "table" then
+        self:tab_to_str_list(v,path .. "/"  .. sub_path , list)
+      else
+        list:push( string.format("%s/%s:%s",path,sub_path,v))
+      end
     end
   end
-  List({"processors","segmentors","translators","filters"})
-  :map(function(elm) return "engine/" .. elm end )
-  :each(function(elm) list_print(config,elm) end)
+  return list
+end
+function E:config_path_to_str_list(path,list)
+  list= list or List()
+  local tab=self:Config():get_obj(path)
+  return self:tab_to_str_list(tab,path,list)
+end
+
+function E:components_str(list)
+  list= list or List()
+  local tab = self:Config():get_obj( path,0 )
+  return List("processors","segmentors","translators","filters")
+  :map(function(elm) return "engine/" .. elm end)
+  :reduce(function(elm,org)
+    return self:config_path_to_str_list(elm,org)
+  end,list)
+
+end
+
+function E:print_components(out)
+  puts(out,  string.format("----- %s : %s ----", self.engine.schema.schema_id,self.name_space) )
+  self:components_str("engine"):each(function(elm)
+    puts(out,elm)
+  end)
+end
+
+function E:components(path)
+  return self:Config():get_obj(path or "engine")
 end
 
 

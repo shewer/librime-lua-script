@@ -5,18 +5,18 @@
 #
 #--------------------------------
 patch:
-  engine/processors/@after 0: lua_processor@init_processor@module_tw
-  module_tw:
+  engine/processors/@after 0: lua_processor@init_processor@module_cn
+  # init_processor config of name_space  
+  module_cn:
     modules:
       - { module: 'command', module_name: "cammand_proc", name_space: "command" }
       - { module: 'component/select_character', module_name: "select_character", name_space: "translator" }
-      - { module: 'english', module_name: "english_proc", name_space: "english" }
-      - { module: "conjunctive", module_name: "conjunctive_proc", name_space: "conjunctive" }
+      - { module: 'english', module_name: "english_proc", name_space: "english_cn" }
+      - { module: "conjunctive", module_name: "conjunctive_proc", name_space: "conjunctive_cn" }
       - { module: 'multi_reverse', module_name: "multi_reverse_proc", name_space: "multi_reverse" }
     keybinds:
       prtscr: "Control+F12" # commit_text of menu list
       prtkey: "Shift+F12"
-
     # init_processor   append comopents
     before_modules:
       filters:
@@ -27,21 +27,20 @@ patch:
     after_modules:
       filters:
         - lua_filter@stroke_count
-        #- uniquifier
         - lua_filter@debug_filter
       segments:
       translators:
         - lua_translator@select_character_tran@select_character   # select_character 配件 模擬矩陣符號表 []1-0 選字 /emj /nu /sma /smb /smc
-
-  # select_character name_space translator 須要調用反查字典和 comment_format 設定 name_space :translator
-  # name_space of select_character hot-key
+  # select_character name_space translator 須要調用反查字典和 comment_format 設定 name_space :translator  
+  # name_space of select_character hot-key   
   #
-  #translator/dictionary:
+  #translator/dictionary: 
   #translator/comment_format:
   #translator/preedit_format:
   translator/keybinds:
     next: bracketleft  # [ --->
     prev: bracketright  # ] <--
+
   #-------------- modules initialize of name_space
   multi_reverse:
     keybinds:
@@ -51,10 +50,10 @@ patch:
       next: "Control+9"
       prev: "Control+0"
       hold: "Shift_L"
-  #------------ english module
-  english: #
+
+  english_cn: #
     tag: abc #  中文模式調用 英文字典 default : none
-      #dictionary: english # defaul english_tw 字典橎位置 lua/tools/english.txt
+    dictionary: english # defaul english_tw 字典橎位置 lua/tools/english.txt
     keybinds:
       toggle: F10 #  enable/disable key
 
@@ -62,9 +61,9 @@ patch:
   #conjunctive_cn/files: [essay.txt, essay_cn.txt]
   #簡體使用者 simplifier/opencc_config: s2t.json (預設)  default: 體簡詞庫 enable: 繁體詞庫
   #conjunctive_cn/files: [essay_cn.txt, essay.txt]
-  conjunctive:
-    files: [essay.txt, essay_cn.txt]
-    escape_char: ".-"
+  conjunctive_cn:
+    files: [essay-cn.txt  essay.txt]
+    escape_key : ".-"
     keybinds:
       toggle: "F11"
 
@@ -72,18 +71,16 @@ patch:
     output_format: [dtype,type,start,_end,preedit,quality,input,ainput,error]
     #tags:
 
-  # switches default
   switches/+:
     - name: conjunctive
-      states: [ 無,聯]
-      reset: 1
+      states: [ 无,联]
     - name: english
-      states: [ 無,英]
+      states: [ 无,英]
     - name: multi_reverse
-      states: [ 無,查]
+      states: [ 无,查]
     - name: qcode
-      states: [ 無,短]
+      states: [ 无,短]
     - name: completion
-      states: [ 無,未]
+      states: [ 无,未]
     - name: _debug
       states: [ off, on]
