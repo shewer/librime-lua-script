@@ -125,8 +125,12 @@ MT.__call=New
 local Word= setmetatable({} , MT)
 Word.__index=Word
 Word.__name="Word"
+
 --local Word=Class("Word")
 --Word.__name= "Word"
+function Word:__eq(obj)
+  return self.word == obj
+end
 
 function Word:_initialize(tab)
   if not (
@@ -136,7 +140,7 @@ function Word:_initialize(tab)
     return
   end
 
-  for i,v in next ,{"word","info","phonics"} do
+  for i,v in next ,{"word","translation","phonetic"} do
     self[v]= (type(tab[v]) == "string" and tab[v] ) or ""
   end
   return self
@@ -144,21 +148,21 @@ end
 
 
 function Word:chk_parts(parts)
-  return (self.info:match(parts) and true)  or false
+  return (self.translation:match(parts) and true)  or false
 end
 function Word:Parse(line)
   local tab={}
-  local word, info_str = table.unpack(line:split("\t"))
+  local word, translation= table.unpack(line:split("\t"))
   if word:len() < 1 then return end
   tab.word=word
-  info_str= info_str or ""
+  translation= translation or ""
 
-  local  head,tail=  info_str:find('^%[.*%];')
+  local  head,tail=translation:find('^%[.*%];')
   if head and tail then
-    tab.phonics= info_str:sub(head,tail-1)
-    tab.info= info_str:sub(tail+1)
+    tab.phonetic=translation:sub(head,tail-1)
+    tab.translation=translation:sub(tail+1)
   else
-    tab.info= info_str
+    tab.translation=translation
   end
   return self(tab)
 end
@@ -173,19 +177,19 @@ function Word:get_info(mode)
   mode= mode and mode % 7 or 0
 
   if mode == 1 then
-    return (info.phonics .. info.info):gsub("\\n",NR)
+    return (info.phonetic .. info.translation):gsub("\\n",NR)
   elseif mode == 2  then
-    return info.info:gsub("\\n", " ")
+    return info.translation:gsub("\\n", " ")
   elseif mode == 3 then
-    return info.info:gsub("\\n", NR)
+    return info.translation:gsub("\\n", NR)
   elseif mode == 4 then
-    return info.phonics
+    return info.phonetic
   elseif mode == 5 then
     return info.word
   elseif mode== 6 then
     return ""
   else
-    return (info.phonics .. info.info):gsub("\\n"," ")
+    return (info.phonetic .. info.translation):gsub("\\n"," ")
   end
 
 end
@@ -193,7 +197,8 @@ function Word:match(pw,pn)
   pn = pn or ""
   if self.word:lower():match(pw) then
     return pn == ""  and true
-    or self.info:match( pn) and  true or false
+    -- 暫時  ecdict 欄位名不同
+    or self.translation:match( pn) and  true or false
   end
   return false
 end
@@ -250,8 +255,8 @@ local function save_table(filename,obj)
   fn:write("local info= {}\n for i,v in next, index do info[v.word] = v end\n")
   fn:write("return {index = index , tree = tree, info =info} \n")
   fn:close()
-  -- chunk_bin 可設定 luac bin
-  if chunk_bin then
+  -- chunk_txt 可設定  lua txt code
+  if not chunk_txt then
     local f = loadfile(filename)
     fn = io.open(filename,'w')
     fn:write( string.dump(f) )
@@ -311,7 +316,26 @@ local function init_dict_from_txt(filename,level)
   --save_table( get_path(filename .. ".txtl"), dict)
   return dict -- dict.index ,dict.info, dict.tree
 end
-
+local function init_dict_from_csv(filename,level)
+  local CSV = require 'tools/csvtotab'
+  print("init_from_csv level", level)
+  local tab= List( CSV.Load_csv(filename,true) )
+  print("after init_from_csv level", level)
+  local dict= {
+    index = tab,
+    info = {},
+    tree = {},
+  }
+  for i=1,#dict.index do
+    if i % 10000 == 0 then print("process: ",i) end
+    local w = setmetatable( dict.index[i],Word)
+    w.index= i
+    w.phonetic = #w.phonetic > 1 and "[" .. w.phonetic .. "]" or w.phonetic
+    dict.info[w.word] = w
+    dict_tree_insert_index(dict.tree,w,level)
+  end
+  return dict
+end
 local function init_dict_from_chunk(filename)
   puts(INFO, "init_dict from chunk",filename)
   local ok,res = pcall(dofile, filename)
@@ -341,10 +365,23 @@ local function init_dict(dict_name,level,force)
     return init_dict(dict_name,level,true)
   else
     local filen = get_path( dict_name .. ".txt")
-    local dict  = init_dict_from_txt( filen )
-    if dict then
-      if not cf_exists then save_table(cfilen,dict) end
-      return dict
+    if file_exists(filen) then
+      local dict  = init_dict_from_txt( filen )
+      if dict then
+        if not cf_exists then save_table(cfilen,dict) end
+        return dict
+      end
+    else
+      -- add csv
+      filen = get_path( dict_name .. ".csv")
+      if file_exists(filen) then
+
+        local dict  = init_dict_from_csv( filen,level )
+        if dict then
+          if not cf_exists then save_table(cfilen,dict) end
+          return dict
+        end
+      end
     end
     puts(ERROR, 'dict file not found', dict_name,filen,res) end
 end
