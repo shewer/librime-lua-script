@@ -74,7 +74,7 @@ setmetatable(eng_parts,{__index=table } )
 
 -- 取得 字頭 英文字串    a-z  A-Z . - _
 local function pre_suffix_word(wild_word)
-  return wild_word:match("^[%a][%a%.%-_]*"),wild_word
+  return wild_word:match("^[-.%a][%a%.%-_]*"),wild_word
 end
 -- 轉換 reg pattern  隔離字元  - .  %- %.    萬用字元 ? * .? .*
 local function conver_rex(str)
@@ -84,7 +84,7 @@ end
 local function split_str(str)
   str= type(str)== "string" and  str  or ""
   local w,p=table.unpack(str:split(":"))
-  local pw= w:match("^[%a][%a%.%-_]*")
+  local pw= w:match("^[-.%a][%a%.%-_]*")
   local ws= List( w:split("/") )
   local ww= ws:shift()
   ww=  ww .. ws:map(function(elm)
@@ -177,7 +177,7 @@ function Word:get_info(mode)
   mode= mode and mode % 7 or 0
 
   if mode == 1 then
-    return (info.phonetic .. info.translation):gsub("\\n",NR)
+    return (info.phonetic .. " " .. info.translation):gsub("\\n",NR)
   elseif mode == 2  then
     return info.translation:gsub("\\n", " ")
   elseif mode == 3 then
@@ -189,7 +189,7 @@ function Word:get_info(mode)
   elseif mode== 6 then
     return ""
   else
-    return (info.phonetic .. info.translation):gsub("\\n"," ")
+    return (info.phonetic .. " " .. info.translation):gsub("\\n"," ")
   end
 
 end
@@ -248,12 +248,14 @@ local function save_table(filename,obj)
     puts(ERROR, "save_table: openfile error" ,res)
     return
   end
-  fn:write("local index = ")
-  serialize(fn, obj.index)
+  fn:write("return ")
+  serialize(fn, obj)
+  --[[
   fn:write("local tree = ")
   serialize(fn, obj.tree)
   fn:write("local info= {}\n for i,v in next, index do info[v.word] = v end\n")
   fn:write("return {index = index , tree = tree, info =info} \n")
+  --]]
   fn:close()
   -- chunk_txt 可設定  lua txt code
   if not chunk_txt then
@@ -279,111 +281,74 @@ local function dict_tree_insert_index(self,word,level)
   end
 end
 
-local function init_dict_from_txt(filename,level)
-  puts(INFO, "init_dict from txt",filename)
-  if not file_exists(filename) then
-    puts(ERROR, "dict file not faund",filename)
-    return
-  end
-  level= level or 3
-
+local function init_dict_from_txt(filename)
   local dictfile,res =  io.open(filename)
   if not dictfile then
     puts(ERROR, "dict file open failed",filename,res)
     return
   end
-
-  local dict= {
-    index = List(),
-    info = {},
-    tree = {},
-  }
+  local tab={}
   --dict_tree.insert_index= dict_tree_insert_index
-
   for line in dictfile:lines() do
     if not line:match("^#") then  -- 第一字 #  不納入字典
-      local w = Word:Parse(line)
-      if w then
-        dict.index:push(w)
-        w.index= #dict.index
-        dict.info[w.word] = w
-        dict_tree_insert_index(dict.tree,w,level)
-      end
+      table.insert(tab, Word:Parse(line))
     end
   end
   dictfile:close()
-  -- mack dict of chunk
-  --save_table( get_path(filename .. ".txtl"), dict)
-  return dict -- dict.index ,dict.info, dict.tree
+  return tab
 end
-local function init_dict_from_csv(filename,level)
+local function init_dict_from_csv(filename)
   local CSV = require 'tools/csvtotab'
-  print("init_from_csv level", level)
-  local tab= List( CSV.Load_csv(filename,true) )
-  print("after init_from_csv level", level)
-  local dict= {
-    index = tab,
-    info = {},
-    tree = {},
-  }
-  for i=1,#dict.index do
-    if i % 10000 == 0 then print("process: ",i) end
-    local w = setmetatable( dict.index[i],Word)
-    w.index= i
-    w.phonetic = #w.phonetic > 1 and "[" .. w.phonetic .. "]" or w.phonetic
-    dict.info[w.word] = w
-    dict_tree_insert_index(dict.tree,w,level)
-  end
-  return dict
-end
-local function init_dict_from_chunk(filename)
-  puts(INFO, "init_dict from chunk",filename)
-  local ok,res = pcall(dofile, filename)
+  local ok,res = pcall(CSV.Load_csv,filename,true)
   if ok then
-    local dict = res
-    setmetatable(dict.index,List)
-    dict.info= {}
-    for i,v in next, dict.index do
-      setmetatable(v,Word)
-      dict.info[v.word]= v
+    for i,w in ipairs(res) do
+      w.phonetic = #w.phonetic > 0 and "[".. w.phonetic ..  "]" or ""
     end
-    return dict -- dict.index ,dict.info, dict.tree
+    return res
   else
     puts(ERROR, 'load dict chunk faild' ,  filename, res)
   end
 end
+
+local function init_dict_from_chunk(filename)
+  puts(INFO, "init_dict from chunk",filename)
+  local ok,res = pcall(dofile, filename)
+  if ok then
+    return res -- dict.index ,dict.info, dict.tree
+  else
+    puts(ERROR, 'load dict chunk faild' ,  filename, res)
+  end
+end
+
+local function init_dictdb( dict, level)
+  local obj = {}
+  obj.index = dict.index and dict.index or dict
+  obj.tree  = dict.tree  and dict.tree  or {}
+  obj.info  = dict.info  and dict.info  or {}
+  for i,w in ipairs( obj.index) do
+    w.index = i
+    setmetatable(w,Word)
+    obj.info[w.word] = w
+    dict_tree_insert_index(obj.tree, w, level)
+  end
+  return obj
+end
+
 local function init_dict(dict_name,level,force)
   -- force (true) init_dict form txt
-    local cfilen = get_path( dict_name .. ".txtl" )
-    local cf_exists = file_exists(cfilen)
+   local dict
+   local filen = get_path(dict_name .. ".txtl")
+   dict= not force and file_exists(filen) and init_dict_from_chunk(filen)
+   filen = get_path( dict_name .. ".txt" )
+   dict = not dict and file_exists(filen) and init_dict_from_txt( filen) or dict
+   filen = get_path( dict_name .. ".csv" )
+   dict = not dict and file_exists(filen) and init_dict_from_csv( filen) or dict
 
-  if not force and cf_exists then
-    local dict = init_dict_from_chunk(cfilen)
-    if dict then return dict end
-    puts(WARN,'---init_dict_frome_chunk faild',dict_name,cfilen,res)
-    -- init from_chunk faild  and recall  from txt
-    return init_dict(dict_name,level,true)
-  else
-    local filen = get_path( dict_name .. ".txt")
-    if file_exists(filen) then
-      local dict  = init_dict_from_txt( filen )
-      if dict then
-        if not cf_exists then save_table(cfilen,dict) end
-        return dict
-      end
-    else
-      -- add csv
-      filen = get_path( dict_name .. ".csv")
-      if file_exists(filen) then
-
-        local dict  = init_dict_from_csv( filen,level )
-        if dict then
-          if not cf_exists then save_table(cfilen,dict) end
-          return dict
-        end
-      end
-    end
-    puts(ERROR, 'dict file not found', dict_name,filen,res) end
+   if not dict then
+      puts(ERROR, 'dict file not found', dict_name,filen,res)
+      return nil
+   end
+   return init_dictdb(dict,level)
 end
 
 --local English =Class("English")
@@ -395,13 +360,16 @@ function English:_getdb()
   return self._dictdb[self._filename]
 end
 
-function English:_initialize(filename,level)
+function English:_initialize(filename,level,force)
   self._filename= filename or "english_tw"
   self._level= level or 3
   self._mode=0
   --local dictdb = self:_getdb()
   if not self:_getdb() then
-    self:reload()
+    self:reload(force)
+    if not file_exists( get_path(filename .. ".txtl" ) ) then
+      self:make_chunk()
+    end
   end
   local dictdb = assert( self:_getdb() )
 
@@ -410,16 +378,19 @@ function English:_initialize(filename,level)
   self._dict_tree=dictdb.tree
   return self
 end
-function English:make_chunk()
+function English:make_chunk(mode)
+  -- only save wordes table
+  mode = true
+
   if self._filename then
     -- object
     local filen= get_path( self._filename .. ".txtl")
-    save_table( filen , self:_getdb())
+    save_table( filen , mode and self:_getdb().index or self:_getdb())
   else
     -- class
     for k,v in next, self._dictdb do
       local filen= get_path( k .. ".txtl")
-      save_table( filen , v)
+      save_table( filen , mode and v.index or v)
     end
   end
 end
@@ -512,6 +483,13 @@ English.Conver_rex=conver_rex
 English.Split=split_str
 English.Conver_pattern= conv_pattern
 English.Word=Word
+
+
+--[[ debug function
+-- for debug and check
+English.save_table= save_table
+English.init_dict= init_dict
+--]]
 
 return English
 
