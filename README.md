@@ -5,7 +5,7 @@
     lua_translator@date@date1 -- module_name: date  name_space: date1
     lua_translator@date -- module_name: date  name_space: date
     -- 檢查lua 環境是否存在 date 如果沒有將會試載入 date = [require](require)('date') or require('component/date')
-  
+  * 英打模組:增加 [ecdict.csv](https://github.com/skywind3000/ECDICT)字典
   * 英打模組:增加自動編譯固態字典檔以改善載入字典時間(減少90%時間)，共用字典table 減少記憶體使用及再次載入時間
   * 以詞定字: select_character [以词定字](#以词定字)上屏模组
   * 聯想詞輸入模組: 
@@ -88,6 +88,7 @@
     * /sma /smb /smc : 同上
   
   ## 英文 字典+英打模式，支援 Tab 補齊功能 及 wordninja
+  
     * **注意** win10部份單字的comment 會造成崩潰，需要remark單字，linux 無此問題可以把 tools/english_tw.txt 內 "#" 移除
     *  英打模式: F10
     *  comment 格式切換: Shift+F10
@@ -99,7 +100,17 @@
     *   english/tag 預設 english : 如果須要在 tag:abc 輸出，可以在 english/tag: abc   or  abc_segmentor/extra_tags: [ english ]
     *  english_tran.lua 增加 優先載入 wordnanja-rs  , 只要把 wordninja.(dll/so/dylib) 放入 <user_data_dir>/lua/plugin
     *  支援 camel upper case 轉換  
-    *  增加固態字典手動編譯 tools/compile_dict.sh dictfile.txt ... 
+    *  字典初始化請提前製作 
+  
+  
+  
+```lua
+-- @ <user_data_dir>/compiler.lua   
+Eng=require('tools/english_dict')
+Eng('ecdict') -- 如果找不到了 ecdict.txtl  換找 .txt or .csv  製作 .txtl (固態字典)
+Eng('english')
+Eng('english_tw')
+```
       
   
   ## 反查模組
