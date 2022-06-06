@@ -86,8 +86,10 @@ function T.func(inp,seg,env)
   yield(first)
 
   local commit= input:match("^[%a%_%.%']+$")  and T._nj and T._nj.split(input)
+  local njcand
   if commit then
-    yield( Candidate(Ninja, seg.start,seg._end, commit, "[ninja]"))
+    njcand = Candidate(Ninja, seg.start,seg._end, commit, "[ninja]")
+    yield(njcand)
   end
 
   -- 使用 context.input 杳字典 type "english"
@@ -99,6 +101,21 @@ function T.func(inp,seg,env)
       yield( Candidate(English,seg.start,seg._end,sync_case(input,w.word),w:get_info(env.mode)) )
     end
   end
+
+  -- ecdict 字典支援子句
+  -- 使用ninja 展開字句查字典
+  -- [[
+  if commit and commit:match("%s") then
+    for w in env.dict:iter(commit) do
+      if w.word == njcand.text then
+        njcand.comment = njcand.comment .. w:get_info(env.mode)
+      else
+        yield( Candidate(Ninja, seg.start , seg._end,w.word,"(Ninja) " .. w:get_info(env.mode)))
+      end
+    end
+  end
+  --]]
+
   -- 使用 ninja 最後一佪字查字典 type "ninja"
   --local n_word= commit[#commit]
   local n_word = commit and commit:split():pop()
