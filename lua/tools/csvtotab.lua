@@ -85,7 +85,7 @@ local function token(str)
       h,t = str:match( token_p3)
     end
   end
-  t = (t and  t or str):gsub('""','"')
+  t = (t and  t or str:gsub("^\"(.*)\"$","%1")):gsub('""','"')
   return t,h
 end
 
