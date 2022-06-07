@@ -319,7 +319,7 @@ local function init_dict_from_chunk(filename)
     puts(ERROR, 'load dict chunk faild' ,  filename, res)
   end
 end
-
+-- 建立字頭索引使用 hash map 找字頭開始index
 local function init_dictdb( dict, level)
   local obj = {}
   obj.index = dict.index and dict.index or dict
@@ -409,11 +409,11 @@ function English:mode(mode)
 end
 
 function English:get_info(word)
-  return self._dict_info[word]
+  return self:_getdb().info[word]
 end
 
 function English:_chk_part(word,ph)
-  local info=self._dict_info[word]
+  local info=self:_getdb().info[word]
   return ( info and info:chk_parts(ph) )
 end
 
@@ -432,7 +432,7 @@ function English:find_index(org_text)
   local pw=conv_pattern(org_text)
   --finde first index
   index = index > 1 and index-1  or nil
-  for i,w in next , self._dict_index , index do
+  for i,w in next , self:_getdb().index , index do
     if w:match(pw) then
       return i
     end
@@ -451,7 +451,7 @@ function English:iter(org_text,mode)
   index= index > 1 and index - 1 or  nil
   return coroutine.wrap(
   function()
-    for i,node in next, self._dict_index , index do
+    for i,node in next, self:_getdb().index , index do
       if not node:is_match(pw) then  break end
       if node:is_match(ww,p) then
         coroutine.yield( node)
@@ -468,7 +468,7 @@ function English:match(word)   --  return list
   return tab_result
 end
 function English:get_word(word_str)
-  return self._dict_info[word_str]
+  return self:_getinfo().info[word_str]
 end
 --  English.Wildfmt("e/a:a")
 --  --> e.*able  e*able  a ()
