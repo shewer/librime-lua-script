@@ -5,6 +5,27 @@
 --
 -- Distributed under terms of the MIT license.
 --
+--[[
+
+  ex :
+  Eng=require('tools/english_dict' )
+  e = Eng( 'english')
+  for w in e:iter('th/i:ad') do    --  * ? /  :
+    print(w.word,w:get_info(1) )
+  end
+
+  list = e:match('th/i:ad') --List table
+  for i,v in ipairs(list)
+    print(w.word,w:get_info(1)
+  end
+
+  pw=function(w) print(w.word,w:get_info()) end
+  list:each(pw)
+
+
+--
+--
+--]]
 
 -- environment setting
 -- rime log  redefine
@@ -114,6 +135,8 @@ local function conv_pattern1(org_text,level)
   return pw, ww, p
 end
 
+--- Word
+--
 local function New(self,...)
   local obj= setmetatable({} , self)
   return not obj._initialize and  obj or obj:_initialize(...)
@@ -150,6 +173,7 @@ end
 function Word:chk_parts(parts)
   return (self.translation:match(parts) and true)  or false
 end
+-- <word>\t<translation>
 function Word:Parse(line)
   local tab={}
   local word, translation= table.unpack(line:split("\t"))
@@ -193,17 +217,12 @@ function Word:get_info(mode)
   end
 
 end
-function Word:match(pw,pn)
-  pn = pn or ""
-  if self.word:lower():match(pw) then
-    return pn == ""  and true
-    -- 暫時  ecdict 欄位名不同
-    or self.translation:match( pn) and  true or false
-  end
-  return false
+
+function Word:match(text)
+  local pw,ww,pn = conv_pattern(text)
+  return self.word:lower():match(ww) and self.translation:match(pn)
 end
 Word.is_match= Word.match
---Class(Word)
 
 
 
@@ -360,9 +379,10 @@ function English:_getdb()
   return self._dictdb[self._filename]
 end
 
-function English:_initialize(filename,level,force)
+function English:_initialize(filename,force,level,max_level)
   self._filename= filename or "english_tw"
   self._level= level or 3
+  self._maxlevel = max_level or 10
   self._mode=0
   --local dictdb = self:_getdb()
   if not self:_getdb() then
@@ -371,11 +391,6 @@ function English:_initialize(filename,level,force)
       self:make_chunk()
     end
   end
-  local dictdb = assert( self:_getdb() )
-
-  self._dict_index=dictdb.index
-  self._dict_info=dictdb.info
-  self._dict_tree=dictdb.tree
   return self
 end
 function English:make_chunk(mode)
@@ -397,67 +412,62 @@ end
 function English:reload(force)
   self._dictdb[self._filename] =  init_dict(self._filename,self._level,force)
 end
-function English:next_mode()
-  return self:mode(   self:mode() + 1 )
-end
-function English:mode(mode)
-  if  ( mode and tonumber( mode ) ) then
-    mode= mode % 5
-    if mode >= 0 and  mode <= 4 then self._mode= mode  end
-  end
-  return self._mode
-end
 
-function English:get_info(word)
-  return self:_getdb().info[word]
-end
 
-function English:_chk_part(word,ph)
-  local info=self:_getdb().info[word]
-  return ( info and info:chk_parts(ph) )
-end
+function English:_find_index(pw,len)
+  local db = self:_getdb()
 
-function English:pre_suffix(key)
-  return self._dict_tree[ key:lower() ]
-end
+  len = len and len < self._maxlevel and len or self._maxlevel
+  len = #pw < len and #pw or len
 
-function English:find_index(org_text)
-  local key= ( org_text:match("^([%a%.%_%-]+).*") or "")
-  :lower()
-  :sub(1, self._level )
-  local index =self._dict_tree[ key:lower() ]
-  if not index then return end
-
-  --local pw,ww,p=conv_pattern1(org_text,self._level)
-  local pw=conv_pattern(org_text)
-  --finde first index
-  index = index > 1 and index-1  or nil
-  for i,w in next , self:_getdb().index , index do
-    if w:match(pw) then
-      return i
-    end
-  end
-  return nil
-end
-function English:iter(org_text,mode)
-  --local pw,ww,p=conv_pattern1(org_text,self._level)
-  local pw,ww,p=conv_pattern(org_text)
-  local index= self:find_index( org_text)
-  if not index then
-    return function() end
-  end
-
-  -- index -1
-  index= index > 1 and index - 1 or  nil
-  return coroutine.wrap(
-  function()
-    for i,node in next, self:_getdb().index , index do
-      if not node:is_match(pw) then  break end
-      if node:is_match(ww,p) then
-        coroutine.yield( node)
+  if len <1 then return end
+  local ppw = pw:lower():sub(1, len )
+  local pindex=db.tree[ppw]
+  if not pindex then
+    return self:_find_index(pw ,len -1)
+  else
+    -- find index form start of pw
+    local i,w= pindex, db.index[pindex]
+    repeat
+      if w:match(pw) then
+        if #pw >self._level then
+          local l= w.index - db.tree[ppw]
+          db.tree[pw] =  l > 20 and w.index or nil
+        end
+        return w.index
+      end
+      i,w = next(db.index,i)
+    until not i or not w:match(ppw)
+    --[[
+    pindex = pindex > 1 and pindex -1 or nil
+    for i,w in next, db.index, pindex do
+      if not w:match("^"..ppw) then return end
+      if w:match("^" .. pw) then
+        db.tree[pw] = db.tree[pw] and db.tree[pw] or w.index
+        return w.index
       end
     end
-  end )
+    --]]
+  end
+end
+function English:iter(org_text,mode)
+  local pw = split_str(org_text)
+  local index= self:_find_index( pw )
+  local db = self:_getdb()
+
+  return coroutine.wrap(
+  function ()
+    -- start from index
+    local i,w = index, db.index[index]
+    if not i then return end
+    repeat
+      if w:match(org_text) then
+        coroutine.yield( w)
+      end
+      i,w = next(db.index, i)
+      -- stop for pw out of scope
+    until not ( i and w:match(pw) )
+  end)
 end
 
 function English:match(word)   --  return list
@@ -473,23 +483,33 @@ end
 --  English.Wildfmt("e/a:a")
 --  --> e.*able  e*able  a ()
 --
+--
+--
+
+
+
+
+
+
+-- for debug and check
+--[[ debug function
+
 function English.Wildfmt(word)
   local _,ww , p =split_str(word)
   local pattern=conver_rex(ww)
   return pattern,ww ,p
 end
 
-English.Conver_rex=conver_rex
-English.Split=split_str
-English.Conver_pattern= conv_pattern
+English.Split=split_str  --1 ('seteu/i/a:m') 字首seteu 單字 seteu*ing*able 詞類 m
+English.Conver_rex=conver_rex --2 ('seteu*?ing:m') 展開/ :  seteu.*.?ing:ment 2
+English.Conver_pattern= conv_pattern --3 ('seteu/i/a:m') 字首 ^seteu  ^seteu.*ing.*able%sm[%a%-%.]*%.
 English.Word=Word
 
 
---[[ debug function
--- for debug and check
 English.save_table= save_table
 English.init_dict= init_dict
 --]]
+
 
 return English
 
