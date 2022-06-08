@@ -83,7 +83,8 @@ end
 
 function M:each_with_index(func, ...) -- func   function( elm, index , ... )
   for i,v in ipairs(self) do
-    func(v, i, ...)
+    local res = func(v, i, ...)
+    if res then return res end
   end
 end
 
@@ -143,19 +144,20 @@ end
 local function def_find(elm,argv)
     return elm == argv
 end
-function M:find(func,...)
-  local argv=...
-  if type(func)~= "function" then
-    func,argv = def_find, func
+function M:find_index(func,...)
+  if type(func) ~= "function" then
+    return elm == func
   end
   for i,v in ipairs(self) do
-    if func(v,argv) then
-      return i,v
+    if func(v,...) then
+      return i
     end
   end
-  return nil
 end
-function M:find_index(func,...)
+
+function M:find(func,...)
+  local i = self:find_index(func,...)
+  return self[i]
 end
 
 -- not use
