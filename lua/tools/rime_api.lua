@@ -40,7 +40,9 @@ local puts = require 'tools/debugtool'
 
 local function Version()
   local ver
-  if Opencc then
+  if LevelDb then 
+    ver = 177
+  elseif Opencc then
     ver = 147
   elseif KeySequence and KeySequence().repr then
     ver= 139
