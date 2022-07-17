@@ -164,7 +164,8 @@ function M.Parse(lines,with_header)
    M()
 end
 function M.File(filename,with_header)
-  local rec = locad_csv(filename,with_header)
+  local rec = load_csv(filename,with_header)
+  return rec
 end
 
 M.Line_to_tab = csvline
