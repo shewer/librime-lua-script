@@ -85,7 +85,7 @@ List = require'tools/list'
 Log = require 'tools/debugtool'
 require 'tools/string'
 Component = Version() >= 177  and Component or require('tools/_component')
-local w_leveldb = LevlDb and require('tools/leveldb')
+local w_leveldb = LevelDb and require('tools/leveldb')
 
 -- append  path
 local function append_path(...)
