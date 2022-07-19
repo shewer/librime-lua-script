@@ -14,7 +14,7 @@
   * 命令模組: 此模組可以在輸入模式 set & get option property config 及執行function
   * 載入程序: 以上模組都可以獨立手動載入也可以利用, init_processor.lua 把需要載入模組設定於 <name_space>/modules: {list}. 預設以此模式[安裝](#安裝)。
   
-  
+  # [![](https://payment.ecpay.com.tw/Upload/QRCode/202207/QRCode_a18bdda1-d2d0-45a2-a4c1-42ce7528e949.png)](https://p.ecpay.com.tw/A6D7688)
 
 
   # 安裝
