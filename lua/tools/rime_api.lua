@@ -34,13 +34,36 @@
 -- 2021.4
 -- 2021.4 支援 ConfigList ListItem ConfigValue ConfigMap Projection Memory
 --
-List = require'tools/list'
-local puts = require 'tools/debugtool'
 
+-- add global var:
+--   List  : module
+--   Log   : func warp log.info ...
+--   Env(env) env  : api of env
+--   Component :  ver < 177  fake_Component : just for lua_xxxx
+-- module:
+--  List
+--
+-- function: Log  Env Init_projection
+-- plguin: string
+--      string.split(str[,char|pattern:default "%s"]) List
+--      string.utf8_len(str) number
+--      string.utf8_offset(index) number
+--      string.utf8_sub(str, start[,end])  string
+
+-- rime_api append api
+--   Verion() number
+--   Version_info() string
+--
+--   V177  LevelDb
+--     leveldb_open(filename, dbname)  leveldb
+--     leveldb_close(db)
+--     leveldb_pool() status of string of db_pool table
 
 local function Version()
   local ver
-  if Opencc then
+  if LevelDb then
+    ver = 177
+  elseif Opencc then
     ver = 147
   elseif KeySequence and KeySequence().repr then
     ver= 139
@@ -57,6 +80,68 @@ local function Version()
   end
   return ver
 end
+
+List = require'tools/list'
+Log = require 'tools/debugtool'
+require 'tools/string'
+Component = Version() >= 177  and Component or require('tools/_component')
+local w_leveldb = LevlDb and require('tools/leveldb')
+
+-- append  path
+local function append_path(...)
+  local slash = package.config:sub(1,1)
+  local paths = package.path:split(";")
+  local res =false
+  for i,vs in next, {...} do
+    local path1 = ("%s/?.lua"):format(vs):gsub("/",slash)
+    local path2 = ("%s/?/init.lua"):format(vs):gsub("/",slash)
+    for i,v in next, {path1,path2} do
+      if not paths:find(v) then
+        paths:push(v)
+        res = res or true
+      end
+    end
+  end
+
+  if res then
+    package.path= paths:concat(";")
+    return true
+  end
+  return false
+end
+
+local function append_cpath(...)
+  local slash = package.config:sub(1,1)
+  local df = package.cpath:match('?.so')
+  or package.cpath:match('?.dylib')
+  or package.cpath:match('?.dll')
+  local paths = package.cpath:split(";")
+  local res =false
+
+  for i,v in next, {...} do
+    local path= ("%s/%s"):format(v,df):gsub("/",slash)
+    if not paths:find(path) then
+      paths:push(path)
+      res = true
+    end
+  end
+
+  if res then
+    package.cpath= paths:concat(";")
+    return true
+  end
+  return false
+end
+do
+  append_path((rime_api.get_user_data_dir() or ".") .. "/lua/component")
+  append_cpath((rime_api.get_user_data_dir() or ".") .. "/lua/plugin")
+--print("*******************************************************")
+--package.path:split(";"):each(print)
+--package.cpath:split(";"):each(print)
+--print("*******************************************************")
+end
+
+
 
 
 --  舊的版本 使用 lua_function  轉換  且 模擬 :apply(str) 接口
@@ -85,15 +170,15 @@ function Init_projection( config, path)
   end
   local patterns= config:get_list( path )
   if not patterns then
-    puts(WARN, "configlist of " .. path .. "is null" )
+    Log(WARN, "configlist of " .. path .. "is null" )
   elseif patterns.size <1 then
-    puts(WARN, "configlist of " .. path .. "size is 0" )
+    Log(WARN, "configlist of " .. path .. "size is 0" )
   end
   local projection= Projection()
   if  patterns then
     projection:load(patterns)
   else
-    puts(WARN, "ConfigList of  " .. path  ..
+    Log(WARN, "ConfigList of  " .. path  ..
       " projection of comment_format could not loaded. comment_format type: " ..
       tostring(patterns) )
   end
@@ -153,7 +238,7 @@ function CN.get_obj(config,path,level)
 end
 function CN.clone_configlist(config,path)
   if not config:is_list(path) then
-    puts(WARN, "clone_configlist: ( " .. path  ..  " ) was not a ConfigList " )
+    Log(WARN, "clone_configlist: ( " .. path  ..  " ) was not a ConfigList " )
     return nil
   end
   return List( CI.Config_item_to_obj(config:get_item(path)) )
@@ -231,7 +316,7 @@ function CN.config_list_replace(config,path, target, replace )
   return false
 end
 ----- rime_api tools
-local M=rime_api
+local M={}
 M.Version=Version
 function M.Ver_info()
   return string.format("Ver: librime %s librime-lua %s lua %s",
@@ -254,13 +339,15 @@ local function file_exists(file)
 end
 function M.load_reversedb(dict_name)
   -- loaded  ReverseDb
-  local reverse_filename = string.format("build/%s.reverse.bin", dict_name)
-  local reversedb = ReverseDb( reverse_filename)
+  local reversedb = ReverseLookup
+  and ReverseLookup(dict_name)
+  or  ReverseDb("build/".. dict_name .. "reverse.bin")
   if not reversedb then
     log.warning( env.name_space .. ": can't load  Reversedb : " .. reverse_filename )
   end
   return reversedb
 end
+
 local function Wrap(obj,name,tab)
   local mt=getmetatable(obj)
   for k,v in next,tab do
@@ -277,18 +364,14 @@ function M.wrap_config(env)
     local config=env.engine.schema.config
     return Wrap(config,"methods",CN)
 end
+
 function M.req_module(mod_name,rescue_func)
-  local slash= package.config:sub(1,1)
   local ok,res = pcall(require, mod_name )
   if ok then return res end
-
-  ok , res = pcall(require, 'component' .. slash .. mod_name )
-  if ok then return res end
-  puts(ERROR, "require module failed ", mod_name , res )
+  Log(ERROR, "require module failed ", mod_name )
   return  rescue_func
 end
-function M.req_module_()
-end
+
 -- env metatable
 local E={}
 --
@@ -345,29 +428,115 @@ function E:config_path_to_str_list(path,list)
   return self:tab_to_str_list(tab,path,list)
 end
 
-function E:components_str(list)
-  list= list or List()
-  local tab = self:Config():get_obj( path,0 )
+
+local Config_api =require 'tools/config_api'
+
+-- Config_get_obj(path[,type])  return obj , args: path , type( i
+--    type( 1 : ConfigItem 2 : Config of Value or List or Map )
+--    type 4 只能單向轉換
+function E:Config_conver(obj,_type,path)
+  return Config_api.conver_type(obj,_type,path)
+end
+function E:Config_data_with_path(obj, path)
+  return Config_api.to_list_with_path(obj,path)
+end
+function E:Config_get(path, _type, tpath)
+  local pp = _type == 4 and ( tpath or path) or nil
+  local o =Config_api.conver_type(
+    self.engine.schema.config:get_item(path),
+    _type,
+    _type == 4 and (tpath or path ) or nil )
+  return o
+end
+function E:Config_set(path, obj)
+  return self.engine.schema.config:set_item(path,
+  Config_api.to_item(obj))
+end
+
+function E:config_path_to_str_list(path)
+  return List( self:Config_get(path) )
+  :map(function(elm) return elm.path .. ": " .. elm.value end)
+end
+-- Get_tag  args :  ()  , (nil, "translator") ,("date")
+function E:Get_tag(def_tag , ns)
+  def_tag = def_tag or "abc" -- default "abc"
+  ns = ns or self.name_space -- default env.name_space
+  return self.engine.schema.config:get_string( ns .. "/tag") or def_tag
+end
+function E:Get_tags(ns)
+  ns = ns or self.name_space
+  return Set(
+    self:Config_get( ns .. "/tags"))
+end
+
+function E:append_value_before(path, elm, mvalue)
+  local obj = self:Config_get(path)
+  if type(obj) ~= "table" or #obj < 1 then return end
+  local list = List(self:Config_get(path))
+  if list:find( elm) then return end
+  local index = list:find(mvalue)
+  local dpath = index and path .. "/@before " .. index -1 or path .. "/@next"
+
+  if not self:Config_set(dpath, elm) then
+    Log(ERROR, "config set ver error","path", path, "value", elm)
+  end
+end
+-- option function
+
+function E:Set_option(name)
+  self.engine.context:set_option(name,true)
+  return true
+end
+function E:Unset_option(name)
+  self.engine.context:set_option(name,false)
+  return false
+end
+function E:Toggle_option(name)
+  local context= self.engine.context
+  context:set_option(name, not context:get_option(name))
+  return context:get_option(name)
+end
+function E:Get_option(name)
+  return self.engine.context:get_option(name)
+end
+-- property function
+function E:Get_property(name)
+  return self.engine.context:get_property(name)
+end
+function E:Set_property(name,str)
+  self.engine.context:set_property(name,str)
+  return str
+end
+
+-- processor function  config
+function E:get_keybinds(path)
+  path = path or self.name_space .. "/keybinds"
+  local tab = self:Config_get(path)
+  tab = type(tab) == "table" and tab or {}
+  for key,name in next, tab do
+    tab[key] = KeyEvent(name)
+  end
+  return tab
+end
+function E:components_str()
   return List("processors","segmentors","translators","filters")
   :map(function(elm) return "engine/" .. elm end)
-  :reduce(function(elm,org)
-    return self:config_path_to_str_list(elm,org)
-  end,list)
-
+  :reduce(function(path,list)
+    return list + self:Config_get(path, 4)
+  end,List())
+  :map(function(elm) return elm.path .. ": " .. elm.value end)
 end
 
 function E:print_components(out)
-  puts(out,  string.format("----- %s : %s ----", self.engine.schema.schema_id,self.name_space) )
-  self:components_str("engine"):each(function(elm)
-    puts(out,elm)
+  Log(out,  string.format("----- %s : %s ----", self.engine.schema.schema_id,self.name_space) )
+  self:components_str():each(function(elm)
+    Log(out,elm)
   end)
 end
-
+---  delete
 function E:components(path)
-  return self:Config():get_obj(path or "engine")
+  return self:Config_get(path or "engine")
 end
-
-
 E.__index=E
 
 
@@ -378,5 +547,18 @@ E.__index=E
 function Env(env)
   return setmetatable(env,E)
 end
+--append_path(...)  paths   + "/?.lua" paths + /?/init.lua
+M.append_path = append_path
+--append_cpath(...) paths + /?.(dll|so|dylib)
+M.append_cpath = append_cpath
 
-return M
+--append rime_api tools
+local function warp_api(mod,target)
+  if not mod then return end
+  for k,v in next , mod do
+    target[k] = target[k] or v
+  end
+end
+warp_api(M,rime_api)
+warp_api(w_leveldb, rime_api)
+

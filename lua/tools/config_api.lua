@@ -20,8 +20,6 @@ M.to_list_with_path= function(obj,path) -- obj , path
 
 --]]
 -- return lua type 0 , ConfigItem 1, Configdata 2 , nul 3
-local ok, res = pcall(require,'tools/debugtools')
-local puts = ok and res or print
 
 local function ctype(cobj)
   if cobj == nil then return 3

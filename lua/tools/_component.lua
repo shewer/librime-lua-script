@@ -5,128 +5,212 @@
 --
 -- Distributed under terms of the MIT license.
 --
+-- 這是模擬 ComponentReg api
+-- librime-lua ver  < 177
+--
 -- require sub_module tools
 -- M.Processor(engine, lua_processor@<module_name>@<name_space>,module_str, rescue_func)
-require 'tools/string'
-local puts=require 'tools/debugtool'
-local M = {}
+
+-- check librime-lua version 177  return Component
+--if Component and LevelDb then
+  --warn("Component is already ")
+  --return Component
+--end
+
+--require 'tools/string'
+--local Log=require 'tools/debugtool'
+
+
+local function conv_prescription(str)
+  str = type(str) == "string" and str or ""
+  local k,m,n= str:split("@"):unpack()
+  n = n or m
+  return  k,m,n
+end
+-- fack Ticket for component
+--function fake_Ticket(engine, name_space, prescription)
+
+local function fake_Ticket(...)
+  local args = {...}
+  if #args == 2 then
+    return {
+      schema=args[1],
+      name_space=args[2],
+    }
+  elseif #args == 3 then
+    return falk_Ticket(args[1],args[1].schema,args[2],args[3])
+  elseif #args == 4 then
+      local ks,m,ns= args[4]:split("@"):unpack()
+    return {
+      engine = args[1],
+      schema = args[2],
+      klass = ks,
+      name_space = ns or args[3],
+    }
+  end
+end
+
+Ticket = Ticket or fake_Ticket
 
 local function req_module(mod_name,rescue_func)
-  local slash= package.config:sub(1,1)
-  local ok,res = pcall(require, mod_name )
+  local ok,res =  pcall(require, mod_name )
   if ok then return res end
-  puts(WARN,"require module failed ", mod_name , res )
-  puts(WARN,"retry require module from ", "component".. slash .. mod_name)
-
-  ok , res = pcall(require, 'component' .. slash .. mod_name )
-  if ok then return res end
-  puts(ERROR, "require module failed ", mod_name , res )
+  Log(ERROR, "require module failed ", mod_name )
   return  rescue_func
 end
 
-local function res_pass(res) return true end
-local function init_module(engine, prescription,module_str,rescue_func)
+
+local function fake_lua_component( obj, ticket)
   -- load modules from  name_space/modules  or _G[name_space]
-  local comp, module_name, name_space= table.unpack(prescription:split("@"))
-  rescue_func = rescue_func or _G["Rescue_" .. comp:match("^lua_(.+)$")]
-  name_space = name_space or module_name
-  module_str = module_str or module_name
+  local module_name , name_space = ticket.name_space:split("@"):unpack()
+  name_space= name_space or module_name
+  local rescue = _G["Rescue_" .. ticket.klass:match("^lua_(.+)$")]
 
   -- init module
-  local module = _G[module_name] or req_module(module_str) or  {func=rescue_func}
+  if not _G[module_name] then
+    Log(WRAN, "lua module not found " , module_name )
+    _G[module_name] = req_module(module_name) --or rescue
+    if not _G[module_name] then
+      _G[module_name] = rescue
+    end
+  end
+  local module = _G[module_name]
   module = type(module) == "function" and {func = module } or module
   -- create lua_component data
-  return  {
-    id = prescription,
-    module_name= module_name,
+  obj.id = ticket.klass .. "@" .. ticket.name_space
+  obj.module_name= module_name
+  obj.name_space = name_space
+  obj.rescue_func = rescue_func
+  obj.chk_res = res_pass
+  obj.module = module
+  obj.env={
+    engine=ticket.engine,
     name_space = name_space,
-    rescue_func = rescue_func,
-    chk_res = res_pass,
-    module = module,
-    env={
-      engine=engine,
-      name_space = name_space,
-    },
   }
+  return obj
 end
 
 local function New(self,...)
-  local obj= init_module(...)
-  setmetatable(obj,self)
-  obj:init()
+  local obj=setmetatable({}, self)
+  obj=obj:_initialize(...)
+
   return obj
 end
-local B={__call=New}
+local function comm_init(self)
+  local ok,res =pcall( self.module and self.module.init and  self.module.init,self.env)
+  if not ok then
+    Log(ERROR,
+    ("component: %s, module: %s, init.func( %s)"):format(self.id,self.module,
+    self.module and self.module.init), res)
+  end
+end
+local function _initialize(self,ticket)
+  fake_lua_component(self,ticket)
+  Log(INFO,"created processor component ",self.id,self)
+  comm_init(self)
+  --self.module.init(self.env)
+  -- create delegate func   obj:init() obj:func(key) obj:finit() ...
+  --for k,v in next, self.module do
+    --self[k] = function(obj,...)
+      --return obj.module[k](..., obj.env)
+    --end
+  --end
+  return self
+end
+
+local function _distory(self)
+  self.module.fini(self.env)
+end
+local B={}
+B._initialize= _initialize
+B.__gc = _distory
+B.__call=New
+B.__index=B
+
 -- Lua_component functions
-local L={}
-setmetatable(L,B)
-function L:init()
-  if self.module.init then
-    local ok ,res = pcall(self.module.init,self.env)
-    if ok then
-      return
-    end
-    puts(ERROR, "excute fint error",self.id,res)
+
+
+local function comm_fini(self)
+  return self.module.fini and self.module.fini(self.env)
+end
+
+
+local function pfunc(self,key) return self.module.func(key, self.env) end
+local function sfunc(self,segs) return self.module.func(segs, self.env) end
+local function tfunc(self,input,seg) return self.module.func(input,seg, self.env) end
+local function ffunc(self,tran,cands) return self.module.func(tran, self.env,cands) end
+local function ftags_match(self,seg)
+  return sself.module.tags_match and elf.module.tags_match(seg) or true
+end
+
+-- generate Lua_Component class and funcs of instance
+local function lua_comp(funcs)
+  local obj = {}
+  obj. __gc = comm_fini
+  obj.__index = obj
+  for k,v in next,funcs do
+    obj[k] = v
   end
-end
-function L:fini()
-  if self.module.fini then
-    local ok ,res = pcall(self.module.fini,self.env)
-    if ok then
-      return
-    end
-    puts(ERROR, "excute fini error",self.id,res)
-  end
-  self.module = nil
-  self.env=nil
-  self.module_name=nil
-
-end
-function L:func(...)
-  local ok,res = pcall(self.module.func,self:args(...) )
-  if ok and self.chk_res(res) then return res end
-  puts(ERROR, "excute func error",self.id,res)
-
-  if self.rescue_func then
-    ok,res = pcall(self.rescue_func, self:args(...) )
-    if ok and self.chk_res(res) then return res end
-    puts(ERROR, "excute rescue_func error",self.id,res)
-  end
-end
-L.__index = L
-L.__call = New
-L.__gc = L.fini
--- lua_processor fusctions
-local function process_key_event(self,key)
-  return self:func(key,self.env)
-end
-local function proc_chk_res(res)
-  return res == 0 or res == 1 or res == 2
-end
-local function proc_args(self,...)
-  local key= ...
-  return key, self.env
-end
-function M.Processor(engine,prescription,module_str)
-  local obj=L(engine,prescription,module_str)
-  obj.args = proc_args
-  obj.chk_res= proc_chk_res
-  obj.rescue_func = obj.rescue_func or Rescue_processor
-  -- delegate func
-  obj.process_key_event=obj.func
-  puts(INFO,"create processor component ",prescription)
-  return obj
+  return setmetatable(obj,B)
 end
 
+local LuaP=lua_comp({
+  --func=pfunc,
+  process_key_event=pfunc,
+})
 
+local LuaS=lua_comp({
+  proceed = sfunc,
+})
 
+local LuaT=lua_comp({
+  query = tfunc,
+})
 
+local LuaF=lua_comp({
+  apply = ffunc,
+  applies_to_segment = ftags_match,
+})
 
+local comp={
+  lua_processor = LuaP,
+  lua_segmetor = LuaS,
+  lua_translator = LuaT,
+  lua_filter = LuaF,
+}
+-- fack Component for librime-lua versino  < #177
+local M={}
 
-function M.Create(engine,prescription,module_str)
-  local comp, module_name, name_space= table.unpack(prescription:split("@"))
-  local cname = comp:match("^lua_(.+)$"):gsub("^(%a)",string.upper)
-  return  M[cname] and M[cname](engine,prescription,module_str)
+function M.Processor(...)
+   local ticket = Ticket(...)
+   if ticket and ticket.klass == "lua_processor" then
+     return  comp[ticket.klass](ticket)
+   end
 end
+function M.Segmentor(...)
+   local ticket = Ticket(...)
+   if ticket and ticket.klass == "lua_segmentor" then
+     return  comp[ticket.klass](ticket)
+   end
+end
+function M.Translator(...)
+   local ticket = Ticket(...)
+   if ticket and ticket.klass == "lua_translator" then
+     return  comp[ticket.klass](ticket)
+   end
+end
+function M.Filter(...)
+   local ticket = Ticket(...)
+   if ticket and ticket.klass == "lua_filter" then
+     return  comp[ticket.klass](ticket)
+   end
+end
+
+
+function M.Require(ticket)
+  local c = comp[ticket.klass]
+  return c and c(ticket) or nil
+end
+
 return M
 

@@ -41,174 +41,119 @@
 --   engine/processor/lua_processor@init_processor@module2
 --
 --
-_NR = package.config:sub(1,1):match("/") and "\n" or "\r"
-do
-  local function init_path()
-    local slash = package.config:sub(1,1)
-    local df = package.cpath:match('?.so')
-    or package.cpath:match('?.dylib')
-    or package.cpath:match('?.dll')
-    local sf = "?.lua"
-
-    --local upath= rime_api.user_data_dir()
-    local function ap(path,file,up)
-      up = up or "."
-      local path = string.format(";%s/%s/%s",up, path, file)
-      :gsub("/",slash)
-      return  path
-    end
-    -- append  ./lua/component/?lua to package.path
-    local function path_append(path)
-      path= ap(path,sf,upath)
-      if package.path:match(path) then
-        package.path = package.path .. path
-      end
-    end
-    -- append  ./lua/plugin/?.(so, dll, dylib) to package.cpath
-    local function cpath_append(path)
-      path= ap(path,df,upath)
-      if package.cpath:match(path) then
-        package.cpath = package.cpath .. path
-      end
-    end
-
-    ---
-    --path_append("lua/component")
-    --cpath_append("lua/plugin")
-  end
-  -- append cpath <user_data_dir>/lua/plugin/?.(so|dll|dylib)
-  init_path()
-end
-
 -- librime-lua-script env
-require 'tools/string'
 require 'tools/rime_api'
-local puts=require'tools/debugtool'
-local List = require 'tools/list'
+--require 'tools/string'
+--local Log=require'tools/debugtool'
+--local List = require 'tools/list'
+
+_NR = package.config:sub(1,1):match("/") and "\n" or "\r"
 
 
--- init_module
--- -- remove load_config
-local function load_config(mod_configs)
 
-  if not mod_configs or mod_configs.type ~= "kList" then return end
-  local modules=List()
+-- init_module only for Processor
 
-  local function map_to_table(cmap_item)
-    if not cmap_item or  cmap_item.type ~= "kMap" then return end
-    local cmap = cmap_item:get_map()
-    local tab={}
-    for i,key in next, cmap:keys() do
-      tab[key] = cmap:get_value(key).value
-    end
-    return tab
-  end
-  for i=0 , mod_configs.size - 1 do
-    modules:push( map_to_table(mod_configs:get_at(i) ) or {} )
-  end
-  return modules
-end
-
-local function init_modules(engine, modules)
-  local Components = require 'tools/_component'
-  return modules
+local function init_modules(env)
+  local modules = List( env:Config_get(env.name_space .. "/modules"))
   :map(function(elm)
-    local ns = elm.name_space and "@" .. elm.name_space or ""
-    local mn = elm.module_name and "@" .. elm.module_name or ""
-    local p = "lua_processor" ..  mn ..  ns
-    local obj= Components.Processor(engine, p, elm.module )
-    return obj
+    -- 整理  modules
+    elm.prescription = elm.prescription
+    or ("%s@%s@%s"):format("lua_processor", elm.module_name, elm.name_space or elm.module_name )
+    return elm
+  end)
+  --modules:each(function(elm)
+  modules:select(function(elm)
+    return elm.prescription:match("^lua_(.+)@(.+)")
+  end)
+  :each(function(elm)
+    local tp,nm,ns = elm.prescription:split("@"):unpack()
+    ns = ns or nm
+    _G[nm] = _G[nm] or rime_api.req_module(elm.module)
+  end)
+
+  return modules:map(function(elm)
+    --local ticket=Ticket(engine,"processor", pres)
+    local schema = elm.schema and Schema(elm.schema) or env.engine.schema
+    local comp=Component.Processor(env.engine,schema,"", elm.prescription)
+    if not comp then
+      Log(DEBUG,"create Component fauled", comp, elm.prescription )
+    end
+    return {name=elm.prescription,comp=comp}
   end)
 end
 
---auto_load
 local function auto_load(env, tab_G)
-  env:config_path_to_str_list("engine"):each(
-  function (str, tab)
-    local comp_str = str:match("^.+:lua_(.+)$")
-    if comp_str then
-      local comp_type,module_name,name_space= comp_str:split("@"):unpack()
-      name_space = name_space or module_name
-      if not tab[module_name] then
-        puts(WARN,"auto_load", "lua_" .. comp_str)
-        tab[module_name] = rime_api.req_module(module_name, tab["Rescue_" .. comp_type])
-      end
-    end
-  end, type(tab_G)=="table" and tab_G or _G)
+  tab_G = tab_G or _G
+  local comps=List(env:Config_get("engine",4))
+  :select(function(elm) return elm.value:match("^lua_(.+)@(.+)$") end)
+  :map(function(elm) return elm.value end)
+  :each(function(elm)
+    local ks,nm,ns= elm:split("@"):unpack()
+    ns = ns or nm
+    _G[nm] = _G[nm] or rime_api.req_module(nm)
+  end)
 end
 
--- append components to config_map of engine
 
-local function append_component(config, dist_path, from_path)
-  local from = from_path and config:get_obj(from_path)
+local function append_component(env, from_path,dist_path)
+  local from = from_path and env:Config_get(from_path)
   if not from then return end
+  dist_path = dist_path or "engine"
 
-  local function fn(elm, path)
-    if not config:find_index(path , elm) then
-      -- path == engine/filters then find index of uniquifier
-      local index = path:match("filters$") and config:find_index(path, "uniquifier")
-      if index then
-        config:set_string(path .. "/@before " .. index , elm)
-      else
-        config:set_string(path .. "/@next" , elm)
+  for key, f_list in pairs(from) do
+      local obj = env:Config_get(dist_path .."/"..key)
+      List(f_list):reverse()
+      if type(obj) == "table" and #obj >0 then
+        local list = List(obj)
+        local index = key == "filters" and list:find("uniquifier")
+        local path = dist_path .. "/" .. key
+        -- dpath  = append component before uniquifier or append after next
+        local dpath = index and path .. "/@before " .. index -1 or path .. "/@after " .. #list -1
+
+        List(f_list)
+        :select(function(elm) return not List(env:Config_get(path)):find(elm) end)
+        :reverse()
+        :each(function(elm) env:Config_set(dpath, elm) end)
       end
-    end
-  end
-  -- key={processors,segments,translators,filters}
-  for key, f_list in next , from do
-    List(f_list):each(fn, dist_path .. "/" .. key)
   end
 end
 
-local function init_keybinds(env)
-  local keys= env:Config():get_obj(env.name_space .. "/keybinds")
-  for k,v in next, keys do
-    keys[k]= KeyEvent(v)
-  end
-  return keys
-end
 -- init_processor
 
 local M={}
 function M.init(env)
   Env(env)
   -- init self --
-  local config=env:Config()
-  append_component(config, "engine", env.name_space .. "/before_modules")
-  local mods= List(config:get_obj(env.name_space .. "/modules") or _G[env.name_space])
-  env.modules = init_modules(env.engine, mods)
-  append_component(config, "engine",env.name_space .. "/after_modules")
+  --local config=env:Config()
+  append_component(env, env.name_space .. "/before_modules")
+  env.modules = init_modules(env)
+  append_component(env, env.name_space .. "/after_modules")
 
   --auto_load_bak(config:get_map("engine"))
   auto_load(env)
 
   -- prtscr prtkey keyevent
-  env.keys= init_keybinds(env)
+  env.keys= env:get_keybinds(env.name_space .. "/keybinds")
   -- init end
-  -- print component
 
   -- print component
   do
-    local list=List()
-    local function fn(elm) list:push(elm) end
-    list:push( "---- submodules ----" )
-    env.modules:each(function(elm) list:push(elm.id) end)
-    list:push("---- engine components ----" )
-    env:components_str():each(fn)
-    local pattern_p= "recognizer/patterns"
-    list:push( "---- " ..  pattern_p .. " ----" )
-    env:config_path_to_str_list(pattern_p):each(fn)
-
-    list:each(function(elm)  puts(INFO,elm) end)
+    ( List()
+    + "---- submodules ----"
+    + env.modules:map(function(elm) return string.format("%s: %s",elm.name, elm.comp) end)
+    + "---- engine components ----"
+    + env:components_str()
+    + "---- recognize/patterns  ----"
+    + List(env:Config_get("recognizer/patterns",4)):map(function(elm)
+      return elm.path .. ": " .. elm.value end)
+    ):each(function(elm,out)  Log(out,elm) end, CONSOLE)
   end
 end
 
 
 function M.fini(env)
   -- modules fini
-  env.modules:each( function(elm)
-    elm:fini()
-  end)
+  env.modules:each(function(elm) elm=nil end)
   -- self finit --
 end
 
@@ -221,20 +166,34 @@ function F.screen_print(env)
   local seg = context.composition:back()
   local s_index = seg.selected_index
   local st = s_index - s_index % page_size
-
+  --[[
   engine:commit_text( context:get_selected_candidate().preedit .. "\t" .. seg.prompt .. _NR )
-  for i=st , st+page_size do
+  for i=st , st+page_size -1  do
     local cand = seg:get_candidate_at(i)
     if not cand then return end
     local head = i == s_index and "->" or "  "
-    local out = head .. cand.text .. "\t" .. cand.comment .. _NR
+    local out = ("%s%s\t%s%s"):format(i == s_index and "->" or "  ", cand.text, cand.comment,_NR)
     engine:commit_text(out)
   end
   engine:commit_text(_NR)
+  --]]
+  do
+    (List()
+    + engine:commit_text( context:get_selected_candidate().preedit .. "\t" .. seg.prompt .. _NR )
+    + List.Range(st,st+page_size -1 ):map(function(elm)
+      local c= seg:get_candidate_at(elm)
+      if c then
+        local head = elm == s_index and "-->" or "   "
+        return ("%s%s:\t%s%s"):format(head, c.text, c.comment, _NR)
+      end
+    end)
+    ):each(function(elm) engine:commit_text(elm) end)
+  end
 end
+
 function F.modules(env)
   env.modules:each( function(elm)
-    local str = string.format("%s: %s%s", elm.id, elm.env.engine, _NR)
+    local str = string.format("%s: %s%s", elm.name,elm.comp, _NR)
     env.engine:commit_text(str )
   end)
 end
@@ -268,12 +227,12 @@ end
 
 function M.func(key,env)
   local Rejected,Accepted,Noop=0,1,2
-  local context=env:Context()
+  local context=env.engine.context
   local status=env:get_status()
   -- prtkey enable/disable
   local debug_mode = context:get_option('_debug')
   if debug_mode and key:eq(env.keys.prtkey) then
-    context:Toggle_option("prtkey")
+    env:Toggle_option("prtkey")
     return Accepted
   elseif debug_mode and context:get_option("prtkey") then
     env.engine:commit_text(key:repr().. " ")
@@ -292,13 +251,25 @@ function M.func(key,env)
     return Accepted
   end
   -- sub_module func
-  local res = env.modules:each(function(elm,...)
-    local res =elm:func(...)
+  local res = env.modules:each(function(elm)
+    local res =elm.comp:process_key_event(key)
     if res < 2 then return res end
-  end,key)
-  --
-  return res  or Noop
+  end)
+  return  res or Noop
 end
 
+local Er ={}
+function Er.init(env)
+  Log(ERROR,"librime-lua version less #127",rime_api.Ver_info() )
+end
+function Er.func(key,env)
+  local Rejected,Accepted,Noop= 0,1,2
+  local context= env.engine.context
+  if context.input:match("^/ver") and key:repr() == "space" then
+    env.engine:commit_text(  rime_api.Ver_info() )
+    return Accepted
+  end
+  return Noop
+end
 
-return M
+return (rime_api.Version()>= 127  or ConfigMap) and M or Er
