@@ -41,19 +41,17 @@ T._ext_dict= T._ext_dict or load_ext_dict("ext_dict")
 function T.init(env)
   local config= env.engine.schema.config
   env.tag= config:get_string(env.name_space .. "/tag") or English
-  local dict= config:get_string(env.name_space .. "/dictionary") or "english_tw"
+  local dict_name= config:get_string(env.name_space .. "/dictionary") or "english_tw"
   env.gsub_fmt =  package.config:sub(1,1) == "/" and "\n" or "\r"
-  env.dict = English_dict(dict)
+  env.dict = assert( English_dict(dict_name), 'can not Create english dict of ' .. dict_name)
 
   env.notifiers=List(
   env.engine.context.option_update_notifier:connect(
   function(ctx,name)
     if name=="english_info_mode" then
-      env.mode= env.mode and (env.mode+1)   or 0
+      env.mode= env.mode and (env.mode+1) or 0
     end
   end) )
-
-
 end
 function T.fini(env)
   env.notifiers:each(function(elm) elm:disconnect() end)
@@ -80,37 +78,49 @@ local function sync_case(input, candidate_word)
     return candidate_word
   end
 end
+-- 處理 英文翻譯長度及格式化 (windows  \n ->\r utf8_len 40)
+local function system_format(comment)
+  local unix = package.config:sub(1,1) == "/"
+  if not unix then
+    comment = comment:utf8_sub(1,40):gsub("\n","\r")
+  else
+  end
+  return comment
+end
+
 function T.func(inp,seg,env)
   local context=env.engine.context
 
   if not ( seg:has_tag(env.tag) or context:get_option(English) )  then return end
 
-  local input =  seg:has_tag("lua_cmd") and inp:sub(2) or inp:sub(seg.start,seg._end)
-
+  local input = inp:sub(seg.start+1,seg._end)
   input = input:match("^[%a][%a_.'/*:%-]*$") and input or ""
   if #input==0 then return end
 
-  --puts("trace",__FILE__(),__FUNC__(),"----english-----", input  )
-
-  local first=T._ext_dict and T._ext_dict[input:lower()]
-  and Candidate("english_ext", seg.start, seg._end, input , "[".. T._ext_dict[input:lower()] .. "]")
+  -- first_cand
+  local first_cand=T._ext_dict and T._ext_dict[input:lower()]
+  and Candidate("english_ext", seg.start, seg._end, input, "["..T._ext_dict[input:lower()].."]")
   or Candidate(English, seg.start, seg._end, input , "[english]")
-  yield(first)
+  yield(first_cand)
 
+  -- njcand
   local commit= input:match("^[%a%_%.%']+$")  and T._nj and T._nj.split(input)
   local njcand
   if commit then
     njcand = Candidate(Ninja, seg.start,seg._end, commit, "[ninja]")
     yield(njcand)
   end
-
   -- 使用 context.input 杳字典 type "english"
-  for w in env.dict:iter(inp:sub(seg.start,seg._end)) do
-    -- 如果 與 字典相同 替換 first cand.comment
-    if first and first.type == English and input == w.word or input:lower() == w.word then
-      first.comment= w:get_info(env.mode)
+  for w in env.dict:iter(input) do
+    -- system_format 處理 comment 字串長度 格式
+    local comment = system_format( w:get_info(env.mode) )
+    -- 如果 與 字典相同 替換 first_cand cand.comment
+    if first_cand and first_cand.type == English
+      and input == w.word or input:lower() == w.word then
+      first_cand.comment= comment
     else
-      yield( Candidate(English,seg.start,seg._end,sync_case(input,w.word),w:get_info(env.mode)) )
+      local cand = Candidate(English,seg.start,seg._end,sync_case(input,w.word),comment)
+      yield( cand)
     end
   end
 
@@ -119,10 +129,13 @@ function T.func(inp,seg,env)
   -- [[
   if commit and commit:match("%s") then
     for w in env.dict:iter(commit) do
+      -- system_format 處理 comment 字串長度 格式
+      local comment = system_format( w:get_info(env.mode) )
       if w.word == njcand.text then
-        njcand.comment = njcand.comment .. w:get_info(env.mode)
+        njcand.comment = njcand.comment .. comment
       else
-        yield( Candidate(Ninja, seg.start , seg._end,w.word,"(Ninja) " .. w:get_info(env.mode)))
+        local cand = Candidate(Ninja, seg.start , seg._end,w.word,"(Ninja) "..comment)
+        yield( cand)
       end
     end
   end
@@ -135,8 +148,9 @@ function T.func(inp,seg,env)
   --if #commit > 1 then
     --local n_word= commit and commit:match(".* (.+)$")
     for w in env.dict:iter(n_word) do
-      -- seg.start =   seg.end - #m_word
-      yield( Candidate(Ninja, seg._end - #n_word , seg._end,w.word,"(Ninja) " .. w:get_info(env.mode)))
+      local comment = system_format( w:get_info(env.mode) )
+      local cand = Candidate(Ninja, seg._end - #n_word , seg._end,w.word,"(Ninja) " .. comment)
+      yield(cand)
     end
   end
 end
