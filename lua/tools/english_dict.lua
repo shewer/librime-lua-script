@@ -26,10 +26,9 @@
 --
 --
 --]]
-
--- environment setting
--- rime log  redefine
-local puts= require'tools/debugtool'
+require 'tools/string'
+local List = List or require 'tools/list'
+local Log= require'tools/debugtool'
 
 --USERDIR= ( USERDIR or  os.getenv("APPDATA") or "" ) .. [[\Rime]]
 
@@ -42,12 +41,28 @@ local puts= require'tools/debugtool'
 --}
 --   f="ful"  --> /f or   Control+f
 --require 'tools/object'
-require 'tools/string'
-local List=require 'tools/list'
 -- 設定 存入bin格式
 --local chunk_bin= true
 local NR = package.config:sub(1,1):match("/") and "\n" or "\r"
 
+local function exists(name)
+    if type(name)~="string" then return false end
+    return os.rename(name,name) and true or false
+end
+
+local function isFile(name)
+    if not exists(name) then return false end
+    local f = io.open(name)
+    if f and f:read(1) then
+        f:close()
+        return true
+    end
+    return false
+end
+
+local function isDir(name)
+    return (exists(name) and not isFile(name))
+end
 
 
 local eng_suffix={ f ="ful" , y= "ly" , t= "tion" ,s="sion", a = "able" ,
@@ -119,7 +134,8 @@ local function conv_pattern(org_text)
   pw= "^" .. conver_rex(pw:lower() or "")
   ww="^"  .. conver_rex(ww:lower())
   p= p:len() >0
-    and   "%s" .. conver_rex(p:lower() ) .. "[%a%-%.]*%."
+    --and   "%s" .. conver_rex(p:lower() ) .. "[%l%-%.]*%."
+    and   conver_rex(p:lower() ) .. "[%l%-%.]*%."
     or "" --  [ ] p [%a]*%."
   return pw, ww, p
 end
@@ -145,36 +161,34 @@ local MT={}
 MT.__index=MT
 MT.__call=New
 
+-- Word
+-- class method  Phrase_chunk(row_chunk)  Parse_text(row_tab)
+-- instance method  get_info(mode_num) to_s() prefix_match(prefix_str) match:(text)
 local Word= setmetatable({} , MT)
 Word.__index=Word
 Word.__name="Word"
 
 --local Word=Class("Word")
 --Word.__name= "Word"
+--[[
 function Word:__eq(obj)
   return self.word == obj
 end
+--]]
+--
 
 function Word:_initialize(tab)
-  if not (
-    type(tab)== "table"
-    and type(tab.word) == "string"
-    and 0 < tab.word:len()  ) then
-    return
+  if type(tab)=="table" and tab.word and tab.word:len() >0 then
+    --and tab.translation and tab.phonetic then
+    for k,v in next, tab do
+      self[k] = v
+    end
+    return self
   end
-
-  for i,v in next ,{"word","translation","phonetic"} do
-    self[v]= (type(tab[v]) == "string" and tab[v] ) or ""
-  end
-  return self
 end
 
-
-function Word:chk_parts(parts)
-  return (self.translation:match(parts) and true)  or false
-end
 -- <word>\t<translation>
-function Word:Parse(line)
+function Word.Parse_text(line)
   local tab={}
   local word, translation= table.unpack(line:split("\t"))
   if word:len() < 1 then return end
@@ -188,10 +202,23 @@ function Word:Parse(line)
   else
     tab.translation=translation
   end
-  return self(tab)
+  return Word(tab)
+end
+function Word.Parse_chunk(str,replace)
+  if type(str) == "string" then
+    str = replace and str:gsub("\\n","\\n"):gsub("\\r","\r") or str
+    local tab=load("return " .. str )()
+    return Word(tab)
+  end
 end
 
-
+function Word:to_s()
+  local l = List()
+  for k,v in next,self do
+    l:push( string.format(" %s=%q",k,v) )
+  end
+  return "{ " .. l:concat(',') .. "}"
+end
 -- 利用此func 設定comment 輸出格式
 --
 function Word:get_info(mode)
@@ -213,305 +240,217 @@ function Word:get_info(mode)
   elseif mode== 6 then
     return ""
   else
+
     return (info.phonetic .. " " .. info.translation):gsub("\\n"," ")
   end
-
+end
+function Word:prefix_match(prefix, case_match )
+  if case_match then
+    return self.word:find( prefix) == 1
+  else
+    return self.word:lower():find( prefix:lower()) == 1
+  end
+  return false
 end
 
-function Word:match(text)
+function Word:chk_parts(parts)
+  return (self.translation:match(parts) and true)  or false
+end
+
+function Word:match(text,case_match)
   local pw,ww,pn = conv_pattern(text)
-  return self.word:lower():match(ww) and self.translation:match(pn)
+  --Log(DEBUG,'word match :', pw,ww,pn,self.word, self.word:match(ww) and true or false ,self:prefix_match(pw))
+  local w_match = case_match and self.word:match(ww) or self.word:lower():match(ww)
+  local p_match = #pn<1 and true or self.translation:match(pn)
+  return w_match and p_match and true or false
 end
 Word.is_match= Word.match
 
 
+-- Dict  instance method
+-- iter(text) return iter function for match text pattern
+-- get(word) return
+-- LuaDict
 
-local function file_exists(filename)
-  local fn = io.open(filename)
-  if fn then fn:close() end
-  return fn and true or false
-end
-local function get_path(filename)
-  local path= string.gsub(debug.getinfo(1).source,"^@(.+/)[^/]+$", "%1")
-  return  path ..  (filename or "english.txt" )
-end
-
--- 將英文字典資料存成chunk 加速載入
-local function save_table(filename,obj)
-
-  local function serialize(fn,o)
-    if type(o) == "number" then
-      fn:write(o)
-    elseif type(o) == "string" then
-      fn:write(string.format("%q", o))
-    elseif type(o) == "table" then
-      fn:write("{\n")
-
-      for k,v in pairs(o) do
-        local tp= type(k)
-        if tp == "number" then
-          fn:write( "  [" , k , "] = ")
-        else
-          fn:write(" [ [[",k, "]] ] = ")
-        end
-        serialize(fn,v)
-        fn:write(",\n")
-      end
-      fn:write("}\n")
-    else
-      error("cannot serialize a " .. type(o))
-    end
-  end
-  local fn,res = io.open(filename,"w")
-  if not fn then
-    puts(ERROR, "save_table: openfile error" ,res)
-    return
-  end
-  fn:write("return ")
-  serialize(fn, obj)
-  --[[
-  fn:write("local tree = ")
-  serialize(fn, obj.tree)
-  fn:write("local info= {}\n for i,v in next, index do info[v.word] = v end\n")
-  fn:write("return {index = index , tree = tree, info =info} \n")
-  --]]
-  fn:close()
-  -- chunk_txt 可設定  lua txt code
-  if not chunk_txt then
-    local f = loadfile(filename)
-    fn = io.open(filename,'w')
-    fn:write( string.dump(f) )
-    fn:close()
-  end
-end
--- when  commit  clean
---
-local function dict_tree_insert_index(self,word,level)
-  level = level or 3
-  local len= word.word:len()
-  local w_lower= word.word:lower()
-  len =  level > len and len  or level
-  for i=1,len do
-    local key= w_lower:sub(1,i)
-    if not self[key] then
-      self[key]=word.index
-    else
-    end
+local function init_tree(tree_tab, index, word,level)
+  local prefix=word:sub(1,level):lower()
+  for i= #prefix, 1,-1 do
+    local  w = prefix:sub(1,i)
+    if tree_tab[w] then break end
+    tree_tab[w] = index
+    init_tree(tree_tab, index, word, level -1)
   end
 end
 
-local function init_dict_from_txt(filename)
-  local dictfile,res =  io.open(filename)
-  if not dictfile then
-    puts(ERROR, "dict file open failed",filename,res)
-    return
-  end
-  local tab={}
-  --dict_tree.insert_index= dict_tree_insert_index
-  for line in dictfile:lines() do
-    if not line:match("^#") then  -- 第一字 #  不納入字典
-      table.insert(tab, Word:Parse(line))
-    end
-  end
-  dictfile:close()
-  return tab
-end
-local function init_dict_from_csv(filename)
-  local CSV = require 'tools/csvtotab'
-  local ok,res = pcall(CSV.Load_csv,filename,true)
-  if ok then
-    for i,w in ipairs(res) do
-      w.phonetic = #w.phonetic > 0 and "[".. w.phonetic ..  "]" or ""
-    end
-    return res
-  else
-    puts(ERROR, 'load dict chunk faild' ,  filename, res)
-  end
-end
-
-local function init_dict_from_chunk(filename)
-  puts(INFO, "init_dict from chunk",filename)
-  local ok,res = pcall(dofile, filename)
-  if ok then
-    return res -- dict.index ,dict.info, dict.tree
-  else
-    puts(ERROR, 'load dict chunk faild' ,  filename, res)
-  end
-end
--- 建立字頭索引使用 hash map 找字頭開始index
-local function init_dictdb( dict, level)
-  local obj = {}
-  obj.index = dict.index and dict.index or dict
-  obj.tree  = dict.tree  and dict.tree  or {}
-  obj.info  = dict.info  and dict.info  or {}
-  for i,w in ipairs( obj.index) do
-    w.index = i
-    setmetatable(w,Word)
-    obj.info[w.word] = w
-    dict_tree_insert_index(obj.tree, w, level)
-  end
-  return obj
-end
-
-local function init_dict(dict_name,level,force)
-  -- force (true) init_dict form txt
-   local dict
-   local filen = get_path(dict_name .. ".txtl")
-   dict= not force and file_exists(filen) and init_dict_from_chunk(filen)
-   filen = get_path( dict_name .. ".txt" )
-   dict = not dict and file_exists(filen) and init_dict_from_txt( filen) or dict
-   filen = get_path( dict_name .. ".csv" )
-   dict = not dict and file_exists(filen) and init_dict_from_csv( filen) or dict
-
-   if not dict then
-      puts(ERROR, 'dict file not found', dict_name,filen,res)
-      return nil
-   end
-   return init_dictdb(dict,level)
-end
-
---local English =Class("English")
-local English =setmetatable({},MT)
-English.__index=English
-English.__name="English"
-English._dictdb={}
-function English:_getdb()
-  return self._dictdb[self._filename]
-end
-
-function English:_initialize(filename,force,level,max_level)
-  self._filename= filename or "english_tw"
-  self._level= level or 3
-  self._maxlevel = max_level or 10
-  self._mode=0
-  --local dictdb = self:_getdb()
-  if not self:_getdb() then
-    self:reload(force)
-    if not file_exists( get_path(filename .. ".txtl" ) ) then
-      self:make_chunk()
-    end
+local LuaDict=setmetatable({},MT)
+LuaDict.__index = LuaDict
+LuaDict.__name = 'LuaDict'
+function LuaDict:_initialize(fn,level)
+  level = level and level>1 and level  or 3
+  self._db = loadfile(fn)()
+  self._tree = {}
+  self._words = {}
+  for i,v in next,self._db do
+    local w = Word(v)
+    self._db[i] = w
+    self._words[v.word] = i
+    init_tree(self._tree,i,w.word,level)
   end
   return self
 end
-function English:make_chunk(mode)
-  -- only save wordes table
-  mode = true
+function LuaDict:_prefix_index(pw)
+  --local pw,ww,pn = conv_pattern(text)
+  local index = 1
+  if #pw <1 then return index end
 
-  if self._filename then
-    -- object
-    local filen= get_path( self._filename .. ".txtl")
-    save_table( filen , mode and self:_getdb().index or self:_getdb())
-  else
-    -- class
-    for k,v in next, self._dictdb do
-      local filen= get_path( k .. ".txtl")
-      save_table( filen , mode and v.index or v)
+  -- 找最近的index
+  for i= #pw,1,-1 do
+    local tree_index= self._tree[ pw:sub(1,i) ]
+    if tree_index  then
+      index = tree_index
+      break
     end
   end
-end
-function English:reload(force)
-  self._dictdb[self._filename] =  init_dict(self._filename,self._level,force)
-end
-
-
-function English:_find_index(pw,len)
-  local db = self:_getdb()
-
-  len = len and len < self._maxlevel and len or self._maxlevel
-  len = #pw < len and #pw or len
-
-  if len <1 then return end
-  local ppw = pw:lower():sub(1, len )
-  local pindex=db.tree[ppw]
-  if not pindex then
-    return self:_find_index(pw ,len -1)
-  else
-    -- find index form start of pw
-    local i,w= pindex, db.index[pindex]
-    repeat
-      if w:match(pw) then
-        if #pw >self._level then
-          local l= w.index - db.tree[ppw]
-          db.tree[pw] =  l > 20 and w.index or nil
-        end
-        return w.index
+  -- 找 prefix word index
+  local count = 0
+  repeat
+    local ww = self._db[index]
+    if self._db[index]:prefix_match(pw) then
+      -- 找到索引 如果count > 200  增加 pw 索引
+      if count > 200 then
+        self._tree[pw] = index
       end
-      i,w = next(db.index,i)
-    until not i or not w:match(ppw)
-    --[[
-    pindex = pindex > 1 and pindex -1 or nil
-    for i,w in next, db.index, pindex do
-      if not w:match("^"..ppw) then return end
-      if w:match("^" .. pw) then
-        db.tree[pw] = db.tree[pw] and db.tree[pw] or w.index
-        return w.index
-      end
+      break
     end
-    --]]
-  end
+    count = count +1
+    index = index+1
+  until index > #self._db
+  return index
 end
-function English:iter(org_text,mode)
-  local pw = split_str(org_text)
-  local index= self:_find_index( pw )
-  local db = self:_getdb()
 
-  return coroutine.wrap(
-  function ()
-    -- start from index
-    local i,w = index, db.index[index]
-    if not i then return end
-    repeat
-      if w:match(org_text) then
-        coroutine.yield( w)
+function LuaDict:iter(text)
+  local pw,ww,pn = split_str(text)
+  local index = self:_prefix_index(pw)
+  return coroutine.wrap(function()
+    while self._db[index]:prefix_match(pw) do
+      if self._db[index]:match(text) then
+        coroutine.yield(self._db[index])
       end
-      i,w = next(db.index, i)
-      -- stop for pw out of scope
-    until not ( i and w:match(pw) )
+      index = index +1
+    end
   end)
 end
 
-function English:match(word)   --  return list
-  local tab_result=List()
-  for elm  in  self:iter(word) do
-    tab_result:push(elm)
+function LuaDict:get(word)
+  local index = self._words[word]
+  return self._db[index]
+end
+
+-- Dict  instance method
+-- iter(text) return iter function for match text pattern
+-- get(word) return
+-- LevelDict
+--
+local  LevelDict=setmetatable({},MT)
+LevelDict.__index = LevelDict
+LevelDict.__name = 'LewelDict'
+
+
+function LevelDict:_initialize(fn)
+  self._db = rime_api.leveldb_open(fn,'dict')
+  return self._db and self
+end
+
+function LevelDict:iter(text, case_match)
+  --local pw,ww,pn = conv_pattern(text)
+  local pw,ww,pn = split_str(text)
+  local dbacc = self._db:query(pw:lower())
+  Log(DEBUG, "--------->>" , dbacc,pw,ww,pn)
+  return  coroutine.wrap(function()
+    for k,v in dbacc:iter() do
+      local w = Word.Parse_chunk(v)
+      if w and w:match(text,case_match) then
+        coroutine.yield(w) end
+    end
+  end)
+end
+
+function LevelDict:get(word)
+  --  have upcae word  ex   Abort   abort\tAbort
+  word = word:match("%u") and string.format("%s\t%s",word:lower(),word) or word
+  local chk_str = assert(self._db:fetch(word))
+  return Word.Parse_chunk(chk_str)
+end
+
+-- English(dict_name)
+-- instance method
+-- iter(text)  return Word  for w in e:iter(text) do  ... end
+-- match(text) return Word of List
+-- word(word)  return Word
+--
+local English =setmetatable({},MT)
+English.__index=English
+English.__name="English"
+English._dicts={}
+function English:_getdict()
+  return English._dicts[self._dict_name]
+end
+--[[
+function English:_setdict()
+  English._dicts[self._dict_name] = self._dict
+end
+--]]
+function English:_initialize(dict_name,reload)
+  dict_name= dict_name or "english_tw"
+  self._dict_name = dict_name
+  --local dictdb = self:_getdb()
+  if reload or not self:_getdict()  then
+    self:reload()
   end
-  return tab_result
+
+  return self:_getdict() and self or nil
 end
-function English:get_word(word_str)
-  return self:_getinfo().info[word_str]
+
+function English:reload(force)
+    local dict_name = self._dict_name
+    if LevelDb and isDir(dict_name)  then
+      local dict_temp= LevelDict(dict_name)
+      self._dicts[dict_name]=  LevelDict(dict_name)
+    elseif isFile( dict_name .. ".txtl") then
+      self._dicts[dict_name] = LuaDict(dict_name .. ".txtl")
+    end
+    return self:_getdict() and true or false
 end
---  English.Wildfmt("e/a:a")
---  --> e.*able  e*able  a ()
---
---
---
 
+function English:iter(org_text,case_match)
+  return self:_getdict():iter(org_text,case_match)
+end
 
+function English:match(org_text)
+  local tab=List()
+  for w in self:iter(org_text) do
+    tab:push(w)
+  end
+  return tab
+end
 
-
+function English:word(word)
+  return self:_getdict():get(word)
+end
 
 
 -- for debug and check
 --[[ debug function
-
-function English.Wildfmt(word)
-  local _,ww , p =split_str(word)
-  local pattern=conver_rex(ww)
-  return pattern,ww ,p
-end
-
 English.Split=split_str  --1 ('seteu/i/a:m') 字首seteu 單字 seteu*ing*able 詞類 m
 English.Conver_rex=conver_rex --2 ('seteu*?ing:m') 展開/ :  seteu.*.?ing:ment 2
 English.Conver_pattern= conv_pattern --3 ('seteu/i/a:m') 字首 ^seteu  ^seteu.*ing.*able%sm[%a%-%.]*%.
 English.Word=Word
-
-
-English.save_table= save_table
-English.init_dict= init_dict
 --]]
-
+English.isFile=isFile
+English.isDir=isDir
+English.LevelDict = LevelDict
+English.luaDict = luaDict
 
 return English
 
---return init
 
