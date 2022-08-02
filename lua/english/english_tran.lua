@@ -1,5 +1,4 @@
-local puts=require 'tools/debugtool'
-local D01= nil
+local Log=require 'tools/debugtool'
 
 local English_dict= require 'tools/english_dict'
 
@@ -23,7 +22,7 @@ local function load_ext_dict(ext_dict)
   filename =  path ..  ( ext_dict or "ext_dict" ) .. ".txt"
   local tab = {}
   for line in io.open(filename):lines() do
-    puts(D01, __FILE__(), line)
+    Log(DEBUG, __FILE__(), line)
     if not line:match("^#") then  -- 第一字 #  不納入字典
       local t=line:split("\t")
       if t then
