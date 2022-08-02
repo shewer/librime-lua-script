@@ -7,6 +7,9 @@
 --
 
 -- Used to escape "'s by toCSV
+require 'tools/string'
+local List=require 'tools/list'
+
 local function escapeCSV(s)
   if string.find(s, '[,"]') then
     s = '"' .. string.gsub(s, '"', '""') .. '"'
@@ -99,7 +102,8 @@ local function reverse(tab)
 end
 local function csvline(str,tab)
   if str:match([[^#]]) then return end
-  str = str:gsub("\r","")
+  --str = str:gsub("\r","")
+  --str = str:gsub("\r",""):gsub("\\r\\n","\n"):gsub("\\n","\n")
   tab= tab or {}
   local t ,h = token(str)
   if not t then return tab end
@@ -110,7 +114,7 @@ local function csvline(str,tab)
   return tab -- reverse(tab)
 end
 
-function load_csv(filename, with_header)
+local function load_csv(filename, with_header)
   local fn = io.open(filename)
   print("load_csv", fn)
   if not fn then return end
