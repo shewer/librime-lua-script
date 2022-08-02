@@ -22,7 +22,6 @@ local function load_ext_dict(ext_dict)
   filename =  path ..  ( ext_dict or "ext_dict" ) .. ".txt"
   local tab = {}
   for line in io.open(filename):lines() do
-    Log(DEBUG, __FILE__(), line)
     if not line:match("^#") then  -- 第一字 #  不納入字典
       local t=line:split("\t")
       if t then
