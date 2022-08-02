@@ -285,9 +285,9 @@ end
 local LuaDict=setmetatable({},MT)
 LuaDict.__index = LuaDict
 LuaDict.__name = 'LuaDict'
-function LuaDict:_initialize(fn,level)
+function LuaDict:_initialize(full_path,level)
   level = level and level>1 and level  or 3
-  self._db = loadfile(fn)()
+  self._db = loadfile(full_path)()
   self._tree = {}
   self._words = {}
   for i,v in next,self._db do
@@ -356,8 +356,8 @@ LevelDict.__index = LevelDict
 LevelDict.__name = 'LewelDict'
 
 
-function LevelDict:_initialize(fn)
-  self._db = rime_api.leveldb_open(fn,'dict')
+function LevelDict:_initialize(full_path)
+  self._db = rime_api.leveldb_open(full_path)
   return self._db and self
 end
 
@@ -365,12 +365,12 @@ function LevelDict:iter(text, case_match)
   --local pw,ww,pn = conv_pattern(text)
   local pw,ww,pn = split_str(text)
   local dbacc = self._db:query(pw:lower())
-  Log(DEBUG, "--------->>" , dbacc,pw,ww,pn)
   return  coroutine.wrap(function()
     for k,v in dbacc:iter() do
       local w = Word.Parse_chunk(v)
       if w and w:match(text,case_match) then
-        coroutine.yield(w) end
+        coroutine.yield(w)
+      end
     end
   end)
 end
@@ -378,8 +378,8 @@ end
 function LevelDict:get(word)
   --  have upcae word  ex   Abort   abort\tAbort
   word = word:match("%u") and string.format("%s\t%s",word:lower(),word) or word
-  local chk_str = assert(self._db:fetch(word))
-  return Word.Parse_chunk(chk_str)
+  local chk_str = self._db:fetch(word)
+  return chk_str and Word.Parse_chunk(chk_str)
 end
 
 -- English(dict_name)
@@ -410,15 +410,35 @@ function English:_initialize(dict_name,reload)
 
   return self:_getdict() and self or nil
 end
+function English:_find_file(ftype)
+  local fmt = ftype == "dir" and "%s%s" or "%s%s.txtl"
+  local func = ftype == "dir" and isDir or isFile
+  local slash = package.config:sub(1,1)
+  -- userdata
+  local path = rime_api.get_user_data_dir() .. slash
+  path = (fmt):format( path, self._dict_name)
+  --Log(DEBUG,'--user---_find_file : ---', ftype, fmt,path,"--res --",func(pathh) )
+  if func(path) then return path end 
+  -- shared
+  local path = rime_api.get_shared_data_dir() .. slash
+  path = (fmt):format( path, self._dict_name)
+  --Log(DEBUG,'--shared---_find_file : ---', ftype, fmt,path,"--res --",func(pathh) )
+  if func(path) then return path end 
+end
 
 function English:reload(force)
     local dict_name = self._dict_name
-    if LevelDb and isDir(dict_name)  then
-      local dict_temp= LevelDict(dict_name)
-      self._dicts[dict_name]=  LevelDict(dict_name)
-    elseif isFile( dict_name .. ".txtl") then
-      self._dicts[dict_name] = LuaDict(dict_name .. ".txtl")
+    local ph= rime_api.get_user_data_dir()
+    local dp = self:_find_file("dir")
+    local fp = self:_find_file("file")
+    if LevelDb and self:_find_file("dir")  then
+      self._dicts[dict_name]=  LevelDict(self:_find_file("dir"))
+    elseif self:_find_file("file") then
+      self._dicts[dict_name] = LuaDict(self:_find_file("file"))
     end
+    for k,v in next,self._dicts do 
+    end
+    
     return self:_getdict() and true or false
 end
 
