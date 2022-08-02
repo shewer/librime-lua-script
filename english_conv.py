@@ -97,10 +97,12 @@ def main(fn,fmt):
 
 if __name__ == '__main__' :
 
-    print(sys.argv)
-    fn= sys.argv[1]
-    fmt= sys.argv[2]
-
-    sys.exit(main(fn,fmt))
+    if len(sys.argv) <2:
+        print('help : python english_conv.py  filename  (chukn|lezeldb) ')
+    else:
+        print(sys.argv)
+        fn= sys.argv[1]
+        fmt= sys.argv[2]
+        sys.exit(main(fn,fmt))
 
 
