@@ -7,7 +7,7 @@
 # Distributed under terms of the MIT license.
 
 """
-  pip3 install leveldb luadata 
+  pip3 install leveldb luadata
 
 """
 import os
@@ -23,7 +23,8 @@ def load_csv(csvf):
         for row in rows:
             if row['word'][0] == '#':
                 continue
-            row['phonetic'] =  '[' + row['phonetic'] +  ']'
+            if row['phonetic'] != "":
+                row['phonetic'] = '[' + row['phonetic'] +  ']'
             l.append(row)
 
     return l
@@ -51,21 +52,27 @@ def write_chunk(filename,rows):
     with open(filename,'w') as fn:
         fn.write('return {\n')
         for row in rows:
-            value= luadata.serialize(row).replace('\\n','\n').replace('\\r','\r')
+            value= luadata.serialize(row) #.replace('\\n','\n').replace('\\r','\r')
             fn.write(value + ',\n')
         fn.write('}\n')
-    
+
 def write_leveldb(filename,rows):
     db = leveldb.LevelDB(filename,create_if_missing=True)
     for row in rows:
-        key = row['word'] 
+        key = row['word']
+        if not key:
+            continue
+
+        if re.findall('[A-Z]',key):
+            key = key.lower() + '\t' + key
+
         value= luadata.serialize(row).replace('\\n','\n').replace('\\r','\r')
         db.Put(key.encode('utf-8'),value.encode('utf-8'))
-    
 
-                
-    
-    
+
+
+
+
 
 def main(fn,fmt):
     """TODO: Docstring for main.
@@ -82,7 +89,7 @@ def main(fn,fmt):
             write_leveldb(f,rows)
         else:
             write_chunk(f + '.txtl', rows)
-            
+
     except ValueError as ve:
         return str(ve)
 
@@ -93,7 +100,7 @@ if __name__ == '__main__' :
     print(sys.argv)
     fn= sys.argv[1]
     fmt= sys.argv[2]
-    
+
     sys.exit(main(fn,fmt))
 
 
