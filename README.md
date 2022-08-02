@@ -9,7 +9,7 @@
   * 英打模組:增加自動編譯固態字典檔以改善載入字典時間(減少90%時間)，共用字典table 減少記憶體使用及再次載入時間
   * 以詞定字: select_character [以词定字](#以词定字)上屏模组
   * 聯想詞輸入模組: 
-  * 英打+英文字典模組: 
+  * 英打+英文字典模組: ** 更新 須要使用 english_conv.py 將字典轉換 chunk or leveldb **
   * 主副字典反查模組: 此模組會查找 script_translator table_translator 可反杳方案內的字典
   * 命令模組: 此模組可以在輸入模式 set & get option property config 及執行function
   * 載入程序: 以上模組都可以獨立手動載入也可以利用, init_processor.lua 把需要載入模組設定於 <name_space>/modules: {list}. 預設以此模式[安裝](#安裝)。
@@ -89,6 +89,19 @@
   
   ## 英文 字典+英打模式，支援 Tab 補齊功能 及 wordninja
   
+    * 2022/08/02 更新 
+      ecdict.csv [github 下載處](https://github.com/skywind3000/ECDICT/)
+      增加 librime-lua #177  LevelDb 字典支援，可以有效降低內存使用量，新版本建議轉換成LevelDb字典
+      字典移至 user_data_dir 
+      須要事先將 english.txt ecdict.csv 轉換成 chunk 或是 leveldb 格式 
+      ```bash
+        pip3 install leveldb 
+        python english_coov.py (english.txt|ecdict.csv)  (chunk|leveldb)
+        # 壓縮 chunk file 
+        luac -o english.txtl1 english.txtl
+        mv english.txt1 english.txtl
+      ```
+      
     * **注意** win10部份單字的comment 會造成崩潰，需要remark單字，linux 無此問題可以把 tools/english_tw.txt 內 "#" 移除
     *  英打模式: F10
     *  comment 格式切換: Shift+F10
