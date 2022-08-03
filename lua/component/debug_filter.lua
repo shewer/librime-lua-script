@@ -135,10 +135,6 @@ local function debug_comment(items,cand,tab)
   return "--" ..  items:gsub(" ",""):split(","):map(fn):concat("|")
 end
 
---warp ShadowCandidate
-local ShadownCandidate = ShadowCandidate or function (cand,type,text,commment)
-  return Candidate(type,cand.start,cand._end,text,comment)
-end
 function M.func(input, env)
    local context = env:Context()
    local items = context:get_property(env.option)

@@ -77,10 +77,6 @@ local function system_format(comment)
   return comment
 end
 
---warp ShadowCandidate
-local ShadownCandidate = ShadowCandidate or function (cand,type,text,commment)
-  return Candidate(type,cand.start,cand._end,text,comment)
-end
 
 -- return Translation
 local function eng_tran(dict,mode,prefix_comment,cand)
