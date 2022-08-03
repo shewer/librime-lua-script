@@ -135,6 +135,10 @@ local function debug_comment(items,cand,tab)
   return "--" ..  items:gsub(" ",""):split(","):map(fn):concat("|")
 end
 
+--warp ShadowCandidate
+local ShadownCandidate = ShadowCandidate or function (cand,type,text,commment)
+  return Candidate(type,cand.start,cand._end,text,comment)
+end
 function M.func(input, env)
    local context = env:Context()
    local items = context:get_property(env.option)
@@ -144,9 +148,10 @@ function M.func(input, env)
    }
 
    for cand in input:iter() do
-      cand.comment = cand.type == "command" and cand.comment or cand.comment ..
-      debug_comment(items,cand,ext_data )
-      yield(cand)
+      local comment = cand.type == "command"
+      and cand.comment
+      or cand.comment ..  debug_comment(items,cand,ext_data )
+      yield( ShadowCandidate( cand, cand.type,cand.text, comment) )
    end
 end
 return M
