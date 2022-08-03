@@ -5,20 +5,34 @@ recipe:
   Rx: customize
   args:
     - schema=luna_pinyin
+    - schema=cangjie5
   description: >-
     Librime-lua-script plugin 
+
 install_files: >-
+  processor_plugin_cn.yaml
   processor_plugin.yaml
   essay_cn.txt
-  lua/init_processor.lua
-  lua/conjunctive.lua
-  lua/_rescue.lua
-  lua/command/*
-  lua/component/*
-  lua/english/*
-  lua/multi_reverse/*
-  lua/tools/*
+  # 英文字典
+  english_conv.py
+  english_tw.txt
+  english.txt
+  ext_dict.txt
+  ecdict.csv
+
+  lua/init_processor.lua # 導入主程式
+  lua/conjunctive.lua #聯想輸入法
+  lua/_rescue.lua # librime-lua  失敗救援程式
+  lua/component/* # 其他可共用戶lua_component
+  lua/command/* # 命令模組
+  lua/english/* # 英打模組
+  lua/multi_reverse/* #多反查模組
+  lua/tools/* #lua library 
 patch_files:
   ${schema:-luna_pinyin}.custom.yaml:
+    - patch/+:
+        __include: processor_plugin:/patch
+
+  ${schema:-cangjie5}.custom.yaml:
     - patch/+:
         __include: processor_plugin:/patch
