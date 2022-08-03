@@ -120,7 +120,7 @@ end
 local function split_str(str)
   str= type(str)== "string" and  str  or ""
   local w,p=table.unpack(str:split(":"))
-  local pw= w:match("^[-.%a][%a%.%-_]*")
+  local pw= w:match("^[-.%a][%a%.%-_ ]*")
   local ws= List( w:split("/") )
   local ww= ws:shift()
   ww=  ww .. ws:map(function(elm)
