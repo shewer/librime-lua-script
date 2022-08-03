@@ -209,9 +209,9 @@ local function component(env)
   _G[u_ns] = _G[u_ns] or require("component/uniquifier")
   local f_index= config:find_index(f_path, org_filter)
   if f_index then
-    config:config_list_replace( f_path, org_filter, r_filter)
+  config:config_list_replace( f_path, org_filter, r_filter)
   else
-    config:config_list_append( f_path, r_filter)
+  config:config_list_append( f_path, r_filter)
   end
   --增加 reject_tags
   config:config_list_append( u_ns .. "/reject_tags", env.name_space )
@@ -245,13 +245,13 @@ function P.func(key,env)
   if not context.input:match(env.pattern) then return Noop end
   -- match env.pattern
   if key:eq(env.uncomp_key)  then
-      context.input  = context.input:match("^(.*)[:/].*$")
-      return Accepted
+    context.input  = context.input:match("^(.*)[:/].*$")
+    return Accepted
   end
   if status.has_menu  then
     local cand=context:get_selected_candidate()
     local comment= cand.comment:match( "^(.*)%-%-.*$")
-    if key:eq(env.comp_key)  then
+    if comment and key:eq(env.comp_key)  then
       context.input =  prefix .. comment
       return Accepted
     --elseif key:repr() == " " then
