@@ -144,9 +144,10 @@ function M.func(input, env)
    }
 
    for cand in input:iter() do
-      cand.comment = cand.type == "command" and cand.comment or cand.comment ..
-      debug_comment(items,cand,ext_data )
-      yield(cand)
+      local comment = cand.type == "command"
+      and cand.comment
+      or cand.comment ..  debug_comment(items,cand,ext_data )
+      yield( ShadowCandidate( cand, cand.type,cand.text, comment) )
    end
 end
 return M

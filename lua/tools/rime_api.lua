@@ -87,6 +87,13 @@ require 'tools/string'
 Component = Version() >= 177  and Component or require('tools/_component')
 local w_leveldb = LevelDb and require('tools/leveldb')
 
+--warp ShadowCandidate
+if Version() < 177 and not ShadownCandidate then
+  ShadownCandidate = function (cand,type,text,commment)
+    return Candidate(type,cand.start,cand._end,text,comment)
+  end
+end
+
 -- append  path
 local function append_path(...)
   local slash = package.config:sub(1,1)
