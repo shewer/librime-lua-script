@@ -45,7 +45,10 @@ local function get_trans_namespace(config)
   local t_list=config:clone_configlist(path)
   :select( function(tran)
     local ns= tran:match("table_translator@(.+)$") or tran:match("script_translator@(.+)$")
-    return ns and not config:get_bool(ns .. "/reverse_disable")
+    local dictionary =ns and  config:get_string(ns .. "/dictionary")
+
+    return ns and dictionary and #dictionary> 0
+    and not config:get_bool(ns .. "/reverse_disable")
   end)
   :map( function(tran)
 	return  assert(tran:match("@([%a_][%a%d_]*)$"),"tran not match")
@@ -132,15 +135,17 @@ function P.func(key,env)
     local compos= context.composition
     local cand_index= compos:empty() and 0 or compos:back().selected_index
     if key:eq(env.keys.next)  then
-      context:set_property(Multi_reverse, env.trans:next())
+      env:Set_property(Multi_reverse, env.trans:next())
     elseif key:eq(env.keys.prev) then
-      context:set_property(Multi_reverse, env.trans:prev())
+      env:Set_property(Multi_reverse, env.trans:prev())
     elseif key:eq(env.keys.toggle) then
-      context:Toggle_option(Multi_reverse)
+      env:Toggle_option(Multi_reverse)
     elseif key:eq(env.keys.qcode) then
-      context:Toggle_option(Qcode)
+      env:Toggle_option(Qcode)
     elseif key:eq(env.keys.completion) then
-      context:Toggle_option(Completion)
+      env:Toggle_option(Completion)
+      --ctx:refresh_non_confirmed_composition()
+      --env.engine:compose()
     else
       -- 使用 Shift_L 顯示字根
       if not context:get_option(Multi_reverse) then
