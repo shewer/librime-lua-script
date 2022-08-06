@@ -1,7 +1,7 @@
 local Log=require 'tools/debugtool'
 
 local English_dict= require 'tools/english_dict'
-
+local slash = package.path:sub(1,1)
 
 local function njload()
   -- try to load wordninja-lua
@@ -18,8 +18,11 @@ local English="english"
 local Ninja="ninja"
 
 local function load_ext_dict(ext_dict)
-  local path= string.gsub(debug.getinfo(1).source,"^@(.+/)[^/]+$", "%1")
+  --local path= string.gsub(debug.getinfo(1).source,"^@(.+/)[^/]+$", "%1")
+  local path= rime_api.get_user_data_dir() .. slash
   filename =  path ..  ( ext_dict or "ext_dict" ) .. ".txt"
+  if not isFile(filename) then return end
+
   local tab = {}
   for line in io.open(filename):lines() do
     if not line:match("^#") then  -- 第一字 #  不納入字典
