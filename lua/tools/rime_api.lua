@@ -59,6 +59,28 @@
 --     leveldb_close(db)
 --     leveldb_pool() status of string of db_pool table
 
+--` add func to global  isFile( path)   , isDir(path)
+
+local function exists(name)
+    if type(name)~="string" then return false end
+    return os.rename(name,name) and true or false
+end
+
+function isFile(name)
+    if not exists(name) then return false end
+    local f = io.open(name)
+    if f then
+      local res = f:read(1) and true or false
+      f:close()
+      return res
+    end
+    return false
+end
+
+function isDir(name)
+    return (exists(name) and not isFile(name))
+end
+
 local function Version()
   local ver
   if LevelDb then
@@ -336,14 +358,6 @@ end
 --  Projection api
 local slash = package.config:sub(1,1)
 M.Projection=Init_projection
---  filter tools
-local function file_exists(file)
-  local fn = io.open(file)
-  if fn then
-    fn:clone()
-    return true
-  end
-end
 function M.load_reversedb(dict_name)
   -- loaded  ReverseDb
   local reversedb = ReverseLookup
@@ -375,7 +389,7 @@ end
 function M.req_module(mod_name,rescue_func)
   local ok,res = pcall(require, mod_name )
   if ok then return res end
-  Log(ERROR, "require module failed ", mod_name )
+  Log(ERROR, "require module failed ", mod_name, res )
   return  rescue_func
 end
 
