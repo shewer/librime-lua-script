@@ -15,10 +15,8 @@ install_files: >-
   essay_cn.txt
   # 英文字典
   english_conv.py
-  english_tw.txt
-  english.txt
+  ecdict.tar.xz
   ext_dict.txt
-  ecdict.csv
 
   lua/init_processor.lua # 導入主程式
   lua/conjunctive.lua #聯想輸入法
