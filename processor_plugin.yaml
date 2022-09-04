@@ -6,6 +6,9 @@
 #--------------------------------
 patch:
   engine/processors/@after 0: lua_processor@init_processor@module_tw
+  schema/dependencies/+:
+    - essay
+    - essay_cn
   module_tw:
     modules:
       - { module: 'command', module_name: "cammand_proc", name_space: "command" }

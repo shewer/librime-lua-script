@@ -12,7 +12,15 @@ recipe:
 install_files: >-
   processor_plugin_cn.yaml
   processor_plugin.yaml
+
   essay_cn.txt
+  essay_cn.schema.yaml
+  essay_cn.dict.yaml
+
+  essay.text
+  essay.schema.yaml
+  essay.dict.yaml
+
   # 英文字典
   english_conv.py
   ecdict.tar.xz

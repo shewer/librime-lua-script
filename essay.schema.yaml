@@ -1,0 +1,19 @@
+# Rime schema settings
+# encoding: utf-8
+# 方案.schema.yaml
+# 
+#
+
+patch:    # desable include custom.yaml
+
+
+schema:
+  schema_id: essay
+speller:
+  algebra:
+    #- xform/^([a-z;,]).([a-z;,])$/$1$2\?/  # 取首尾二碼爲反查三碼字
+    #- xform/^([a-z;,])..([a-z;,])$/$1$2\?\?/  # 取首尾二碼爲速成碼反查四碼字
+    #- xform/^([a-z;,])...([a-z;,])$/$1$2\?\?\?/  # 取首尾二碼爲速成碼反查五碼字
+    #- xlit|abcdefghijklmnopqrstuvwxyz|dmatwfyzljxiekbhsocrugqnpv|
+translator:
+  dictionary: essay
