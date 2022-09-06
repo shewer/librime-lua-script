@@ -40,7 +40,8 @@ local function fake_Ticket(...)
   elseif #args == 3 then
     return falk_Ticket(args[1],args[1].schema,args[2],args[3])
   elseif #args == 4 then
-      local ks,m,ns= args[4]:split("@"):unpack()
+      --local ks,m,ns= args[4]:split("@"):unpack()
+      local ks,ns= args[4]:match("^([%a_]+)@?(.*)$")
     return {
       engine = args[1],
       schema = args[2],
