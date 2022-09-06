@@ -84,7 +84,7 @@ end
 
 local function auto_load(env, tab_G)
   tab_G = tab_G or _G
-  local comps=List(env:Config_get("engine",4))
+  local comps=List(env:Config_get_with_path("engine"))
   :select(function(elm) return elm.value:match("^lua_(.+)@(.+)$") end)
   :map(function(elm) return elm.value end)
   :each(function(elm)
@@ -144,7 +144,7 @@ function M.init(env)
     + "---- engine components ----"
     + env:components_str()
     + "---- recognize/patterns  ----"
-    + List(env:Config_get("recognizer/patterns",4)):map(function(elm)
+    + List(env:Config_get_with_path("recognizer/patterns")):map(function(elm)
       return elm.path .. ": " .. elm.value end)
     ):each(function(elm,out)  Log(out,elm) end, CONSOLE)
   end
@@ -251,10 +251,11 @@ function M.func(key,env)
     return Accepted
   end
   -- sub_module func
-  local res = env.modules:each(function(elm)
+  local res = env.modules:each(function(elm,res)
     local res =elm.comp:process_key_event(key)
     if res < 2 then return res end
-  end)
+  end) or Noop
+
   return  res or Noop
 end
 
