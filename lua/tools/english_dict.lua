@@ -183,6 +183,7 @@ function Word:_initialize(tab)
     for k,v in next, tab do
       self[k] = v
     end
+    self.phonetic = self.phonetic or ""
     return self
   end
 end
@@ -200,6 +201,7 @@ function Word.Parse_text(line)
     tab.phonetic=translation:sub(head,tail-1)
     tab.translation=translation:sub(tail+1)
   else
+    tab.phonetic=""
     tab.translation=translation
   end
   return Word(tab)
@@ -469,7 +471,7 @@ English.Word=Word
 English.isFile=isFile
 English.isDir=isDir
 English.LevelDict = LevelDict
-English.luaDict = luaDict
+English.LuaDict = LuaDict
 
 return English
 
