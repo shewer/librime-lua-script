@@ -8,6 +8,10 @@
 --
 --------------------------------------------
 -- add List() Env(env)   Init_projection(config,path) in  global function
+-- bool isDir(path)
+-- bool isFile(path)
+-- void Log(
+--
 -- Env(env)   wrap env table
 --   env:config()  wrap config userdata
 --   env:context() wrap context userdata
@@ -60,6 +64,14 @@
 --     leveldb_pool() status of string of db_pool table
 
 --` add func to global  isFile( path)   , isDir(path)
+
+local function fake_SCandidate( cand, _type, text, comment)
+  _type = _type or cand.type
+  text = text or cand.text
+  comment = comment or cand.comment
+  return Candidate(_type, cand.start, cand._end, text, comment)
+end
+ShadowCandidate = ShadowCandidate or fake_SCandidate
 
 local function exists(name)
     if type(name)~="string" then return false end
@@ -290,7 +302,7 @@ function CN.find_index(config,path,str)
   for i=0,size -1 do
     local ipath= path .. "/@" .. i
     if config:is_value(ipath) and  config:get_string(ipath ):match(str) then
-      return i
+      return e
     end
   end
 end
@@ -362,7 +374,7 @@ function M.load_reversedb(dict_name)
   -- loaded  ReverseDb
   local reversedb = ReverseLookup
   and ReverseLookup(dict_name)
-  or  ReverseDb("build/".. dict_name .. "reverse.bin")
+  or  ReverseDb("build/".. dict_name .. ".reverse.bin")
   if not reversedb then
     log.warning( env.name_space .. ": can't load  Reversedb : " .. reverse_filename )
   end
@@ -455,23 +467,70 @@ local Config_api =require 'tools/config_api'
 -- Config_get_obj(path[,type])  return obj , args: path , type( i
 --    type( 1 : ConfigItem 2 : Config of Value or List or Map )
 --    type 4 只能單向轉換
-function E:Config_conver(obj,_type,path)
-  return Config_api.conver_type(obj,_type,path)
+--
+--  check base_type
+--  conver ConfigItem of obj  to list { {path= string, value= string} ...}
+local function select_capi(num_type)
+  num_type  = type(num_type) == "number"
+  and num_type >0 and num_type <= 3 and mun_type or 1
+  local ar = { Config_api.to_obj, Config_api.to_item, Config_api.to_cdata, }
+  return ar[num_type]
 end
-function E:Config_data_with_path(obj, path)
-  return Config_api.to_list_with_path(obj,path)
-end
-function E:Config_get(path, _type, tpath)
-  local pp = _type == 4 and ( tpath or path) or nil
-  local o =Config_api.conver_type(
-    self.engine.schema.config:get_item(path),
-    _type,
-    _type == 4 and (tpath or path ) or nil )
-  return o
+function E:Config_get(path,_type)
+  local item = self.engine.schema.config:get_item(path)
+  local conv_func = select_capi(_type)
+  return conv_func(item)
 end
 function E:Config_set(path, obj)
+  if obj == nil then return false end
   return self.engine.schema.config:set_item(path,
   Config_api.to_item(obj))
+end
+--  ex:
+--   { 1,{a=2,b=4},2,3,4} , "test" --> { {path= "test/@0" , value = "1" } ,{path="test/@2/a", value="2" ... }
+local function to_list_with_path(obj,path,tab,loopchk)
+  loopchk = loopchk or {}
+  tab = tab or {}
+  path  = path or ""
+  local tp = type(obj)
+  local base_type = tp == "number" or tp == "string" or tp == "boolean"
+  if loopchk[obj] or base_type then 
+    table.insert(tab , {path = path, value=obj})
+    return tab
+  end
+  loopchk[obj] = true
+  if type(obj) == "table" then 
+    local is_list = #obj > 0
+    local lpath = #path > 0 and path .. "/" or path
+    lpath = is_list and lpath .. "@" or lpath
+
+    for k,v in  (is_list and ipairs or pairs)(obj) do 
+      to_list_with_path(v, lpath .. k , tab,loopchk)
+    end
+    return tab
+  end
+end
+function E:Config_get_with_path(path,tpath)
+  local  obj=self:Config_get(path)
+  tpath= tpath or path
+  return to_list_with_path(obj,tpath)
+end
+local function chk_pdata(path,obj)
+  if not obj then return false end
+  path:each(function(elm) 
+    local ok = elm:match("^[%a_]+$") and elm:match("^@%d+$")
+    if not ok then return false end
+  end)
+  return true
+end
+function E:Config_set_with_path(pdata)
+  for i,v in ipairs(pdata) do 
+    if chk_pdata(v.path,v.obj) then
+      self:Config_set(v.path,v.obj)
+    else 
+      Log(WARN,"config set error", v.path,v.obj)
+    end
+  end
 end
 
 function E:config_path_to_str_list(path)
@@ -543,7 +602,7 @@ function E:components_str()
   return List("processors","segmentors","translators","filters")
   :map(function(elm) return "engine/" .. elm end)
   :reduce(function(path,list)
-    return list + self:Config_get(path, 4)
+    return list + self:Config_get_with_path(path)
   end,List())
   :map(function(elm) return elm.path .. ": " .. elm.value end)
 end

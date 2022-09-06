@@ -7,53 +7,100 @@
 --
 --[[
 config_api.lua 
-提供 lua_base type  and table  ConfigItem ConfigData( Value,Map,List)
-互換功能 和  map {path= string , value= string}  of array 
-以便於操作 config  configdata  lua_obj 之間的轉換
+提供 luadata ConfigValue ConfigList ConfigMap ConfigItem 轉換 function
+包含遞迴轉換,相同型別不轉換 return 原obj 
 
--- return lua type 0 , ConfigItem 1, Configdata 2 , nul 3
-M.conver_type = conver_type -- return obj args: obj ,type
-M.to_obj = function(obj) return conver_type(obj,0) end
-M.to_item = function(obj) return conver_type(obj,1) end
-M.to_cdata = function(obj) return conver_type(obj,2) end
-M.to_list_with_path= function(obj,path) -- obj , path
+luadata boolen number string  to ConfigValue
+array to ConfigList 
+map to ConfigMap
+ConfigData to ConfigItem
+ConfigItem to ConfigData
+
+to_obj
+to_item
+to_cdata
+
 
 --]]
--- return lua type 0 , ConfigItem 1, Configdata 2 , nul 3
+--  0xff  unknown 
+local Log = require 'tools/debugtool'
+local _type={
+  ['nil'] = 0, boolean = 1,number=2, string = 3, table = 4, array= 5, map=6, userdata=8,
+configitem=0x80, configvalue=0x81, configlist=0x82, configmap=0x83, configdata=0x87,
+undef = 0xff
+}
+-- base_type : boolen number string
+local function base_type(obj)
+  local ct = _type[type(obj)]
+  return  ct >= _type.boolen and ct < _type.table 
+end
 
+local function utype(uobj)
+  if uobj.get_list then return _type.configitem
+  elseif uobj.element then 
+    local _configtype={kScalar=_type.configvalue, kList=_type.configlist, kMap = _type.configmap }
+    return  _configtype[uobj.type]
+  else
+    return _type.undef
+  end
+end
+-- return type_name of number
 local function ctype(cobj)
-  if cobj == nil then return 3
-  elseif type(cobj) ~= "userdata" then return 0
-  elseif cobj.element then return 2
-  elseif cobj.get_list and cobj.type then return 1
+  local luatype = _type[ type(cobj) ]
+
+  if luatype <_type.table then return luatype
+  elseif luatype == _type.table then 
+    return #cobj >0 and  _type.array or _type.map
+  elseif luatype == _type.userdata then
+    return utype(cobj)
   end
 end
 
-local _base_type={number= true, boolean = true, string = true }
-local function base_type(obj)
-  return _base_type[type(obj)]
+local function is_basetype(ct)
+  return ct == _type.boolean
+    or ct == _type.number
+    or ct == _type.string
 end
-
--- data to data  
-local ctype_funcn= {kList="get_list", kMap="get_map",kScalar="get_value"}
-local function _item_to_cdata(citem)
-  local func= ctype_funcn[citem.type]
-  if func then return citem[func](citem) end
+local function is_table(ct)
+  return ct == _type.array
+    or ct == _type.map
 end
-
- 
-
-
+local function is_configdata(ct)
+  return ct == _type.configvalue 
+     or ct == _type.configlist
+     or ct == _type.configmap
+end
+local function __conv_ltype(str)
+   local tp= tonumber(str)
+   if tp then return tp end
+   tp= str:lower()
+   if tp == "false" then 
+     return false
+   elseif tp == "true" then 
+     return true
+   else 
+     return str
+   end
+end
+local function _conv_ltype(cobj)
+  local tp = cobj:get_double() or cobj:get_int() or cobj:get_bool()
+  return tp == nil 
+  and cobj:get_string() 
+  or tp
+end
 local function item_to_obj(config_item,level)
     level = level or 99
+    
     if level <1 then return config_item end
     if config_item.type == "kScalar" then
-      return config_item:get_value().value
+      return _conv_ltype( config_item:get_value() )
     elseif config_item.type == "kList" then
       local cl= config_item:get_list()
       local tab={}
       for k=1,cl.size do
-        tab[k]= item_to_obj( cl:get_at(k-1), level -1)
+        local kkk=cl:get_at(k-1)
+        local oo= item_to_obj( cl:get_at(k-1), level -1)
+        tab[k]= oo
         --table.insert(tab, item_to_obj( cl:get_at(i), level -1 ))
       end
       return tab
@@ -68,96 +115,102 @@ local function item_to_obj(config_item,level)
 end
 
 
-local function obj_to_item(lua_obj)
-  local ct = ctype(lua_obj)
-  if  base_type(lua_obj) then 
-    return ConfigValue( tostring(lua_obj) ).element
-  elseif type(lua_obj) == "table" then 
-    if #lua_obj > 0 then
-      local cobj=ConfigList()
-      for i,v in ipairs(lua_obj) do
+local function obj_to_item(obj)
+  local ct = ctype(obj)
+  if ct == _type.configitem then 
+    return obj
+  elseif is_configdata(ct) then 
+    return obj.element
+  elseif is_basetype(ct) then
+    return ConfigValue( tostring(obj) ).element
+  elseif ct == _type.array then 
+    local cobj=ConfigList()
+    for i,v in ipairs(obj) do
+      local o = obj_to_item(v)
+      if o then cobj:append(o) end
+    end
+    return cobj.element
+  elseif ct == _type.map then
+    local cobj = ConfigMap()
+    for k,v in pairs(obj) do
+      if type(k) == "string" then 
         local o = obj_to_item(v)
-        if o then cobj:append(o) end
+        if o then cobj:set(k, obj_to_item(v)) end
       end
-      return cobj.element
-    else
-      local cobj = ConfigMap()
-      for k,v in pairs(lua_obj) do
-        if type(k) == "string" then 
-          local o = obj_to_item(v)
-          if o then cobj:Set(k, M.to_item(v)) end
-        end
-      end
-      return cobj.element
     end
-  -- ConfigList ConfigValue ConfigMap
-  elseif ct == 2 then 
-    return lua_obj.element
-  -- ConfigItem 
-  elseif ct == 1 then
-    return lua_obj
+    return cobj.element
   end
 end
 
---  check base_type
---  conver ConfigItem of obj  to list { {path= string, value= string} ...}
---  ex:
---   { 1,{a=2,b=4},2,3,4} , "test" --> { {path= "test/@0" , value = "1" } ,{path="test/@2/a", value="2" ... }
-local function _obj_to_list_with_path(obj,path,tab,loopchk)
-  loopchk = loopchk or {}
-  tab = tab or {}
-  path  = path or ""
-  if loopchk[obj] or base_type(obj) then 
-    table.insert(tab , {path = path, value=obj})
-    return tab
-  end
-  loopchk[obj] = true
-  if type(obj) == "table" then 
-    local is_list = #obj > 0
-    local lpath = #path > 0 and path .. "/" or path
-    lpath = is_list and lpath .. "@" or lpath
-
-    for k,v in  (is_list and ipairs or pairs)(obj) do 
-      _obj_to_list_with_path(v, lpath .. k , tab,loopchk)
-    end
-    return tab
-  end
-end
--- return lua type 0 , ConfigItem 1, Configdata 2 , nul 3
-local function conver_type(cobj,_type,...) -- cobj ,type:0  1 2 
-  local t = ctype(cobj)
-  if t == 3 then return nil end
-  
-  if not _type then 
-    _type = t == 0 and 1 or 0
-  end
-
-  if _type == t then return cobj end
-  -- conver to lua_data
-  if _type == 0 then 
-    return item_to_obj( t == 1 and cobj or conver_type(cobj, 1) )
-  -- conver to item
-  elseif _type == 1 then
-    return t == 2 and cobj.element or obj_to_item( cobj)
-  -- conver to configdata
-  elseif _type == 2 then
-    return _item_to_cdata( t == 1 and cobj or conver_type(cobj,1))
-  -- onw way conver to {path=string, value=string} of list
-  elseif _type == 4 then 
-    local path = ...
-    return _obj_to_list_with_path( 
-    (t == 0 and cobj or conver_type(cobj,0)), path)
+local function _cobjtype(cobj)
+  local ldata,citem,cdata = 0,1,2
+  local ct = ctype(cobj)
+  if is_basetype(ct) or is_table(ct)  then 
+    return ldata
+  elseif is_configdata(ct) then
+    return cdata
+  elseif ct == _type.configitem then 
+    return citem
   end
 end
 
 
+
+local function item_to_cdata(obj)
+  if obj.type == "kScalar" then return obj:get_value()
+  elseif obj.type == "kMap" then return obj:get_map()
+  elseif obj.type == "kList" then return obj:get_list()
+  end
+end
+
+
+local function to_obj(obj)
+  local ldata,citem,cdata,llist = 0,1,2,3
+  if obj == nil then return nil end
+
+  local ct = _cobjtype(obj)
+  if ct == ldata then 
+    return obj
+  elseif ct == cdata then
+    return to_obj(obj.element)
+  elseif ct == citem then
+    return item_to_obj(obj)
+  end
+end
+
+local function to_item(obj)
+  local ldata,citem,cdata,llist = 0,1,2,3
+  if obj == nil then return nil end
+
+  local ct = _cobjtype(obj)
+
+  if ct == citem then 
+    return obj
+  elseif ct == cdata then
+    return obj.element
+  elseif ct == ldata then
+    return obj_to_item( obj )
+  end
+end
+
+local function to_cdata(obj)
+  local ldata,citem,cdata,llist = 0,1,2,3
+  if obj == nil then return nil end
+
+  local ct = _cobjtype(obj)
+  if ct == cdata then
+    return obj
+  elseif ct == citem then 
+    return item_to_cdata(obj)
+  elseif ct == ldata then 
+    return to_cdata( obj_to_item(obj)) 
+  end
+end
 
 local M={}
+M._type = _type
 M.ctype= ctype
-M.conver_type = conver_type
-M.to_obj = function(obj) return conver_type(obj,0) end
-M.to_item = function(obj) return conver_type(obj,1) end
-M.to_cdata = function(obj) return conver_type(obj,2) end
-M.to_list_with_path = function(obj,path) return conver_type(obj,4,path) end
-
+M.to_obj = to_obj
+M.to_item = to_item
+M.to_cdata = to_cdata
 return M
