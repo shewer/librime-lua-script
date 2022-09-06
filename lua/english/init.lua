@@ -62,7 +62,7 @@ end
 
 
 local function component(env)
-  local config = env:Config()
+  local config = env.engine.schema.config
   -- definde prefix suffix  from name_space or local prefix suffix
   -- 加入 recognizer/patterns
   --local path= "recognizer/patterns/" .. env.name_space
@@ -84,7 +84,7 @@ local function component(env)
 
   -- 加入 lua_translator@english_tran@english
   do
-    local module = "english_tran"
+    local module = "english.english_tran"
     _G[module]= _G[module] or T
     local path= "engine/translators"
     local component= ("%s@%s@%s"):format( "lua_translator", module, env.name_space)
@@ -112,7 +112,7 @@ local function component(env)
 end
 
 local function init_keybinds(env)
-  local keys= env:Config():get_obj(env.name_space .. "/keybinds")
+  local keys= env:Config_get(env.name_space .. "/keybinds")
   for k,v in next, keys do
     keys[k]= KeyEvent(v)
   end
@@ -122,8 +122,8 @@ end
 local P={}
 function P.init(env)
   Env(env)
-  local context=env:Context()
-  local config= env:Config()
+  local context=env.engine.context
+  local config= env.engine.schema.config
   --load_config(env)
   component(env)
   --recognizer/patterns/english: "^[a-zA-Z]+[*/:'._-].*"
@@ -159,7 +159,7 @@ function P.func(key,env)
   local Rejected,Accepted,Noop=0,1,2
   -- 過濾 release ctrl alt key 避免 key_char 重複加入input
   if key:release() or key:ctrl() or key:alt() then return Noop end
-  local context=env:Context()
+  local context=env.engine.context
   local status=env:get_status()
   local key_char= key.keycode >= 0x20 and key.keycode < 128 and string.char( key.keycode) or ""
 
