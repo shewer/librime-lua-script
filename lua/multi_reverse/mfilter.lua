@@ -106,6 +106,7 @@ end
 
 
 function M.init(env)
+  Env(env)
   local config=env.engine.schema.config
   local context=env.engine.context
   env.tags= get_tags(env)
@@ -130,8 +131,9 @@ function M.func(input,env)
       :concat(" ")
     end
 
-    cand.comment = cand.comment .. "|" ..
-      env.projection:apply( context:get_option(Qcode) and quick_code(code) or code ) or code
+    local m_comment= env.projection:apply(env:Get_option(Qcode) and quice_code or code)
+    m_comment = #m_comment == 0 and code or m_comment
+    cand.comment = cand.comment .. "|" .. m_comment
     yield(cand)
   end
 end
