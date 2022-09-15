@@ -150,14 +150,21 @@ function M:find(func,...)
   end
   for i,v in ipairs(self) do
     if func(v,argv) then
-      return i,v
+      return v,i
     end
   end
   return nil
 end
 function M:find_index(func,...)
+  local _,i = self:find(func,...)
+  return i
 end
-
+function M:find_match(pattern)
+  return self:find(function(elm) return tostring(elm):match(pattern) end)
+end
+function M:select_match(pattern)
+  return self:select(function(elm) return tostring(elm):match(pattern) end)
+end
 -- not use
 local function deepcompare(t1,t2,ignore_mt)
   local ty1 = type(t1)
