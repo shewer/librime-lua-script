@@ -40,9 +40,7 @@ translator/dictionary:
 --]]
 
 --  append  rime_api  method
-require'tools/rime_api'
-local puts=require 'tools/debugtool'
-
+local Env = require 'tools/env_api'
 local List= require'tools/list'
 
 -- 簡碼處理 ex:   "abcd abc cc aa" -->  "aa cc" ,"abcd abc cc aa"
@@ -113,6 +111,7 @@ function M.init(env)
 
   env.projection= rime_api.Projection( config, env.name_space .. "/comment_format")
   env.dictionary= config:get_string(env.name_space .. "/dictionary")
+  --if T03 then GD() end
   env.reverdb= rime_api.load_reversedb(env.dictionary)
 end
 

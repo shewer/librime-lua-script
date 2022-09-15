@@ -19,9 +19,8 @@
 
 --
 --
-local puts=require'tools/debugtool'
 local List=require'tools/list'
-require 'tools/rime_api'
+local Env= require 'tools/env_api'
 
 
 local Keybinds={
@@ -40,49 +39,43 @@ local Qcode="qcode"
 local Multi_reverse_hold="multi_reverse_hold"
 
 -- get name_space of table_translator and script_translator
-local function get_trans_namespace(config)
-  local path="engine/translators"
-  local t_list=config:clone_configlist(path)
-  :select( function(tran)
-    local ns= tran:match("table_translator@(.+)$") or tran:match("script_translator@(.+)$")
-    local dictionary =ns and  config:get_string(ns .. "/dictionary")
-
-    return ns and dictionary and #dictionary> 0
-    and not config:get_bool(ns .. "/reverse_disable")
-  end)
-  :map( function(tran)
-	return  assert(tran:match("@([%a_][%a%d_]*)$"),"tran not match")
-	end )
-  t_list:unshift( "translator" )
-  return t_list
+local function get_trans_namespace(env)
+  local function ts_trans(tran)
+    return tran:match("table_translator@(.+)$") or tran:match("script_translator@(.+)$")
+  end
+  return List(env:Config_get("engine/translators"))
+  :select(ts_trans):map(ts_trans):unshift('translator')
 end
 
 local function component(env)
   local config= env:Config()
-  local t_path="engine/translators"
   local f_path="engine/filters"
+  local mfilter='multi_reverse.filter'
+
+  local filters_chk= List(env:Config_get(f_path))
+  -- load module 
+  _G[Completion] = _G[Completion] or require(Completion)
+  _G[mfilter] = _G[mfilter] or require( mfilter )
+  -- find match string
+  local function fm(elm,mstr) return elm:match(mstr) end
+
   -- insert  lua_filter@completion at first
-  _G[Completion] = _G[Completion] or require( 'multi_reverse/completion' )
-  if not config:find_index(f_path, "lua_filter@" .. Completion ) then
+  if not filters_chk:find(fm, "lua_filter@"..Completion) then
     config:set_string( f_path .. "/@before 0" , "lua_filter@" .. Completion   )
   end
-  -- append lua_filter@multi_reverse@<name_space> before uniquifier
-  _G[Multi_reverse] = _G[Multi_reverse] or require( 'multi_reverse/mfilter' )
-  get_trans_namespace(config):each(function(elm)
-    local comp= string.format("lua_filter@%s@%s",Multi_reverse,elm)
-    if not config:find_index(f_path, comp) then
-      local index = config:find_index(f_path, "uniquifier")
-      if index then
-        config:set_string(f_path .. "/@before " .. index , comp)
-      else
-        config:set_string(f_path .. "/@next" , comp)
-      end
+  --if T02 then GD() end
+
+  -- return  append filter  
+  get_trans_namespace(env) :each(function(elm)
+    local comp= string.format("lua_filter@%s@%s",mfilter,elm)
+    if not filters_chk:find(fm, comp) then
+      config:set_string(f_path .. "/@next" , comp)
     end
   end)
 end
 
 local function init_keybinds(env)
-  local keys= env:Config():get_obj(env.name_space .. "/keybinds")
+  local keys= env:Config_get(env.name_space .. "/keybinds")
   for k,v in next, keys do
     keys[k]= KeyEvent(v)
   end
@@ -95,12 +88,11 @@ function P.init(env)
   local context=env:Context()
   local config= env:Config()
   component(env)
-
-  --env.keybind_tab=require 'multi_reverse/keybind_cfg'
-  local MultiSwitch=require'multi_reverse/multiswitch'
-  env.trans= MultiSwitch( get_trans_namespace(config) )
-  -- load key_binder file
   env.keys= init_keybinds(env)
+
+  local MultiSwitch=require'multi_reverse/multiswitch'
+  env.trans= MultiSwitch( get_trans_namespace(env) )
+  -- load key_binder file
 
   -- initialize option  and property  of multi_reverse
   --context:set_option(Multi_reverse,true)
@@ -115,7 +107,10 @@ function P.init(env)
   {
     context.property_update_notifier:connect(function(ctx,name)
     if name == Multi_reverse then
+      -- reflash cand.comment 
+      local selected_index = ctx.composition:back().selected_index
       ctx:refresh_non_confirmed_composition()
+      ctx.composition:back().selected_index = selected_index 
     end
     end),
   })
