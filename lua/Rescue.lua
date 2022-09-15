@@ -26,17 +26,17 @@ function E:get(env)
   return table.concat( tab ,",")
 end
 
-function M.processor(key,env)
+function M.proc(key,env)
   E:set(env,"P@" .. env.name_space)
   return 2 -- Noop
 end
 
-function M.segmentor(seg,env)
+function M.segm(seg,env)
   E:set(env,"S@" .. env.name_space)
   return true
 end
 
-function M.translator(input,seg,env)
+function M.tran(input,seg,env)
   E:set(env,"T@" .. env.name_space)
   yield(Candidate("LuaError",seg.start,seg._end, "", "Err:" .. E:get(env) ))
 end
@@ -51,9 +51,17 @@ function M.filter(input, env)
   end
 end
 
-Rescue_processor=M.processor
-Rescue_segmentor=M.segmentor
-Rescue_translator=M.translator
-Rescue_filter=M.filter
+-- rrequire('_rescue')  return _ENV['_rescue.proc'], _ENV.....
+-- rrequier('_rescue',_ENV,'Rescue') return _ENV['Rescue.proc']
 
+M.lua_processor=M.proc
+M.lua_segmentor=M.segm
+M.lua_translator=M.tran
+M.lua_filter=M.filter
+M._modules=true
+return M
+--Rescue_processor=M.proc
+--Rescue_segmentor=M.segm
+--Rescue_translator=M.tran
+--Rescue_filter=M.filter
 --return Rescue
