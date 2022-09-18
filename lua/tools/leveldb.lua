@@ -7,89 +7,51 @@
 --
 -- 
 --[[
-leveldb 可以使用KEY 查詢 value 或是 query 查詢 frefix key (字元排序 而不是用trie)
-
-ex ab< abc < ac < ad
-
--- rime.lua
-
-user_tran=require 'leveldb'
--- schema.yaml
-# append to engine/translations
-lua_translator@user_tran@ecdict
-
-ecdict:
-  dictionary: ecdictdb
-  initial_quality: 1.5
+--leveldb pool 
+--
 
 --]]
 
-local db_pool_={}
-local function opendb(fn,dbname) 
-  dbname= dbname or ""
-  local db = db_pool_[fn]
-  if not db then 
-    db = LevelDb(fn,dbname) 
-    if not db then return nil end
-    db_pool_[fn] = db
+local udir=rime_api.get_user_data_dir() .. "/"
+local sdir=rime_api.get_shared_data_dir() .. "/"
+-- return full_path
+local function find_path(fn)
+  local full_upath= udir .. fn
+  local full_spath= sdir .. fn
+  return isDir(full_upath) and full_upath
+  or isDir(full_spath) and full_spath 
+  or full_upath
+end
+-- 
+function opendb(fn,dbname)
+  local filename = find_path(fn)
+  local db=LevelDb(filename,dbname or "") or nil
+  if db and not db:loaded() then
+    db:open()
   end
-  if not db:loaded() then db:open() end
   return db
 end
-local function closedb(db)
-  db:close()
-  for k,v in next , db_pool_ do 
-    if  v == db then 
-      db_pool_[k] = nil
-    end
+
+local M = {}
+M._db_pool={}
+
+function M.open(fn,dbname) 
+  if not M._db_pool[fn] then 
+    M._db_pool[fn] = opendb(fn,dbname) or nil
   end
+  return M._db_pool[fn]
 end
-local function pool()
+
+function M.pool_status()
   local tab = {}
-  for k,v in next,db_pool_ do
-    table.insert(tab, ("%s:%s(%s)"):format(k,v,v:loaded() and "opened" or "closed" ))
+  for k,v in next,M._db_pool do
+    table.insert(tab, ("%s:%s(%s)"):format(k,v,v:loaded() and "opening" or "closed" ))
   end
   return tab
 end
-return {
-  leveldb_open=opendb, 
-  leveldb_close=closedb,
-  leveldb_puol= pool,
-}
---[[ example lua_translator
-local function init_data(db)
-  local tab = {
-    ab = "于",
-    cd = "金",
-    ac = "金金",
-  }
-  for k,v in next,tab do
-    db:update(k,v)
-  end
-end
-local M={}
-function M.init(env)
-  local config = env.engine.schema.config
-  local dbname = config:get_string(env.name_space .. "/dictionary")
-  env.quality= tonumber( config:get_string(env.name_space .. "/initial_quality") ) or 1
-  env.db = assert(opendb(dbname,'dict'), "leveldb cand not init")
-  init_data(env.db)
-end
-
-function M.fini(env)
-  env.db:close()
-end
-
-function M.func(inp,seg,env)
-  for k,v in env.db:query(inp):iter() do 
-    local type_ = k == inp and "udata" or "comp_udada"
-    local cand = Candidate(type_,seg.start,seg._end,k,v)
-    cand.quality= env.quality
-    yield(cand)
-  end
-end
-
+-- M.open(fn,dbname) -- return db
+-- M.pool_status() -- return status of table 
 return M
---]]
+
 
 

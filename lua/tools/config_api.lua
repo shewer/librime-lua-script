@@ -210,7 +210,7 @@ end
 local M={}
 M._type = _type
 M.ctype= ctype
-M.to_obj = to_obj
-M.to_item = to_item
-M.to_cdata = to_cdata
+M.get_obj = to_obj
+M.get_item = to_item
+M.get_cdata = to_cdata
 return M

@@ -42,7 +42,7 @@
 -- puts(INFO,__FILE__(),__LINE__(),__FUNC__() , ...)
 --
 -- global variable
-function __FILE__(n) n=n or 2 return debug.getinfo(n,'S').soruce end
+function __FILE__(n) n=n or 2 return debug.getinfo(n,'S').short_src end
 function __LINE__(n) n=n or 2 return debug.getinfo(n, 'l').currentline end
 function __FUNC__(n) n=n or 2 return debug.getinfo(n, 'n').name end
 INFO="log"
@@ -53,10 +53,11 @@ CONSOLE="console"
 
 
 
-
+-- Log function 
 local function tran_msg(...)
   local msg="\t"
-  for i,k in next, {...} do msg = msg .. ": " .. tostring(k)  end
+  local tab = {...}
+  for i=1,#tab do msg = msg .. ": " .. tostring(tab[i])  end
   return msg
 end
 local function  push_error_log(msg)
@@ -70,7 +71,7 @@ local function  push_error_log(msg)
   end
 
 end
-local function puts( tag , ...)
+function Log( tag , ...)
   if type(tag) ~= "string" then return end
   local func = print
   local f_info=false
@@ -108,4 +109,47 @@ local function puts( tag , ...)
   func( msg )
 end
 
-return puts
+function Log_data(_type,obj,info)
+  Log(_type,'----------',info,'------------',obj)
+  local tp=type(obj)
+  if tp == "table" then 
+    for k,v in next,obj do 
+      Log(_type,"\t", k,v )
+    end
+  end
+end
+function Log_datas(_type,...)
+  for k,v in ipairs{...} do
+    Log_data(_type,v,k)
+  end
+end
+
+--  require tools
+--
+function rpath(n)
+  n= n or 3
+  local path ,file= __FILE__(3):match("^(.+)/(.*.lua)$") 
+  path = path:match("/lua/(.+)$")
+  return path,file
+end
+--  global function isFile isDir
+local function exists(name)
+    if type(name)~="string" then return false end
+    return os.rename(name,name) and true or false
+end
+
+function isFile(name)
+    if not exists(name) then return false end
+    local f = io.open(name)
+    if f then
+      local res = f:read(1) and true or false
+      f:close()
+      return res
+    end
+    return false
+end
+
+function isDir(name)
+    return (exists(name) and not isFile(name))
+end
+return Log
