@@ -42,6 +42,7 @@
 
 local M={}
 M.__index=M
+M.__name="List"
 function M:New(...)
   local obj={...}
   if #obj==1 and type(obj[1]) =="table" then
@@ -210,24 +211,24 @@ function M:insert_check(elm)
   return nil ~= elm
 end
 function M:insert_at(index, elm)
-  assert(index , --and elm,
-    ("args error: %s, index: %d , elm: %s"):format( "List:insert_at(index,elm) ", index,elm) )
-  index = index >=0 and index or index  +1+#self
-  if self:insert_check(elm) then
-    table.insert(self,index,elm)
-    return self,true
-  end
-
-  return self,false
+  --assert(index , --and elm,
+    --("args error: %s, index: %d , elm: %s"):format( "List:insert_at(index,elm) ", index,elm) )
+  index = index <1 and 1 or index >#self and #self or index
+  table.insert(self,index,elm)
+  return self
 end
 function M:push(elm)
-  return self:insert_at(#self+1, elm)
+  --return self:insert_at(#self+1, elm)
+  table.insert(self,elm)
+  return self
 end
 M.append=M.push
 M.unpack=table.unpack
 M.concat=table.concat
 function M:unshift(elm)
-  return self:insert_at(1,elm)
+  --return self:insert_at(1,elm)
+  table.insert(self,1,elm)
+  return self
 end
 
 function M:remove_at(index)
