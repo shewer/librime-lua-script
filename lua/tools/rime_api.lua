@@ -65,11 +65,20 @@
 
 --` add func to global  isFile( path)   , isDir(path)
 
+local List = require'tools/list'
+require 'tools/string'
+if not rime_api then 
+  require 'test/fake/rime_api'
+end
 
 
 local function Version()
   local ver
-  if rime_api.get_distribution_name then
+  if Opencc and Opencc('s2t.json').convert_word then
+    return 200
+  elseif rime_api.regex_match then
+    return 197
+  elseif rime_api.get_distribution_name then
     return 185
   elseif LevelDb then
     return 177
@@ -94,10 +103,6 @@ local function Version()
   end
 end
 
-List = require'tools/list'
-require 'tools/string'
---Component = Version() >= 177  and Component or require('tools/_component')
-local w_leveldb = LevelDb and require('tools/leveldb')
 
 
 
@@ -108,7 +113,7 @@ local w_leveldb = LevelDb and require('tools/leveldb')
 local function old_Init_projection(config,path)
   local patterns=List()
   for i=0,config:get_list_size(path)-1 do
-    patterns:push( config:get_string(path .. "/@" .. i ) )
+    table.insert( patterns,  config:get_string(path .. "/@" .. i ) )
   end
   local make_pattern=require 'tools/pattern'
   local projection = patterns:map(function(pattern) return make_pattern(pattorn) end )
@@ -123,7 +128,7 @@ end
 --  projection=Init_projection(config, "translator/preedit_format")
 --  projection:apply( code )
 
-function Init_projection( config, path)
+local function Init_projection( config, path)
   --  old version
   if Version() < 102 then
     return old_Init_projection(config,path)
@@ -146,149 +151,45 @@ function Init_projection( config, path)
 end
 
 
--- ConfigItem
-local CI={}
-function CI.Config_item_to_obj(config_item,level)
-    level = level or 99
-    if level <1 then return config_item end
-
-    if not config_item or not config_item.type then return nil end
-    if config_item.type == "kList" then
-      local cl= config_item:get_list()
-      local tab={}
-      for i=0,cl.size-1 do
-        table.insert(tab, CI.Config_item_to_obj( cl:get_at(i), level -1 ))
-      end
-      return tab
-    elseif config_item.type == "kMap" then
-      local cm = config_item:get_map()
-      local tab={}
-      for i,k in next,cm:keys() do
-        tab[k] = CI.Config_item_to_obj( cm:get(k), level -1)
-      end
-      return tab
-    elseif config_item.type == "kScalar" then
-      return config_item:get_value().value
-    else return nil end
-end
--- Config method clone_configlist write_configlist
--- Env(env):config():clone_configlist("engine/processors") -- return list of string
--- Env(env):config():write_configlist("engine/processors",list)
---
-local CN={}
--- clone ConfigList of string to List
-
-
-function CN.get_obj(config,path,level)
-  return CI.Config_item_to_obj( config:get_item(path or ""),level)
-end
-function CN.clone_configlist(config,path)
-  if not config:is_list(path) then
-    Log(WARN, "clone_configlist: ( " .. path  ..  " ) was not a ConfigList " )
-    return nil
-  end
-  return List( CI.Config_item_to_obj(config:get_item(path)) )
-end
-
--- List write to Config
-function CN.write_configlist(config,path,list)
-  list:each_with_index(
-  function(config_string,i)
-    config:set_string( path .. "/@" .. i-1 , config_string)
-  end )
-  return #list
-end
---
-function CN.find_index(config,path,str)
-  if not config:is_list(path) or 1 > config:get_list_size(path)   then
-    return
-  end
-  local size = config:get_list_size(path)
-  for i=0,size -1 do
-    local ipath= path .. "/@" .. i
-    if config:is_value(ipath) and  config:get_string(ipath ):match(str) then
-      return e
-    end
-  end
-end
--- just for list of string for now
-function CN.config_list_insert(config,path,obj,index)
-  if config:is_null(path) then
-    local clist= ConfigList()
-    clist:append( ConfigValue(str).element )
-    config:set( path, clist.element )
-    return true
-  end
-  if not config:is_list(path) then return end
-  local size = config:get_list_size(path)
-  index = index and index <= size and index or size
-  local ipath = path .. "/@before " ..index
-  local ctype= type(obj)
-  if type(obj) == "string" then
-    config:set_string(ipath , obj )
-    return true
-  end
-  return false
-end
-
-function CN.config_list_append(config ,path, str)
-
-  if config:is_null(path) then
-    local clist= ConfigList()
-    clist:append( ConfigValue(str).element )
-    config:set_item( path, clist.element )
-    return true
-  end
-  local list = assert( config:get_list(path) , ("%s:%s: %s not a List"):format( __FUNC__(),__LINE__(), path))
-  if list and not index then
-      list:append( ConfigValue(str).element )
-      return true
-  else
-      return false
-  end
-end
-
-function CN.config_list_replace(config,path, target, replace )
-  --local index=config:find_index( path, target)
-  local size= config:is_list(path) and config:get_list_size(path)
-  for i = 0,size - 1 do
-    local ipath= path .. "/@" .. i
-    local l_str= config:get_string( ipath )
-    if l_str and l_str:match(target) then
-      config:set_string(ipath, replace )
-      return true
-    end
-  end
-  return false
-end
 ----- rime_api tools
-local M= rime_api or _ENV['rime_api']
-M.Version=Version
-function M.Ver_info()
+
+local function Ver_info()
   local msg1 = rime_api.get_user_id and string.format(" %s %s %s (id:%s) ",
   rime_api.get_distribution_name(),
   rime_api.get_distribution_code_name(),
   rime_api.get_distribution_version(),
   rime_api.get_user_id()) or ""
+
   local msg2 = string.format(" Ver: librime %s librime-lua %s lua %s",
   rime_api.get_rime_version() , Version() ,_VERSION )
+
   return msg1 .. msg2
 end
--- Context method
--- Env(env):context():Set_option("test") -- set option "test" true
---                    Unset_option("test") -- set option "test" false
---                    Toggle_option("test")  -- toggle "test"
---  Projection api
-M.Projection=Init_projection
-function M.load_reversedb(dict_name)
-  -- loaded  ReverseDb
-  local reversedb = ReverseLookup
-  and ReverseLookup(dict_name)
-  or  ReverseDb("build/".. dict_name .. ".reverse.bin")
-  if not reversedb then
-    log.warning( env.name_space .. ": can't load  Reversedb : " .. reverse_filename )
-  end
-  return reversedb
+
+local function load_reversedb(dict_name)
+  -- loaded  ReverseDb from ReverseLookup or ReverseDb
+  local reversedb = ReverseLookup and ReverseLookup(dict_name)
+    or  ReverseDb( get_full_path( "build/".. dict_name .. ".reverse.bin") ) 
+
+  if reversedb then return reversedb end
+  log.warning( env.name_space .. ": can't load  Reversedb : " .. reverse_filename )
 end
 
-return M
+local M = {}
+M.__index=M
+M.__newindex=function(tab,key,value)
+end
+
+M.Version=Version
+M.Ver_info=Ver_info
+M.Projection= Init_projection
+M.ReverseDb= load_reversedb
+M.VER_INFO= Ver_info()
+M.LIBRIME_LUA_VER= Version()
+M.LIBRIME_VER = rime_api.get_rime_version()
+M.USER_DIR = rime_api.get_user_data_dir() or "."
+M.SHARED_DIR = rime_api.get_shared_data_dir() or "."
+--Component = Version() >= 177  and Component or require('tools/_component')
+M.LevelDb = LevelDb and require('tools/leveldb')
+setmetatable(rime_api,M)
+return rime_api

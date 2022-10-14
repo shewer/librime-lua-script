@@ -6,15 +6,8 @@
 -- Distributed under terms of the MIT license.
 --
 
-if not LevelDb then
-  Log(ERROR, "Librime-lua version not support")
-  return function(inp,seg,env)
-    yield(
-      Candidate("error",seg.start,seg._end,env.name_space,"LevelDb not support")
-    )
-  end
-end
 -- env metatable
+local List = require 'tools/list'
 local E={}
 --
 function E:Context()
@@ -189,7 +182,7 @@ end
 
 -- processor function  config
 function E:get_keybinds(path)
-  path = path or self.name_space .. "/keybinds"
+  path = (path or self.name_space) .. "/keybinds"
   local tab = self:Config_get(path)
   tab = type(tab) == "table" and tab or {}
   for key,name in next, tab do

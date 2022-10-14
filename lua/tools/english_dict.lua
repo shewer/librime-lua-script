@@ -27,9 +27,8 @@
 --
 --]]
 require 'tools/string'
+require 'tools/_file'
 local List = List or require 'tools/list'
-local Log= require'tools/debugtool'
-
 --USERDIR= ( USERDIR or  os.getenv("APPDATA") or "" ) .. [[\Rime]]
 
 -- 字典 字根 查碼 table
@@ -44,25 +43,6 @@ local Log= require'tools/debugtool'
 -- 設定 存入bin格式
 --local chunk_bin= true
 local NR = package.config:sub(1,1):match("/") and "\n" or "\r"
-
-local function exists(name)
-    if type(name)~="string" then return false end
-    return os.rename(name,name) and true or false
-end
-
-local function isFile(name)
-    if not exists(name) then return false end
-    local f = io.open(name)
-    if f and f:read(1) then
-        f:close()
-        return true
-    end
-    return false
-end
-
-local function isDir(name)
-    return (exists(name) and not isFile(name))
-end
 
 
 local eng_suffix={ f ="ful" , y= "ly" , t= "tion" ,s="sion", a = "able" ,
@@ -151,22 +131,20 @@ local function conv_pattern1(org_text,level)
   return pw, ww, p
 end
 
---- Word
---
+--local Word= require 'tools/english_word'
+
 local function New(self,...)
   local obj= setmetatable({} , self)
   return not obj._initialize and  obj or obj:_initialize(...)
 end
-local MT={}
-MT.__index=MT
-MT.__call=New
+--- Word
+--
+local class= require 'tools/class'
+
 
 -- Word
 -- class method  Phrase_chunk(row_chunk)  Parse_text(row_tab)
 -- instance method  get_info(mode_num) to_s() prefix_match(prefix_str) match:(text)
-local Word= setmetatable({} , MT)
-Word.__index=Word
-Word.__name="Word"
 
 --local Word=Class("Word")
 --Word.__name= "Word"
@@ -177,6 +155,8 @@ end
 --]]
 --
 
+local Word = class()--{}
+Word.__name="Word"
 function Word:_initialize(tab)
   if type(tab)=="table" and tab.word and tab.word:len() >0 then
     --and tab.translation and tab.phonetic then
@@ -268,7 +248,11 @@ function Word:match(text,case_match)
 end
 Word.is_match= Word.match
 
-
+--local class = require 'tools/class'
+--return class(Word)
+--local MT={}
+--MT.__index=MT
+--MT.__call=New
 -- Dict  instance method
 -- iter(text) return iter function for match text pattern
 -- get(word) return
@@ -284,12 +268,15 @@ local function init_tree(tree_tab, index, word,level)
   end
 end
 
-local LuaDict=setmetatable({},MT)
-LuaDict.__index = LuaDict
+local LuaDict=class() --setmetatable({},MT)
+--LuaDict.__index = LuaDict
 LuaDict.__name = 'LuaDict'
 function LuaDict:_initialize(full_path,level)
   level = level and level>1 and level  or 3
-  self._db = loadfile(full_path)()
+  if T03 and GD then GD() end
+  if not isFile(full_path) then return end
+  --self._db = loadfile(full_path)()
+  self._db = dofile(full_path)
   self._tree = {}
   self._words = {}
   for i,v in next,self._db do
@@ -332,9 +319,10 @@ end
 
 function LuaDict:iter(text)
   local pw,ww,pn = split_str(text)
-  local index = self:_prefix_index(pw)
+  --if not index then GD() end
   return coroutine.wrap(function()
-    while self._db[index]:prefix_match(pw) do
+    local index = self:_prefix_index(pw)
+    while self._db[index] and  self._db[index]:prefix_match(pw) do
       if self._db[index]:match(text) then
         coroutine.yield(self._db[index])
       end
@@ -353,8 +341,8 @@ end
 -- get(word) return
 -- LevelDict
 --
-local  LevelDict=setmetatable({},MT)
-LevelDict.__index = LevelDict
+local  LevelDict=class() --setmetatable({},MT)
+--LevelDict.__index = LevelDict
 LevelDict.__name = 'LewelDict'
 
 
@@ -390,8 +378,8 @@ end
 -- match(text) return Word of List
 -- word(word)  return Word
 --
-local English =setmetatable({},MT)
-English.__index=English
+local English = class() -- setmetatable({},MT)
+--English.__index=English
 English.__name="English"
 English._dicts={}
 function English:_getdict()
@@ -433,15 +421,15 @@ function English:reload(force)
     local ph= rime_api.get_user_data_dir()
     local dp = self:_find_file("dir")
     local fp = self:_find_file("file")
-    if LevelDb and self:_find_file("dir")  then
-      self._dicts[dict_name]=  LevelDict(self:_find_file("dir"))
-    elseif self:_find_file("file") then
-      self._dicts[dict_name] = LuaDict(self:_find_file("file"))
-    end
-    for k,v in next,self._dicts do 
-    end
+    self._dicts[dict_name] = (LevelDb and dp and LevelDict(dp)) 
+      or (fp and LuaDict(fp) ) or nil
+    --if LevelDb and dp  then
+      --self._dicts[dict_name]=  LevelDict( dp)
+    --elseif fp then
+      --self._dicts[dict_name] = LuaDict(fp)
+    --end
     
-    return self:_getdict() and true or false
+    return  self:_getdict() and true or false
 end
 
 function English:iter(org_text,case_match)
@@ -468,8 +456,6 @@ English.Conver_rex=conver_rex --2 ('seteu*?ing:m') 展開/ :  seteu.*.?ing:ment 
 English.Conver_pattern= conv_pattern --3 ('seteu/i/a:m') 字首 ^seteu  ^seteu.*ing.*able%sm[%a%-%.]*%.
 English.Word=Word
 --]]
-English.isFile=isFile
-English.isDir=isDir
 English.LevelDict = LevelDict
 English.LuaDict = LuaDict
 

@@ -6,23 +6,17 @@
 -- Distributed under terms of the MIT license.
 --
 -- 
---[[
---leveldb pool 
---
+--support leveldb pool 
+-- ldb = require'tools/leveldb'
+-- leveldb = ldb.open(fn,dbname) -- return instance of LevelDb 
 
---]]
+require 'tools/_file'
 
-local udir=rime_api.get_user_data_dir() .. "/"
-local sdir=rime_api.get_shared_data_dir() .. "/"
--- return full_path
 local function find_path(fn)
-  local full_upath= udir .. fn
-  local full_spath= sdir .. fn
-  return isDir(full_upath) and full_upath
-  or isDir(full_spath) and full_spath 
-  or full_upath
+  local full_path = get_full_path(fn)
+  return full_path and isDir(full_path) and full_path or rime.get_user_data_dir() .. "/" .. fn  
 end
--- 
+
 function opendb(fn,dbname)
   local filename = find_path(fn)
   local db=LevelDb(filename,dbname or "") or nil

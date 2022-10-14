@@ -109,7 +109,12 @@ IN THE SOFTWARE.
 --
 _profiler = {}
 
-
+--fix >=5.1
+if not table.getn then
+  table.getn=function(tab)
+    return type(tab) == "table" and #tab or 0
+  end
+end
 --
 -- newProfiler() creates a new profiler object for managing 
 -- the profiler and storing state.  Note that only one profiler 

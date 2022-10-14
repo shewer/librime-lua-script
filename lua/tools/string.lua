@@ -31,7 +31,9 @@ function utf8.sub(str,si,ei)
 
   local u_si= index(str,si)
   ei = ei or utf8.len(str)
-  ei = ei >=0 and ei +1 or ei
+  ei = ei >=0 
+  and ei + 1 
+  or ei
   local u_ei= index(str, ei ) -1
   return str:sub(u_si,u_ei)
 end
