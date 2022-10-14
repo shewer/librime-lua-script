@@ -5,6 +5,9 @@
 --
 -- Distributed under terms of the MIT license.
 
+-- ver <#177 : 只能建立 lua_component
+-- 增加 Component.Require(...) 以 component_name 自動區別 processor segmentor translator filter
+--
 
 local processors= Set{ 
  "lua_processor",
