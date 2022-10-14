@@ -91,7 +91,7 @@ def main(fn,fmt):
         else:
             write_chunk(f + '.txtll',rows)
             print("compile to bin ")
-            os.system( 'luac -o '+ f + ".txtl " + f + ".txtl && rm " + f +".txtll" )
+            os.system( 'luac -o '+ f + ".txtl " + f + ".txtll && rm " + f +".txtll" )
 
 
     except ValueError as ve:
