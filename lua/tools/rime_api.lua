@@ -67,7 +67,7 @@
 
 local List = require'tools/list'
 require 'tools/string'
-if not rime_api then 
+if not rime_api then
   require 'test/fake/rime_api'
 end
 
@@ -169,7 +169,7 @@ end
 local function load_reversedb(dict_name)
   -- loaded  ReverseDb from ReverseLookup or ReverseDb
   local reversedb = ReverseLookup and ReverseLookup(dict_name)
-    or  ReverseDb( get_full_path( "build/".. dict_name .. ".reverse.bin") ) 
+    or  ReverseDb( get_full_path( "build/".. dict_name .. ".reverse.bin") )
 
   if reversedb then return reversedb end
   log.warning( env.name_space .. ": can't load  Reversedb : " .. reverse_filename )

@@ -5,16 +5,16 @@
 --
 -- Distributed under terms of the MIT license.
 --
--- 
---support leveldb pool 
+--
+--support leveldb pool
 -- ldb = require'tools/leveldb'
--- leveldb = ldb.open(fn,dbname) -- return instance of LevelDb 
+-- leveldb = ldb.open(fn,dbname) -- return instance of LevelDb
 
 require 'tools/_file'
 
 local function find_path(fn)
   local full_path = get_full_path(fn)
-  return full_path and isDir(full_path) and full_path or rime.get_user_data_dir() .. "/" .. fn  
+  return full_path and isDir(full_path) and full_path or rime_api.get_user_data_dir() .. "/" .. fn
 end
 
 function opendb(fn,dbname)
@@ -29,8 +29,8 @@ end
 local M = {}
 M._db_pool={}
 
-function M.open(fn,dbname) 
-  if not M._db_pool[fn] then 
+function M.open(fn,dbname)
+  if not M._db_pool[fn] then
     M._db_pool[fn] = opendb(fn,dbname) or nil
   end
   return M._db_pool[fn]
@@ -44,7 +44,7 @@ function M.pool_status()
   return tab
 end
 -- M.open(fn,dbname) -- return db
--- M.pool_status() -- return status of table 
+-- M.pool_status() -- return status of table
 return M
 
 

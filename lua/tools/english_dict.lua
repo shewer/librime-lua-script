@@ -347,7 +347,7 @@ LevelDict.__name = 'LewelDict'
 
 
 function LevelDict:_initialize(full_path)
-  self._db = rime_api.leveldb_open(full_path)
+  self._db = rime_api.LevelDb.open(full_path)
   return self._db and self
 end
 
