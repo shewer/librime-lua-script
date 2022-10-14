@@ -12,11 +12,11 @@ patch:
     - essay_cn
   module:
     modules:
-      - { module: 'command', prescription: "lua_processor@command.proc@command" }
-      - { module: 'select_character.proc', prescription: "lua_processor@select_character.proc" }
-      - { module: 'english', prescription: "lua_processor@english.proc@english" }
-      - { module: "conjunctive", prescription: "lua_processor@conjunctive.proc@conjunctive"} #, module_name: "conjunctive.proc" }
-      - { module: 'multi_reverse', prescription: "lua_processor@multi_reverse.proc@multi_reverse" }
+      - { prescription: "lua_processor@command.proc@command" } # lua/command/proc.lua
+      - { prescription: "lua_processor@select_character.proc" } # lua/select_character/proc.lua
+      - { prescription: "lua_processor@english.proc@english" } # lua/english/proc.lua
+      - { prescription: "lua_processor@conjunctive.proc@conjunctive"} # conjunctive/prac.lua , module_name: "conjunctive.proc" }
+      - { prescription: "lua_processor@multi_reverse.proc@multi_reverse" } # lua/multi_reverse/proc.lua
         
     keybinds:
       prtscr: "Control+F12" # commit_text of menu list
@@ -97,8 +97,8 @@ patch:
     output_format: [dtype,type,start,_end,preedit,quality,input,ainput,error]
     #tags:
   # switches default
-  __patch: append_sw
-append_sw:
+  #__patch: append_sw
+#append_sw:
   switches/+:
     - name: conjunctive
       states: [ 🈲,聯]
