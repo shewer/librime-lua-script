@@ -71,10 +71,19 @@ function TestList:test_insert_at()
 	local l1=List(1,2,3,4) 
 	local l2 = l1
 	local l3 = l1:insert_at(1,0)
+
+	lu.assertEquals(List():insert_at(11,1), {1}) -- unshift
+	lu.assertEquals(List():insert_at(0,1), {1}) -- unshift
+	lu.assertEquals(List():insert_at(-1,1), {1}) -- unshift
+	lu.assertEquals(List(1,2,3):insert_at(-1,0), {0,1,2,3}) -- unshift
+	lu.assertEquals(List(1,2,3):insert_at(0,0), {0,1,2,3}) -- unshift
+	lu.assertEquals(List(1,2,3):insert_at(1,0), {0,1,2,3}) -- unshift
+	lu.assertEquals(List(1,2,3):insert_at(2,0), {1,0,2,3}) -- unshift
+	lu.assertEquals(List(1,2,3):insert_at(4,0), {1,2,3,0}) -- unshift
+	lu.assertEquals(List(1,2,3):insert_at(5,0), {1,2,3,0}) -- unshift
 	lu.assertEquals(l1, {0,1,2,3,4}) -- unshift
 	lu.assertTrue(addrcheck(l1,l2) and addrcheck(l1,l3))
-	local l3 = l1:insert_at(6,5) --- push
-	lu.assertEquals(l1, {0,1,2,3,4,5})
+	lu.assertEquals(l1:insert_at(#l1+11,5), {0,1,2,3,4,5})
 	lu.assertTrue(addrcheck(l1,l2) and addrcheck(l1,l3))
 	local l3 = l1:insert_at(3,1.5) --- push
 	lu.assertEquals(l1, {0,1,1.5,2,3,4,5})
@@ -393,9 +402,14 @@ function TestList:testFind()
       {3,4} ),{3,4} )
   lu.assertEquals( l1:find({3,4}), {3,4})
 
-  
-
-  
+end
+function TestList:test_find_match()
+  lu.assertEquals(List('aa','bb','cc'):find_match('^b'),'bb')
+  lu.assertEquals(List('aa','bb','cc'):find_match('^ba'),nil)
+  lu.assertEquals(List('aa','abcdefg','cc'):find_match('b.*g$'),'abcdefg')
+end
+function TestList:test_select_match()
+  lu.assertEquals(List('aa','abcdefg','cc'):select_match('a.*$'),{'aa','abcdefg'})
 
 end
 
