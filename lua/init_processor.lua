@@ -178,6 +178,7 @@ end
 
 local M={}
 function M.init(env)
+  if ENGINE_TEST then require('testl/engine')() end
   Env(env)
 
   -- init self --
