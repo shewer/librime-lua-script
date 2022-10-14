@@ -10,153 +10,14 @@
 
 --
 --
--- ex1: custom.yaml   name_space:module1
--- rime.lua
--- init_processor= require'init_processor' -- module_name
--- modules1={
---   { module= 'command'    , module_name= "command_proc",     name_space= "command"},
---   { module= 'english'    , module_name= "english_proc",     name_space= "english"},
---   { module= 'conjunctive', module_name= "conjunctive_proc", name_space= "conjunctive"},
--- }
---
--- module2={
---   { module= 'english'    , module_name= "english_proc"    , name_space= "english"},
---   { module= 'conjunctive', module_name= "conjunctive_proc", name_space= "conjunctive"},
--- }
---
---
--- <方案1>.custom.yaml # 由moduel1 name_space 載入 module1
--- patch:
---   engine/processors/lua_processor@init_processor@module1
---   module1/modules:
---     - { module: 'command'    , module_name: "command_proc"    , name_space: "command"}
---     - { module: 'conjunctive', module_name: "conjunctive_proc", name_space: "conjunctive"}
---
---<方案2>.custom.yaml  # 由 _G[module1] 載入 module1
---patch:
---   engine/processor/lua_processor@init_processor@module1
---
---<方案3>.custom.yaml  # 由 _G[module2] 載入 module2
---patch:
---   engine/processor/lua_processor@init_processor@module2
---
 --
 -- librime-lua-script env
-require 'tools/rime_api'
---require 'tools/string'
---local Log=require'tools/debugtool'
---local List = require 'tools/list'
+require 'tools/_component'
+local Env = require 'tools/env_api'
+local List = require 'tools/list'
 
 _NR = package.config:sub(1,1):match("/") and "\n" or "\r"
-
-
-
 -- init_module only for Processor
-
-local function init_modules(env)
-  local modules = List( env:Config_get(env.name_space .. "/modules"))
-  :map(function(elm)
-    -- 整理  modules
-    elm.prescription = elm.prescription
-    or ("%s@%s@%s"):format("lua_processor", elm.module_name, elm.name_space or elm.module_name )
-    return elm
-  end)
-  --modules:each(function(elm)
-  modules:select(function(elm)
-    return elm.prescription:match("^lua_(.+)@(.+)")
-  end)
-  :each(function(elm)
-    local tp,nm,ns = elm.prescription:split("@"):unpack()
-    ns = ns or nm
-    _G[nm] = _G[nm] or rime_api.req_module(elm.module)
-  end)
-
-  return modules:map(function(elm)
-    --local ticket=Ticket(engine,"processor", pres)
-    local schema = elm.schema and Schema(elm.schema) or env.engine.schema
-    local comp=Component.Processor(env.engine,schema,"", elm.prescription)
-    if not comp then
-      Log(DEBUG,"create Component fauled", comp, elm.prescription )
-    end
-    return {name=elm.prescription,comp=comp}
-  end)
-end
-
-local function auto_load(env, tab_G)
-  tab_G = tab_G or _G
-  local comps=List(env:Config_get_with_path("engine"))
-  :select(function(elm) return elm.value:match("^lua_(.+)@(.+)$") end)
-  :map(function(elm) return elm.value end)
-  :each(function(elm)
-    local ks,nm,ns= elm:split("@"):unpack()
-    ns = ns or nm
-    _G[nm] = _G[nm] or rime_api.req_module(nm)
-  end)
-end
-
-
-local function append_component(env, from_path,dist_path)
-  local from = from_path and env:Config_get(from_path)
-  if not from then return end
-  dist_path = dist_path or "engine"
-
-  for key, f_list in pairs(from) do
-      local obj = env:Config_get(dist_path .."/"..key)
-      List(f_list):reverse()
-      if type(obj) == "table" and #obj >0 then
-        local list = List(obj)
-        local index = key == "filters" and list:find("uniquifier")
-        local path = dist_path .. "/" .. key
-        -- dpath  = append component before uniquifier or append after next
-        local dpath = index and path .. "/@before " .. index -1 or path .. "/@after " .. #list -1
-
-        List(f_list)
-        :select(function(elm) return not List(env:Config_get(path)):find(elm) end)
-        :reverse()
-        :each(function(elm) env:Config_set(dpath, elm) end)
-      end
-  end
-end
-
--- init_processor
-
-local M={}
-function M.init(env)
-  Env(env)
-  -- init self --
-  --local config=env:Config()
-  append_component(env, env.name_space .. "/before_modules")
-  env.modules = init_modules(env)
-  append_component(env, env.name_space .. "/after_modules")
-
-  --auto_load_bak(config:get_map("engine"))
-  auto_load(env)
-
-  -- prtscr prtkey keyevent
-  env.keys= env:get_keybinds(env.name_space .. "/keybinds")
-  -- init end
-
-  -- print component
-  do
-    ( List()
-    + "---- submodules ----"
-    + env.modules:map(function(elm) return string.format("%s: %s",elm.name, elm.comp) end)
-    + "---- engine components ----"
-    + env:components_str()
-    + "---- recognize/patterns  ----"
-    + List(env:Config_get_with_path("recognizer/patterns")):map(function(elm)
-      return elm.path .. ": " .. elm.value end)
-    ):each(function(elm,out)  Log(out,elm) end, CONSOLE)
-  end
-end
-
-
-function M.fini(env)
-  -- modules fini
-  env.modules:each(function(elm) elm=nil end)
-  -- self finit --
-end
-
 
 local F={}
 function F.screen_print(env)
@@ -176,7 +37,6 @@ function F.screen_print(env)
     engine:commit_text(out)
   end
   engine:commit_text(_NR)
-  --]]
   do
     (List()
     + engine:commit_text( context:get_selected_candidate().preedit .. "\t" .. seg.prompt .. _NR )
@@ -189,34 +49,63 @@ function F.screen_print(env)
     end)
     ):each(function(elm) engine:commit_text(elm) end)
   end
+  --]]
+  local fs = env:Get_option('full_shape')
+  if fs then env:Unset_option('full_shape') end
+
+  local str_head = context:get_selected_candidate().preedit .. "\t" .. seg.prompt .. _NR
+  local strlist= List.Range(st,st+page_size-1):map(function(elm) 
+    local c=seg:get_candidate_at(elm)
+    local head = elm == s_index and '-->' or '   ' 
+    return ("%s%s:\t%s%s"):format(head, c.text, c.comment,_NR)
+  end):concat()
+  env.engine:commit_text(str_head .. strlist)
+
+  if fs then env:Set_option('full_shape') end
 end
 
 function F.modules(env)
-  env.modules:each( function(elm)
-    local str = string.format("%s: %s%s", elm.name,elm.comp, _NR)
-    env.engine:commit_text(str )
-  end)
+  local fs = env:Get_option('full_shape')
+  if fs then env:Unset_option('full_shape') end
+
+  local str = env.modules:map( 
+  function(elm) return ("%s: %s%s"):format( elm.name,elm.comp,_NR) end):concat()
+  env.engine:commit_text(str)
+
+  if fs then env:Set_option('full_shape') end
 end
+
 function F.comps(env)
-  env:components_str():each(function(elm)
-    env.engine:commit_text( elm .. _NR)
-  end)
+  local fs = env:Get_option('full_shape')
+  if fs then env:Unset_option('full_shape') end
+
+  env.engine:commit_text( env:components_str():concat(_NR) )
+
+  if fs then env:Set_option('full_shape') end
 end
 
 function F.cal(env)
-  local engine=env.engine
-  engine:commit_text("```" .. _NR)
-  local cal = require('tools/cowsay')
-  cal():split("\n")
-  :each(function(line)
-    engine:commit_text(line .. _NR)
-  end)
-  engine:commit_text("```" .. _NR)
+
+  local fs = env:Get_option('full_shape')
+  if fs then env:Unset_option('full_shape') end
+
+  local cal = require 'tools/cowsay'
+  local str = ('```%s%s%s```%s'):format(_NR,cal(),_NR,_NR)
+  env.engine:commit_text(str)
+
+  if fs then env:Set_option('full_shape') end
+  --engine:commit_text("```" .. _NR)
+  --local cal = require('tools/cowsay')
+  --cal():split("\n")
+  --:each(function(line)
+    --engine:commit_text(line .. _NR)
+  --end)
+  --engine:commit_text("```" .. _NR)
 end
 function F.cowsay(env)
   local engine=env.engine
   engine:commit_text("```" .. _NR)
-  for line in io.popen("al |cowsay -n"):lines() do
+  for line in io.popen("cal |cowsay -n"):lines() do
     engine:commit_text(line .. _NR)
   end
   engine:commit_text("```" .. _NR)
@@ -224,12 +113,147 @@ end
 function F.ver(env)
   env.engine:commit_text( rime_api.Ver_info() )
 end
+function F.reload(env)
+  if rime_api.Version() < 139 then
+    env.engine:process_key(env.keys.reload)
+  else 
+    env.engine:apply_schema(Schema(env.engine.schema.schema_id))
+  end
+  return 1
+end
+function F.menusize(env,size)
+  env.engine.context:clear()
+  if size > 0  and size <10 then
+    env:Config_set('menu/page_size', size )
+    Log(DEBUG,env,size,env:Config():get_string('menu/page_size'))
+
+    F.reload(env)
+  end
+  return 1
+end
+
+-- init_processorr 
+local function init_modules(env)
+  local modules = List( env:Config_get(env.name_space .. "/modules"))
+  return modules:map( function(elm)
+    if elm.module then rrequire(elm.module,_ENV) end
+    local comp=Component.Require(env.engine,"",elm.prescription)
+    return comp and {name=elm.prescription,comp=comp}
+  end)
+  --return modules
+end
+local function auto_load(env, tab_G)
+  tab_G = tab_G or _ENV
+  List("processors","segmentors","translators","filters")
+  :map(function(elm) return "engine/" .. elm end)
+  :reduce(function(elm,org) return org + env:Config_get(elm) end,List())
+  :select_match("^lua_")
+  :each(function(elm)
+    local mod_name = elm:split("@")[2]
+    if not rrequire(mod_name) then
+      Log(ERROR,'lua component require module failed', mod_name)
+    end
+  end)
+end
+
+-- append  segments, translators , filters
+-- from_path, dist_path :  ConfigMap -- key->ConfigList
+local function append_component(env, from_path,dist_path)
+  local from = from_path and env:Config_get(from_path)
+  if not from then return end
+  dist_path = dist_path or "engine"
+
+  for sub_path, f_list in pairs(from) do
+    local path = dist_path .. "/" ..sub_path
+    local dist_clist = List(env:Config_get(path))
+    List(f_list):each(function(elm_str)
+      dist_clist:append(
+        not dist_clist:find(elm_str) and elm_str or nil )
+    end)
+    env:Config_set(path,dist_clist)
+  end
+end
+
+-- init_processor
+
+local M={}
+function M.init(env)
+  Env(env)
+
+  -- init self --
+  --local config=env:Config()
+  append_component(env, env.name_space .. "/before_modules")
+  if T01 and GD then GD() end
+  env.modules = init_modules(env)
+  append_component(env, env.name_space .. "/after_modules")
+
+  --auto_load_bak(config:get_map("engine"))
+  auto_load(env)
+
+  -- prtscr prtkey keyevent
+  env.keys= env:get_keybinds()
+  env.keys.reload = env.keys.reload and env.keys.reload or KeyEvent('F9')
+
+  -- use key_binder reload 
+  if rime_api.Version() < 139 then 
+    local ckeyb= env:Config_get('key_binder/bindings/@0')
+    local reload_keyb = { 
+      when='always',
+      accept= env.keys.reload:repr(),
+      select= env.engine.schema.schema_id, 
+    }
+    if ckeyb.select ~= reload_keyb.select or  
+      ckeyb.when ~= reload_keyb.when or
+      ckeyb.accept ~= reload_keyb.accept then
+      env:Config_set('key_binder/bindings/@before 0', reload_keyb)
+    end
+  end
+
+  -- init end
+  env:Unset_option("_reload")
+  env:Unset_option("_menu_size")
+  env.opt_update_notifier=env:Context().option_update_notifier:connect(function(ctx,name)
+  --[[
+    if name == "_reload" then 
+      Log(DEBUG,'------ reload ------')
+      env.engine.active_engine:apply_schema(env.engine.schema)
+    elseif name == "_page_size" then
+      local ms= env.engine.schema.page_size == 5 and 9 or 5
+      Log(DEBUG,'------ change menu sizer ------',ms )
+      env:Config_set('menu/page_size', ms)
+      env.engine.active_engine:apply_schema(env.engine.schema)
+    end
+ --]]
+  end)
+  do
+    ( List()
+    + "---- submodules ----"
+    + env.modules:map(function(elm) return string.format("%s: %s",elm.name, elm.comp) end)
+    + "---- engine components ----"
+    + env:components_str()
+    + "---- recognize/patterns  ----"
+    + List(env:Config_get_with_path("recognizer/patterns")):map(function(elm)
+      return elm.path .. ": " .. elm.value end)
+    ):each(function(elm,out)  Log(out,elm) end, INFO)
+  end
+end
+
+
+function M.fini(env)
+  -- modules fini
+  env.modules:each(function(elm) elm=nil end)
+  env.opt_update_notifier:disconnect()
+  
+  -- self finit --
+end
+
+
 
 function M.func(key,env)
   local Rejected,Accepted,Noop=0,1,2
   local context=env.engine.context
   local status=env:get_status()
-  -- prtkey enable/disable
+
   local debug_mode = context:get_option('_debug')
   if debug_mode and key:eq(env.keys.prtkey) then
     env:Toggle_option("prtkey")
@@ -245,6 +269,12 @@ function M.func(key,env)
   -- self func
   -- /ver /modules /comps /cal /cowsay
   local active_input= context.input:match("^/(.+)$")
+  if key:repr() == 'space' and active_input and active_input:match('menusize%d') then
+    local nfunc, ssize = active_input:match("(.+)(%d)")
+    Log(DEBUG,'active_input',active_input,F[nfunc],nfunc,ssize)
+    return F[nfunc](env,tonumber(ssize))
+  end
+
   if key:repr() == "space" and  F[active_input] then
     F[active_input](env)
     context:clear()
@@ -273,4 +303,4 @@ function Er.func(key,env)
   return Noop
 end
 
-return (rime_api.Version()>= 127  or ConfigMap) and M or Er
+return ( ConfigMap or rime_api.Version()>= 127) and M or Er

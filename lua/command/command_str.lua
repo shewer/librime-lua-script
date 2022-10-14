@@ -6,8 +6,7 @@
 -- Distributed under terms of the MIT license.
 --
 --
-require 'tools/string'
-local puts = require 'tools/debugtool'
+local List = require 'tools/list'
 local function New(self, ... )
   local obj = {}
   setmetatable(obj,self)
@@ -137,7 +136,6 @@ function Base1.__index(obj,key)
   return obj:get(key)
 end
 function Base1.__newindex(obj,key,value)
-  puts("******>", __FILE__(),__LINE__(),obj,key,value)
   obj:set(key,value)
 end
 function Base1:exec(str)
@@ -175,6 +173,7 @@ local function Option(ref,vars)
     return self.obj:get_option(name) or false
   end
   function obj:set(name,value)
+    value = value:match("(%a+)--")
     self.obj:set_option( name, value == "true")
   end
   obj.execute= obj.set
@@ -294,7 +293,6 @@ local function func_iter(self,str)
   return coroutine.wrap( function()
     local key,name,value = table.unpack(str:split(":") )
     local stalus= self.vars[name]
-    --puts("trace1", __FILE__(),__FUNC__(),__LINE__(), str , key,name,value, status)
     --if not value  then
     value = value and ":" .. value or ""
     for k,v in pairs(self.vars)  do

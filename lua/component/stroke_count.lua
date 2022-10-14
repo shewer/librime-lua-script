@@ -19,7 +19,6 @@ stroke_count = require 'stroke_count'
 --  h,s,p,n,z 代表橫、豎、撇、捺、折
 --]]
 
-require 'tools/string'
 local List=require 'tools/list'
 local str_fmt="(總:%s:%s)"
 

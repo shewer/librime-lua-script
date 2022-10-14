@@ -52,13 +52,10 @@ ex:
 --
 --]]
 
+local Env=require'tools/env_api'
 local output_fmt="dtype,type,start,_end,preedit,quality"
 local name = "_debug"
-local puts = require 'tools/debugtool'
 
-
-require 'tools/rime_api'
-require 'tools/string'
 local List=require 'tools/list'
 local function item_to_list(item)
   if item and item.type == "kList" then
@@ -144,10 +141,15 @@ function M.func(input, env)
    }
 
    for cand in input:iter() do
+     if T04 and GD then GD() end
       local comment = cand.type == "command"
       and cand.comment
       or cand.comment ..  debug_comment(items,cand,ext_data )
-      yield( ShadowCandidate( cand, cand.type,cand.text, comment) )
+      
+      local ccand = cand:get_dynamic_type() == "Shadow" and cand:get_genuine() or cand
+      ccand.comment = ccand.comment .. comment
+      yield(cand)
+      --yield( ShadowCandidate( cand, cand.type,cand.text, comment) )
    end
 end
 return M

@@ -1,5 +1,6 @@
-local Log=require 'tools/debugtool'
 
+local Env= require 'tools/env_api'
+local List= require 'tools/list'
 local English_dict= require 'tools/english_dict'
 local slash = package.path:sub(1,1)
 
@@ -8,14 +9,13 @@ local function njload()
   -- https://github.com/BlindingDark/wordninja-rs-lua
   -- rime.lua append
   -- cp wordninja.so  <user_data_dir>/lua/plugin
-  --
+  -- append cpath <user_data_dir>/lua/plugin
   -- window lua 版本不符將造成暫時取消 window版本 載入 wordnanja-rs
-  local nj = require 'tools/wordninja'
-  return nj
+  local ok,res = pcall(require ,'wordnanja')
+  if ok then return res end
+  return  require'tools/wordninja'
 end
 
-local English="english"
-local Ninja="ninja"
 
 local function load_ext_dict(ext_dict)
   --local path= string.gsub(debug.getinfo(1).source,"^@(.+/)[^/]+$", "%1")
@@ -35,23 +35,28 @@ local function load_ext_dict(ext_dict)
   return tab
 end
 
+local English="english"
+local Ninja="ninja"
+
 local T={}
 T._nj= T._nj or njload()
 T._ext_dict= T._ext_dict or load_ext_dict("ext_dict")
 
 function T.init(env)
+  local t1 = os.clock()
   Env(env)
   local config= env.engine.schema.config
   env.tag= config:get_string(env.name_space .. "/tag") or English
   local dict_name= config:get_string(env.name_space .. "/dictionary") or "english_tw"
-  env.gsub_fmt =  package.config:sub(1,1) == "/" and "\n" or "\r"
   env.dict = assert( English_dict(dict_name), 'can not Create english dict of ' .. dict_name)
 
   env.notifiers=List(
   env.engine.context.option_update_notifier:connect(
   function(ctx,name)
     if name=="english_info_mode" then
-      env.mode= env.mode and (env.mode+1) or 0
+      T._mode = T._mode and T._mode +1 or 0
+      env.mode = T._mode
+      --env.mode= env.mode and (env.mode+1) or 0
     end
   end) )
 end
@@ -71,11 +76,11 @@ local function sync_case(input, candidate_word)
 end
 
 -- 處理 英文翻譯長度及格式化 (windows  \n ->\r utf8_len 40)
-local function system_format(comment)
+local function system_format(comment,len)
+  len = len or 40
   local unix = package.config:sub(1,1) == "/"
   if not unix then
-    comment = comment:utf8_sub(1,40):gsub("\n","\r")
-  else
+    comment = comment:utf8_sub(1,len):gsub("\n","\r")
   end
   return comment
 end
@@ -102,11 +107,13 @@ local function eng_tran(dict,mode,prefix_comment,cand)
 end
 
 function T.func(inp,seg,env)
+  -- check inp format
   if not ( seg:has_tag(env.tag) or env:Get_option(English) )  then return end
 
   local input = inp:sub(seg.start+1,seg._end)
   input = input:match("^[%a][%a_.'/*:%-]*$") and input or ""
   if #input==0 then return end
+
 
   -- first_cand
   local first_comment = T.ext_dict and T._ext_dict[input:lower()]
@@ -127,21 +134,20 @@ function T.func(inp,seg,env)
 
   -- ecdict 字典支援子句
   -- 使用ninja cand 展開字句查字典
+  if not njcand then return end
   for cand in eng_tran(env.dict,env.mode,"(Ninja) ",njcand):iter() do
     yield(cand)
   end
 
   -- 使用 ninja 最後一佪字查字典 type "ninja"
   --local n_word= commit[#commit]
-  if not njcand then return end
   local n_word = njcand.text:match("%s(%a+)$")
   if not n_word then return end
-  local snjcand= Candidate("sub_ninja",njcand._end - #n_word,njcand._end, n_word,"")
+  local snjcand= Candidate("sub_ninja",njcand._end - #n_word,njcand._end, n_word,"[sninja]")
   yield(snjcand)
-  for cand in eng_tran(env.dict,env.mode,"(Ninja) ",snjcand):iter() do
-     yield(cand)
+  for cand in eng_tran(env.dict,env.mode,"(SNinja) ",snjcand):iter() do
+    yield(cand)
   end
-
 end
 
 
