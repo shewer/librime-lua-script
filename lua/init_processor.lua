@@ -123,7 +123,7 @@ function F.reload(env)
 end
 function F.menusize(env,size)
   env.engine.context:clear()
-  if size > 0  and size <10 then
+  if size and size > 0  and size <10 then
     env:Config_set('menu/page_size', size )
     Log(DEBUG,env,size,env:Config():get_string('menu/page_size'))
 
@@ -184,8 +184,8 @@ function M.init(env)
   -- init self --
   --local config=env:Config()
   append_component(env, env.name_space .. "/before_modules")
-  if T01 and GD then GD() end
   env.modules = init_modules(env)
+  if T01 and GD then GD() end
   append_component(env, env.name_space .. "/after_modules")
 
   --auto_load_bak(config:get_map("engine"))
