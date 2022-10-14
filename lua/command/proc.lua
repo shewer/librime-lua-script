@@ -39,17 +39,20 @@ local function component(env)
   config:set_string(path, pattern)
 
   -- 加入 lua_translator@command
-  config:set_string("engine/translators/@next", "lua_translator@command.tran@".. env.name_space)
-
-  do
-    local flist=List(env:Config_get("engine/filters"))
-    local uindex= flist:find_index("uniquifier") or 1
-    local luindex= flist:find_index('lua_filter@uniquifier') or 1
-    local uindex = math.max(uindex,luindex)
-    table.insert(flist,uindex +1 ,"lua_filter@command.filter@" .. env.name_space)
-    env:Config_set('engine/filters',flist)
+  local trans= List(env:Config_get('engine/translators'))
+  local cmd_tran= 'lua_translator@command.tran@' .. env.name_space
+  if not trans:find_match(cmd_tran) then
+    config:set_string("engine/translators/@next", cmd_tran)
   end
 
+  -- 加入 lua_filter@command
+  local filters= List(env:Config_get('engine/filters'))
+  local cmd_filter = "lua_filter@command.filter@" .. env.name_space
+  if not filters:find_match(cmd_filter) then
+    local _,uindex = filters:find_match('uniquifier')
+    uindex = uindex and uindex -1 or 1
+    config:set_string('engine/filters/@after '.. uindex, cmd_filter)
+  end
 end
 local P={}
 function P.init(env)
