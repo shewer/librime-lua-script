@@ -77,18 +77,22 @@ def write_leveldb(filename,rows):
 def main(fn,fmt):
     """TODO: Docstring for main.
     :returns: TODO
-    python conv_file.py  file.[txt|csv]  [leveldb|chunk]
+    python conv_file.py  file.[txt|csv]  [leveldb|chunk] -- default: luac compile to chunk_bin
 
     """
     try:
 
         f,ext = os.path.splitext(fn)
         rows = ext == ".csv" and  load_csv(fn) or load_text(fn)
-        outtype = sys.argv[2]
         if fmt== 'leveldb':
             write_leveldb(f,rows)
-        else:
+        elif fmt == 'chunk':
             write_chunk(f + '.txtl', rows)
+        else:
+            write_chunk(f + '.txtll',rows)
+            print("compile to bin ")
+            os.system( 'luac -o '+ f + ".txtl " + f + ".txtl && rm " + f +".txtll" )
+
 
     except ValueError as ve:
         return str(ve)
@@ -97,12 +101,11 @@ def main(fn,fmt):
 
 if __name__ == '__main__' :
 
+    print(sys.argv,len(sys.argv))
     if len(sys.argv) <2:
-        print('help : python english_conv.py  filename  (chukn|lezeldb) ')
+        print('help : python english_conv.py  filename  [chukn|lezeldb] default: chunk_bin ')
     else:
-        print(sys.argv)
         fn= sys.argv[1]
-        fmt= sys.argv[2]
+        fmt= len(sys.argv)>2 and sys.argv[2] 
         sys.exit(main(fn,fmt))
-
 

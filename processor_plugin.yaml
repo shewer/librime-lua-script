@@ -5,36 +5,44 @@
 #
 #--------------------------------
 patch:
-  engine/processors/@after 0: lua_processor@init_processor@module_tw
+  engine/processors/@after 0: lua_processor@init_processor@module
+  #engine/processors/@after 0: lua_processor@init_proc
   schema/dependencies/+:
     - essay
     - essay_cn
-  module_tw:
+  module:
     modules:
-      - { module: 'command', module_name: "cammand_proc", name_space: "command" }
-      - { module: 'component/select_character', module_name: "select_character", name_space: "translator" }
-      - { module: 'english', module_name: "english_proc", name_space: "english" }
-      - { module: "conjunctive", module_name: "conjunctive_proc", name_space: "conjunctive" }
-      - { module: 'multi_reverse', module_name: "multi_reverse_proc", name_space: "multi_reverse" }
+      - { module: 'command', prescription: "lua_processor@command.proc@command" }
+      - { module: 'select_character.proc', prescription: "lua_processor@select_character.proc" }
+      - { module: 'english', prescription: "lua_processor@english.proc@english" }
+      - { module: "conjunctive", prescription: "lua_processor@conjunctive.proc@conjunctive"} #, module_name: "conjunctive.proc" }
+      - { module: 'multi_reverse', prescription: "lua_processor@multi_reverse.proc@multi_reverse" }
+        
     keybinds:
       prtscr: "Control+F12" # commit_text of menu list
       prtkey: "Shift+F12"
+      reload: "F9"
+
 
     # init_processor   append comopents
     before_modules:
       filters:
-        #- lua_filter@stroke_count
+        - lua_filter@stroke_count
         #- lua_filter@debug_filter
       segments:
       translators:
+        - lua_translator@unicode_tran
+        #- lua_translator@ecdict
     after_modules:
       filters:
         - lua_filter@stroke_count
         #- uniquifier
+        #- lua_filter@multi_reverse.filter@S_luna_pinyin
         - lua_filter@debug_filter
       segments:
       translators:
-        - lua_translator@select_character_tran@select_character   # select_character 配件 模擬矩陣符號表 []1-0 選字 /emj /nu /sma /smb /smc
+        - lua_translator@memory_tran@luna_pinyin
+        - lua_translator@select_character.tran@select_character   # select_character 配件 模擬矩陣符號表 []1-0 選字 /emj /nu /sma /smb /smc
 
   # select_character name_space translator 須要調用反查字典和 comment_format 設定 name_space :translator
   # name_space of select_character hot-key
@@ -43,8 +51,8 @@ patch:
   #translator/comment_format:
   #translator/preedit_format:
   translator/keybinds:
-    next: bracketleft  # [ --->
-    prev: bracketright  # ] <--
+    next: [ #--->
+    prev: ] #<--
   #-------------- modules initialize of name_space
   multi_reverse:
     keybinds:
@@ -54,39 +62,55 @@ patch:
       next: "Control+9"
       prev: "Control+0"
       hold: "Shift_L"
+    extensions: #用於 方案只有主字典,用以反查其他方案主字典
+      - luna_pinyin #  add  lua_filter@multi_reverse.filter@S_luna_pinyin  讀取 luna_pinyin.schema:/translator data
+      - cangjie5
   #------------ english module
   english: #
-    tag: abc #  中文模式調用 英文字典 default : none
-      #dictionary: english # defaul english_tw 字典橎位置 lua/tools/english.txt
+    #tag: abc #  中文模式調用 英文字典 default : none
+    dictionary: #ecdict #english # defaul english_tw 字典橎位置 lua/tools/english.txt
     keybinds:
       toggle: F10 #  enable/disable key
+      mode: "Shift+F10"
 
   #繁體使用者 simplifier/opencc_config: t2s.json (預設)  default: 繁體詞庫 enable: 簡體詞庫
   #conjunctive_cn/files: [essay.txt, essay_cn.txt]
   #簡體使用者 simplifier/opencc_config: s2t.json (預設)  default: 體簡詞庫 enable: 繁體詞庫
   #conjunctive_cn/files: [essay_cn.txt, essay.txt]
   conjunctive:
-    files: [essay.txt, essay_cn.txt]
+    files: essay.txt # essay_cn.txt
+    tran_name_space: luna_pinyin
     escape_char: ".-"
+
     keybinds:
       toggle: "F11"
+      trigger: "~"
+      command: "C"
+      restory: "B"
+      histroy: "H"
+      left: "<"
+      right: ">"
+
+
 
   debug_filter:
     output_format: [dtype,type,start,_end,preedit,quality,input,ainput,error]
     #tags:
-
   # switches default
+  __patch: append_sw
+append_sw:
   switches/+:
     - name: conjunctive
-      states: [ 無,聯]
+      states: [ 🈲,聯]
       reset: 1
     - name: english
-      states: [ 無,英]
+      states: [ 🈲,英]
     - name: multi_reverse
-      states: [ 無,查]
+      states: [ 🈲,查]
     - name: qcode
-      states: [ 無,短]
+      states: [ 🈲,短]
     - name: completion
-      states: [ 無,未]
+      states: [ 🈲,未]
     - name: _debug
-      states: [ off, on]
+      states: [ 🈲 , 🐞]
+      reset: 0
