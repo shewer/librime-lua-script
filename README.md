@@ -17,7 +17,7 @@
 
   * 載入程序: 以上模組都可以獨立手動載入也可以利用, init_processor.lua 把需要載入模組設定於 <name_space>/modules: {list}. 預設以此模式[安裝](#安裝)。
 
-    
+
 
   # [![](https://payment.ecpay.com.tw/Upload/QRCode/202207/QRCode_a18bdda1-d2d0-45a2-a4c1-42ce7528e949.png)](https://p.ecpay.com.tw/A6D7688)
 
@@ -28,7 +28,7 @@
   * 修正 librime-lua #131 無法正常安裝使用(已在 #131環境下載入全部測試 無重大問題 )
   * 終止增加改版，將以 librime-lua #177 以上環境爲主
   * 聯想 丶英文丶八股文 由用戶設定字典即可，  繁->簡  簡->繁 已無需分開設定
-  * 
+  *
 * 2022/08/02
   * 英打模組:增加 [ecdict.csv](https://github.com/skywind3000/ECDICT)字典(已壓縮至 dict.tar.xz中) , #177 使用 leveldb , 小於#177 仍然使用 chunk
   * 英打模組:增加自動編譯固態字典檔以改善載入字典時間(減少90%時間)，共用字典table 減少記憶體使用及再次載入時間
@@ -38,18 +38,20 @@
   # 安裝
 
    新增簡體版本設定檔( customize_cn.recipe.yaml , processor_plugin_cn.yaml )
-   window 版本請更換 rime.dll 至 librime-lua #131. 
+   window 版本請更換 rime.dll 至 librime-lua #131.
 
   ## plum 安裝至方案中
 
   ```bash
-    # plugin in cangjie5 
+    # plugin in cangjie5
     rime-install shewer/librime-lua-script@main:customize:schema=cangjie5
-    echo 'init_processor= require("init_processor")' >> rime.lua 
+    echo 'init_processor= require("init_processor")' >> rime.lua
+    tar xvf  librime-lua-script/dict.tar.xz
+    python librime-lua-script/english-conv.py english.txt  # 轉換lua table bytecode 加速載入時間 新
     # 簡體
     #rime-install shewer/librime-lua-script@main:customize_cn:schema=cangjie5
-    #echo 'init_processor= require("init_processor")' >> rime.lua 
-    
+    #echo 'init_processor= require("init_processor")' >> rime.lua
+
   ```
 
   ## 手動安裝事前準備
@@ -60,6 +62,9 @@
   cp librime-lua-script/processor_plug* .
   cp librime-lua-script/essay_cn.txt .
   echo 'init_processor = require("init_processor")' >> rime.lua
+  tar xvf  librime-lua-script/dict.tar.xz
+  python librime-lua-script/english-conv.py english.txt  # 轉換lua table bytecode 加速載入時間 新
+
   ```
 
   ## 方案設定
@@ -72,6 +77,9 @@
         #__include: processor_plugin_cn:/patch  # 簡體
   # }
   ```
+  ## processor_plugin.yaml 內文設定(見內文)
+
+
 
   # 使用說明
   ## init_processor
@@ -79,14 +87,14 @@
     init_processor 將檢查 engine 下 lua_component 是否載入lua環境中，井嘗試載入
 
   ### 操作
-    * /ver : commit_text ver 
+    * /ver : commit_text ver
     * /modules : commit_text 載入模組
     * /comps : commit_text engine components
     * /cal: commit_text 月曆
-    * Control+F12: commit_text menu candidate 
+    * Control+F12: commit_text menu candidate
     * Shift+F12: commit_text key:repr() ，在option "_debug" enable 時可以送出 鍵名字串
 
-   
+
 
   ## command 模組
     使用 input 設定及查詢相關環境, /c + /f:reload 可以做動態設定環境
@@ -111,18 +119,18 @@
 
 * 2022/08/02更新
 
-  *  增加 字典轉換 script ，取消自動轉換機制， 須要事先將 english.txt ecdict.csv 轉換成 chunk 或是 leveldb 格式 
+  *  增加 字典轉換 script ，取消自動轉換機制， 須要事先將 english.txt ecdict.csv 轉換成 chunk 或是 leveldb 格式
   * 增加 LevelDb 字典格式( librime-lua #177) 可以有效降低內存使用量，新版本建議轉換成LevelDb字典
 
-  
+
 
   ```bash
-    # user_data_dir 
+    # user_data_dir
       tar xvf dict.tar.xz  # 解壓縮至 user_data_dir (english.txt english_tw.txt ecdict.csv)
       pip3 install leveldb # 安裝 leveldb csv 模組
       pip3 install csv
       python english_conv.py (english.txt|ecdict.csv)  (chunk|leveldb)
-      # 壓縮 chunk file 
+      # 壓縮 chunk file
       luac -o english.txtl1 english.txtl
       mv english.txt1 english.txtl
   ```
@@ -134,7 +142,7 @@
   *  comment 格式切換: Shift+F10
 
   *  在英打模式下 支援 * / 字尾字根:詞類  /i ing /n ness /l less  /t tion /s sion /a able :adj v vi vt ...
-  *  想要在中打模式下調用 此模組可以在 tag 上着手 ( abc/extra_tags: [ english ]  or english/tag: abc ), 但是不支援[ / * : ] 
+  *  想要在中打模式下調用 此模組可以在 tag 上着手 ( abc/extra_tags: [ english ]  or english/tag: abc ), 但是不支援[ / * : ]
 
   *  english/tag 預設 english : 如果須要在 tag:abc 輸出，可以在 english/tag: abc   or  abc_segmentor/extra_tags: [ english ] ( 中打模式中可能失去 / * : 功能)
   *  english_tran.lua 增加 優先載入 wordnanja-rs  , 只要把 wordninja.(dll/so/dylib) 放入 <user_data_dir>/lua/plugin  **注意lua VERSION  wordninja.dll (5.3) librime-lua(5.4)
@@ -144,14 +152,14 @@
 *   ex: input: btw   candidate:  btw [by the way]  candidate: by the way [btw]
 *   english/tag 預設 english : 如果須要在 tag:abc 輸出，可以在 english/tag: abc   or  abc_segmentor/extra_tags: [ english ]
 *  english_tran.lua 增加 優先載入 wordnanja-rs  , 只要把 wordninja.(dll/so/dylib) 放入 <user_data_dir>/lua/plugin
-*  支援 camel upper case 轉換  
-*  字典初始化請提前製作 
+*  支援 camel upper case 轉換
+*  字典初始化請提前製作
 
 
 ```lua
 -- 手動初始化固態字典 ，在<user_data_dir/lua 執行
--- lua -e 'ENG=require("tools/english_dict"); Eng("ecdict") ;Eng("english")' 
--- @ <user_data_dir>/compiler.lua   
+-- lua -e 'ENG=require("tools/english_dict"); Eng("ecdict") ;Eng("english")'
+-- @ <user_data_dir>/compiler.lua
 Eng=require('tools/english_dict')
 Eng('ecdict') -- 如果找不到了 ecdict.txtl  換找 .txt or .csv  製作 .txtl (固態字典)
 Eng('english')
@@ -160,7 +168,7 @@ Eng('english_tw')
 
 
   ## 反查模組
-    自動載入 table script translator 反查filter，免去設定 
+    自動載入 table script translator 反查filter，免去設定
   ### 操作
     * Ctrl+6 反查開關
     * ctrl+7 反查碼顯示最短碼開關 較適合table_translator
@@ -179,10 +187,10 @@ Eng('english_tw')
       H : user 常用詞 選屏上字
 
   ## debug 模式
-    提供顯示candidate info 於 comment 
-    
+    提供顯示candidate info 於 comment
+
     * "/o:_debug" : debug 開關
-    * "/p:_debug" : 設定顯示項目 dtype,type,start,_end,preedit,quality,input,ainput,error 
+    * "/p:_debug" : 設定顯示項目 dtype,type,start,_end,preedit,quality,input,ainput,error
     ```
     (鯨)木十弓	 [tags: vcode cangjie5liu newcjliu abc]
     ->檸	--Phrase|table|0|3|(鯨)木十弓|1.7018|tjk|tjk|
@@ -195,11 +203,11 @@ Eng('english_tw')
       檸檬茶	[聯]--Simple|history|0|3|檸檬茶[聯]|0.0000|tjk|tjk|
       檸檬水	[聯]--Simple|history|0|3|檸檬水[聯]|0.0000|tjk|tjk|
       檸檬片	[聯]--Simple|history|0|3|檸檬片[聯]|0.0000|tjk|tjk|
-    
+
     ```
 
   ## 筆劃數 stroke_count
-    利用 stroke字典計算筆劃數井加入 comment,此功能須要stroke.reverse.db ，使用 option: "stroke_count" 開關此功能(ex: /o:stro{Tab}{space} ) 
+    利用 stroke字典計算筆劃數井加入 comment,此功能須要stroke.reverse.db ，使用 option: "stroke_count" 開關此功能(ex: /o:stro{Tab}{space} )
     ```
     (鯨)木十弓	 [tags: vcode cangjie5liu newcjliu abc]
     ->檸	(總:18:18)--Phrase|table|0|3|(鯨)木十弓|1.7018|tjk|tjk|

@@ -3,6 +3,10 @@
 # patch:
 #   __include: processor_plugin:/patch
 #
+# init_processor   module
+#   append before_modules to segmentors translators filters
+#   append modules to segmentors translators filters
+#   append after_modules to segmentors translators filters
 #--------------------------------
 patch:
   engine/processors/@after 0: lua_processor@init_processor@module
@@ -10,14 +14,15 @@ patch:
   schema/dependencies/+:
     - essay
     - essay_cn
+    - stroke
   module:
     modules:
-      - { prescription: "lua_processor@command.proc@command" } # lua/command/proc.lua
-      - { prescription: "lua_processor@select_character.proc" } # lua/select_character/proc.lua
-      - { prescription: "lua_processor@english.proc@english" } # lua/english/proc.lua
-      - { prescription: "lua_processor@conjunctive.proc@conjunctive"} # conjunctive/prac.lua , module_name: "conjunctive.proc" }
-      - { prescription: "lua_processor@multi_reverse.proc@multi_reverse" } # lua/multi_reverse/proc.lua
-        
+      - { prescription: "lua_processor@command.proc@command" } # lua/command/proc.lua namespace: command
+      - { prescription: "lua_processor@select_character.proc" } # lua/select_character/proc.lua  namespace: translator(default)
+      - { prescription: "lua_processor@english.proc@english" } # lua/english/proc.lua namespace: english
+      - { prescription: "lua_processor@conjunctive.proc@conjunctive"} # conjunctive/prac.lua namespace: conjunctive
+      - { prescription: "lua_processor@multi_reverse.proc@multi_reverse" } # lua/multi_reverse/proc.lua namespace: multi_reverse
+
     keybinds:
       prtscr: "Control+F12" # commit_text of menu list
       prtkey: "Shift+F12"
@@ -50,7 +55,7 @@ patch:
   #translator/dictionary:
   #translator/comment_format:
   #translator/preedit_format:
-  translator/keybinds:
+  translator/keybinds:  # nama_space of keybinds of select_character
     next: [ #--->
     prev: ] #<--
   #-------------- modules initialize of name_space
@@ -68,17 +73,16 @@ patch:
   #------------ english module
   english: #
     #tag: abc #  中文模式調用 英文字典 default : none
-    dictionary: #ecdict #english # defaul english_tw 字典橎位置 lua/tools/english.txt
+    #
+    # 字典使用 english_conv.py file.[txt|csv]  [chunk|leveldb] 轉換
+    dictionary: english #ecdict #english # defaul english_tw 字典橎位置 <user_data_dir>/english[.txtl] (leveldb | chunk)
     keybinds:
       toggle: F10 #  enable/disable key
-      mode: "Shift+F10"
+      mode: "Shift+F10" #切換comment 模式
 
-  #繁體使用者 simplifier/opencc_config: t2s.json (預設)  default: 繁體詞庫 enable: 簡體詞庫
-  #conjunctive_cn/files: [essay.txt, essay_cn.txt]
-  #簡體使用者 simplifier/opencc_config: s2t.json (預設)  default: 體簡詞庫 enable: 繁體詞庫
-  #conjunctive_cn/files: [essay_cn.txt, essay.txt]
+  # 聯想namespace 設定
   conjunctive:
-    files: essay.txt # essay_cn.txt
+    files: essay.txt # essay_cn.txt <---- 字典
     tran_name_space: luna_pinyin
     escape_char: ".-"
 
