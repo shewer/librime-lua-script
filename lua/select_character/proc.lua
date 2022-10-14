@@ -48,9 +48,8 @@ local C01=""
 --]]
 --  require 'tools/string' -- utf8 module
 -- local List=require 'tools/list'
-require 'tools/string'
-local puts = require 'tools/debugtool'
 -- default  keybinds
+local List = require 'tools/list'
 local NEXT_KEY="["
 local PREV_KEY="]"
 
@@ -112,7 +111,7 @@ function CM:_update()
 end
 function CM:index(index)
   if type(index) == "number" and self._index ~= index then
-    self._index = (index -1) % self:size() + 1
+    self._index = (index ) % self:size() 
     self:_update()
   end
   return self._index
@@ -120,11 +119,11 @@ end
 
 
 function CM:inc()
-  local index= self:index() or  0
+  local index= self:index() or  -1
   return  self:index( index +1  )
 end
 function CM:dec()
-  local index= self:index() or  self:size()+1
+  local index= self:index() or  0
   return self:index( index -1 )
 end
 
@@ -132,8 +131,8 @@ end
 
 
 function CM:select_character(index)
-  index = self:index(index)
-  local word=  self._text:utf8_sub(index,index)
+  local idx = self:index(index) +1  -- lua start form 1
+  local word=  self._text:utf8_sub(idx,idx)
   return word
 end
 function CM:select_org_character(index)
@@ -171,7 +170,7 @@ local function Warp_cand(cand, projection_func, index )
   obj._org_preedit=obj._cand.preedit
   obj._org_comment=obj._cand.comment
   obj._projection=projection_func
-  obj._index= index or 0
+  obj._index= nil -- dec inc will init
   return setmetatable(obj, CM )
 end
 
@@ -182,7 +181,7 @@ local function load_project_func(env)
   if use_reverse then
     -- load reversedb
     local dictionary= config:get_string( env.name_space .. "/dictionary") or config:get_string("translator/dictionary" )
-    reversedb= rime_api.load_reversedb(dictionary)
+    reversedb= rime_api.ReverseDb(dictionary)
 
     select_preedit_path= config:get_string(env.name_space .. '/select_preedit_format') or "comment_format"
     -- load projection
@@ -219,7 +218,9 @@ function M.init(env)
   env.tail= KeyEvent(pk )
   -- load preedit_mode  default
   env.projection_func= load_project_func(env)
-
+  function env.Warp_cand(cand)
+    return Warp_cand(cand,env.projection_func)
+  end
 end
 
 function M.fini(env)
@@ -242,24 +243,24 @@ function M.func(key,env)
     -- entery  select_character  processor
 
     if cand.type == "symble" then
-      env.cand = env.cand and env.cand or Warp_cand(cand, env.projection_func)
+      env.cand = env.cand and env.cand or env.Warp_cand(cand, env.projection_func)
     end
 
     if key:eq(env.head) then
       -- 往下定字  -->
-      env.cand = env.cand and env.cand or Warp_cand(cand, env.projection_func)
+      env.cand = env.cand and env.cand or env.Warp_cand(cand, env.projection_func)
       env.cand:inc()
       return Accepted
     elseif key:eq(env.tail) then
       -- 往上定字  <--
-      env.cand = env.cand and env.cand or Warp_cand(cand, env.projection_func)
+      env.cand = env.cand and env.cand or env.Warp_cand(cand, env.projection_func)
       env.cand:dec()
       return Accepted
     elseif  env.cand and ( key:repr():match("^%x$") or key.keycode == 0x20) then
       local n= tonumber(key:repr():match("^%x$") or "" ,16) --key.keycode - 0x30
-      -- 以詞定字模式標 定字上屏 n= 0-f   index = 1-16
-      n = n and n+1 or nil
-      env.engine:commit_text( env.cand:select_org_character( n  ))
+      -- 以詞定字模式標 定字上屏 n= 1-f 0  index = 1-16
+      n = n and n-1 or nil
+      env.engine:commit_text( env.cand:select_character( n  ))
 
       -- clear env.cand
       env.cand:clear()

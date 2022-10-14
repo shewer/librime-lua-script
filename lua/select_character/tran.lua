@@ -29,8 +29,6 @@ emj=[[😀😃😄😁😆😅🤣😂🙂🙃😉😊😇🥰😍🤩😘😗�
 }
 
 
-local puts = require 'tools/debugtool'
-require 'tools/string'
 local M={}
 function M.init(env)
   env.pattern = "^/(%a+)$"
