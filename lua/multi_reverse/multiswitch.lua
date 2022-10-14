@@ -22,7 +22,7 @@ function M:size()
   return #self
 end
 function M:status(set)
-  if set ~=nil then 
+  if set ~=nil then
     self._status = set and true or false
   end
   return self._status and self[self._index+1] or ""
@@ -37,8 +37,8 @@ function M:off()
   return self:status(false)
 end
 function M:index(i)
-  if type(i) == "number" then 
-    self._index = i % #self 
+  if type(i) == "number" then
+    self._index = i % #self
   end
   return self._index
 end

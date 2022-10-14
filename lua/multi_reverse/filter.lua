@@ -10,17 +10,19 @@
 --[[
 ------- lua_filter ---------------
 --
--- 由 processor.init() 取得 engine/translators ConfigList中的 script_translator & table_translator
--- @name_space  轉出  lua_filter@name_filter@namespace 字串 加入 engine/filters
---
-option: qcode   -- 顯示 字根短碼
-option: multi_reverse  -- tag_match 條件
-property: multi_rverse  -- tags_match 條件   env.name_space
 
-config:
-  <name_space>/dictionary: -- tags_match 條件 open ReverseDb
-  <name_space>/tags:  -- tags_match 條件   has_tags
-  <name_space>/comment_format:  Projection pattern
+
+反查碼 filtera 是以 property: multi_reverse: <name_space> match 時觸發反查機制
+
+ex:
+
+
+lua_filter@multi_reverse.filter@name_space
+_G['multi_reverse.filter'] = require 'multi_reverse.filter'
+
+luafilter@reverse_filter@<name_space>
+_G['reverse_filter'] = require 'multi_reverse.filter'
+
 
 
 -----------------------------------
@@ -43,19 +45,12 @@ translator/dictionary:
 local Env = require 'tools/env_api'
 local List= require'tools/list'
 
--- 簡碼處理 ex:   "abcd abc cc aa" -->  "aa cc" ,"abcd abc cc aa"
+-- 簡碼處理 ex:   "abcd abc cc aa" -->  "cc aa"
 local function quick_code(text)
-  local pattern="[^%s]+"
-  local list=List()
-  for sp in text:gmatch(pattern) do
-    list:push(sp)
-  end
-  local min = list:reduce(
-  function(elm,org)
-    return #elm < org and #elm or org
-  end , 100 )
-  return list:select(function(elm) return #elm <= min end ):concat(" ")
-
+  local tab=text:split("%s+")
+  if #tab <=1 then return tab[1] end
+  local min = tab:reduce(function(elm,min) return min < #elm and min or #elm end, 100)
+  return tab:select(function(elm) return #elm <= min end):concat(" ")
 end
 
 -- load <name_space>/tags to table
@@ -105,14 +100,24 @@ end
 
 function M.init(env)
   Env(env)
-  local config=env.engine.schema.config
   local context=env.engine.context
   env.tags= get_tags(env)
 
-  env.projection= rime_api.Projection( config, env.name_space .. "/comment_format")
-  env.dictionary= config:get_string(env.name_space .. "/dictionary")
-  --if T03 then GD() end
-  env.reverdb= rime_api.load_reversedb(env.dictionary)
+  -- init comment_formate and reversedb
+  -- default  self , S_<schema>/translatior , name_space not fund : <schema>/transltor
+  local ns , config = env.name_space , env.engine.schema.config
+  if ns:match("^S_(.+)$") then
+    -- setup  schema_id <-- ns:match("^S_(.+)$") ns <-- 'translator'
+    config =Schema(ns:match("^S_(.+)$")).config
+    ns = "translator"
+  elseif config:is_null(ns) then
+    -- try to setup  schema_id <-- ns  ns <-- translator
+    config= Schema(ns).config
+    ns = "translator"
+  end
+  env.projection= rime_api.Projection( config, ns .. "/comment_format")
+  env.dictionary= config:get_string( ns .. "/dictionary")
+  env.reverdb= rime_api.ReverseDb(env.dictionary)
 end
 
 function M.fini(env)

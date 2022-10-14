@@ -40,11 +40,15 @@ local Multi_reverse_hold="multi_reverse_hold"
 
 -- get name_space of table_translator and script_translator
 local function get_trans_namespace(env)
+  local s_id = env.engine.schema.schema_id
   local function ts_trans(tran)
     return tran:match("table_translator@(.+)$") or tran:match("script_translator@(.+)$")
   end
   return List(env:Config_get("engine/translators"))
   :select(ts_trans):map(ts_trans):unshift('translator')
+  + List(env:Config_get(env.name_space .. "/extensions"))
+  :select(function(elm) return s_id ~= elm end)
+  :map(function(elm) return "S_" .. elm end)
 end
 
 local function component(env)
@@ -52,24 +56,27 @@ local function component(env)
   local f_path="engine/filters"
   local mfilter='multi_reverse.filter'
 
-  local filters_chk= List(env:Config_get(f_path))
-  -- load module 
+  -- load module
   _G[Completion] = _G[Completion] or require(Completion)
   _G[mfilter] = _G[mfilter] or require( mfilter )
   -- find match string
   local function fm(elm,mstr) return elm:match(mstr) end
 
+  local filters= List(env:Config_get(f_path))
   -- insert  lua_filter@completion at first
-  if not filters_chk:find(fm, "lua_filter@"..Completion) then
+  if not filters:find_match( "lua_filter@"..Completion) then
     config:set_string( f_path .. "/@before 0" , "lua_filter@" .. Completion   )
   end
-  --if T02 then GD() end
 
-  -- return  append filter  
-  get_trans_namespace(env) :each(function(elm)
-    local comp= string.format("lua_filter@%s@%s",mfilter,elm)
-    if not filters_chk:find(fm, comp) then
-      config:set_string(f_path .. "/@next" , comp)
+  -- return  append filter
+  local _,u_index= filters:find_match('simplifier')
+  u_index = u_index and u_index -1 or #filters -1
+  (get_trans_namespace(env) )
+  :reverse()
+  :each(function(elm)
+    local comp= ("lua_filter@%s@%s"):format(mfilter, elm)
+    if not filters:find_match(comp) then
+      config:set_string(f_path .. "/@before " .. u_index , comp)
     end
   end)
 end
@@ -88,11 +95,11 @@ function P.init(env)
   local context=env:Context()
   local config= env:Config()
   component(env)
+  -- load key_binder file
   env.keys= init_keybinds(env)
 
   local MultiSwitch=require'multi_reverse/multiswitch'
   env.trans= MultiSwitch( get_trans_namespace(env) )
-  -- load key_binder file
 
   -- initialize option  and property  of multi_reverse
   --context:set_option(Multi_reverse,true)
@@ -106,14 +113,16 @@ function P.init(env)
   env.notifier=List(
   {
     context.property_update_notifier:connect(function(ctx,name)
-    if name == Multi_reverse then
-      -- reflash cand.comment 
+    if ctx:has_menu() and name == Multi_reverse then
+      -- reflash cand.comment
       local selected_index = ctx.composition:back().selected_index
       ctx:refresh_non_confirmed_composition()
-      ctx.composition:back().selected_index = selected_index 
+      ctx.composition:back().selected_index = selected_index
     end
+  --[[
+  ]]
     end),
-  })
+  }) 
 end
 
 function P.fini(env)
