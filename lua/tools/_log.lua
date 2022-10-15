@@ -37,6 +37,7 @@ log_type_func={
 
 function Log( tag , ...)
   local info= debug.getinfo(2,'Sln')
+  info.short_src = info.short_src:match("lua/(.*.lua)$")
   local tab= {...}
   for i=1,#tab  do 
     tab[i]=tostring( tab[i])
@@ -71,6 +72,8 @@ local function tab_to_s(tab,str,depth)
 end
 function Log_data(tag,obj,msg,enab_mt)
   local info= debug.getinfo(2,'Sln')
+  info.short_src = info.short_src:match("lua/(.*.lua)$")
+
   info_str=("%s [%s:%s:%s] : ---inspect: %s--- : %s"):format(tag,info.short_src,info.name,info.currentline, msg or "", obj)
   local str = ""
   if type(obj)== "table" then 

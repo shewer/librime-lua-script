@@ -63,6 +63,9 @@ end
 function FS.sdir(env)
   return rime_api.SHARED_DIR
 end
+function FS.mem(env)
+  return ("%6.3f"):format(collectgarbage('count'))
+end
 
 
 local function commit_text(env, str)
@@ -177,6 +180,12 @@ function M.init(env)
   env:Unset_option("_menu_size")
   env.opt_update_notifier=env:Context().option_update_notifier:connect(function(ctx,name)
   end)
+  env.commit_notifier=env:Context().commit_notifier:connect(function(ctx)
+    local bf=collectgarbage('count')
+    collectgarbage()
+    local ff=collectgarbage('count')
+    Log(DEBUG,'-----mem',bf,ff,bf-ff)
+  end)
 
   do
     ( List()
@@ -196,6 +205,7 @@ function M.fini(env)
   -- modules fini
   env.modules:each(function(elm) elm=nil end)
   env.opt_update_notifier:disconnect()
+  env.commit_notifier:disconnect()
 
   -- self finit --
 end
