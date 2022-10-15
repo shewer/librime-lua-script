@@ -90,7 +90,12 @@
     * /ver : commit_text ver
     * /modules : commit_text 載入模組
     * /comps : commit_text engine components
-    * /cal: commit_text 月曆
+    * /cal : commit_text 月曆
+    * /udir : commit_text user_data_dir
+    * /sdir : commit_text shared_data_dir
+    * /reload : reload
+
+    * /pgsize + 1-9: change pagesize
     * Control+F12: commit_text menu candidate
     * Shift+F12: commit_text key:repr() ，在option "_debug" enable 時可以送出 鍵名字串
 

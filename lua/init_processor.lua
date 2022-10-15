@@ -19,120 +19,82 @@ local List = require 'tools/list'
 _NR = package.config:sub(1,1):match("/") and "\n" or "\r"
 -- init_module only for Processor
 
-local F={}
-function F.screen_print(env)
+local FS={} -- commit_text
+function FS.screen_print(env)
   local engine = env.engine
   local page_size = engine.schema.page_size
   local context = engine.context
   local seg = context.composition:back()
   local s_index = seg.selected_index
   local st = s_index - s_index % page_size
-  --[[
-  engine:commit_text( context:get_selected_candidate().preedit .. "\t" .. seg.prompt .. _NR )
-  for i=st , st+page_size -1  do
-    local cand = seg:get_candidate_at(i)
-    if not cand then return end
-    local head = i == s_index and "->" or "  "
-    local out = ("%s%s\t%s%s"):format(i == s_index and "->" or "  ", cand.text, cand.comment,_NR)
-    engine:commit_text(out)
-  end
-  engine:commit_text(_NR)
-  do
-    (List()
-    + engine:commit_text( context:get_selected_candidate().preedit .. "\t" .. seg.prompt .. _NR )
-    + List.Range(st,st+page_size -1 ):map(function(elm)
-      local c= seg:get_candidate_at(elm)
-      if c then
-        local head = elm == s_index and "-->" or "   "
-        return ("%s%s:\t%s%s"):format(head, c.text, c.comment, _NR)
-      end
-    end)
-    ):each(function(elm) engine:commit_text(elm) end)
-  end
-  --]]
-  local fs = env:Get_option('full_shape')
-  if fs then env:Unset_option('full_shape') end
 
   local str_head = context:get_selected_candidate().preedit .. "\t" .. seg.prompt .. _NR
-  local strlist= List.Range(st,st+page_size-1):map(function(elm) 
+  local strlist= List.Range(st,st+page_size-1):map(function(elm)
     local c=seg:get_candidate_at(elm)
-    local head = elm == s_index and '-->' or '   ' 
+    local head = elm == s_index and '-->' or '   '
     return ("%s%s:\t%s%s"):format(head, c.text, c.comment,_NR)
   end):concat()
-  env.engine:commit_text(str_head .. strlist)
-
-  if fs then env:Set_option('full_shape') end
+  return (str_head .. strlist)
 end
 
-function F.modules(env)
-  local fs = env:Get_option('full_shape')
-  if fs then env:Unset_option('full_shape') end
-
-  local str = env.modules:map( 
+function FS.modules(env)
+  return env.modules:map(
   function(elm) return ("%s: %s%s"):format( elm.name,elm.comp,_NR) end):concat()
-  env.engine:commit_text(str)
-
-  if fs then env:Set_option('full_shape') end
 end
 
-function F.comps(env)
-  local fs = env:Get_option('full_shape')
-  if fs then env:Unset_option('full_shape') end
-
-  env.engine:commit_text( env:components_str():concat(_NR) )
-
-  if fs then env:Set_option('full_shape') end
+function FS.comps(env)
+  return env:components_str():concat(_NR)
 end
 
-function F.cal(env)
-
-  local fs = env:Get_option('full_shape')
-  if fs then env:Unset_option('full_shape') end
-
+function FS.cal(env)
   local cal = require 'tools/cowsay'
-  local str = ('```%s%s%s```%s'):format(_NR,cal(),_NR,_NR)
-  env.engine:commit_text(str)
+  return ('```%s%s%s```%s'):format(_NR,cal(),_NR,_NR)
+end
 
-  if fs then env:Set_option('full_shape') end
-  --engine:commit_text("```" .. _NR)
-  --local cal = require('tools/cowsay')
-  --cal():split("\n")
-  --:each(function(line)
-    --engine:commit_text(line .. _NR)
-  --end)
-  --engine:commit_text("```" .. _NR)
+function FS.cowsay(env)
+  return ( "```\n" .. io.popen('cal | cowsay -n'):read() .. "\n```\n"):gsub('\n',_NR)
 end
-function F.cowsay(env)
-  local engine=env.engine
-  engine:commit_text("```" .. _NR)
-  for line in io.popen("cal |cowsay -n"):lines() do
-    engine:commit_text(line .. _NR)
+function FS.ver(env)
+  return rime_api.Ver_info()
+end
+function FS.udir(env)
+  return rime_api.USER_DIR
+end
+function FS.sdir(env)
+  return rime_api.SHARED_DIR
+end
+
+
+local function commit_text(env, str)
+  if type(str) == 'string' and #str > 0 then
+    local fs = env:Get_option('full_shape')
+    if fs then env:Unset_option('full_shape') end
+    env.engine:commit_text( str )
+    if fs then env:Set_option('full_shape') end
+    return true
   end
-  engine:commit_text("```" .. _NR)
 end
-function F.ver(env)
-  env.engine:commit_text( rime_api.Ver_info() )
-end
+
+--execute function
+local F={}
 function F.reload(env)
   if rime_api.Version() < 139 then
     env.engine:process_key(env.keys.reload)
-  else 
+  else
     env.engine:apply_schema(Schema(env.engine.schema.schema_id))
   end
   return 1
 end
-function F.menusize(env,size)
+function F.pgsize(env,size)
   env.engine.context:clear()
   if size and size > 0  and size <10 then
     env:Config_set('menu/page_size', size )
-    Log(DEBUG,env,size,env:Config():get_string('menu/page_size'))
-
     F.reload(env)
   end
   return 1
 end
 
--- init_processorr 
+-- init_processorr
 local function init_modules(env)
   local modules = List( env:Config_get(env.name_space .. "/modules"))
   return modules:map( function(elm)
@@ -195,15 +157,15 @@ function M.init(env)
   env.keys= env:get_keybinds()
   env.keys.reload = env.keys.reload and env.keys.reload or KeyEvent('F9')
 
-  -- use key_binder reload 
-  if rime_api.Version() < 139 then 
+  -- use key_binder reload
+  if rime_api.Version() < 139 then
     local ckeyb= env:Config_get('key_binder/bindings/@0')
-    local reload_keyb = { 
+    local reload_keyb = {
       when='always',
       accept= env.keys.reload:repr(),
-      select= env.engine.schema.schema_id, 
+      select= env.engine.schema.schema_id,
     }
-    if ckeyb.select ~= reload_keyb.select or  
+    if ckeyb.select ~= reload_keyb.select or
       ckeyb.when ~= reload_keyb.when or
       ckeyb.accept ~= reload_keyb.accept then
       env:Config_set('key_binder/bindings/@before 0', reload_keyb)
@@ -214,18 +176,8 @@ function M.init(env)
   env:Unset_option("_reload")
   env:Unset_option("_menu_size")
   env.opt_update_notifier=env:Context().option_update_notifier:connect(function(ctx,name)
-  --[[
-    if name == "_reload" then 
-      Log(DEBUG,'------ reload ------')
-      env.engine.active_engine:apply_schema(env.engine.schema)
-    elseif name == "_page_size" then
-      local ms= env.engine.schema.page_size == 5 and 9 or 5
-      Log(DEBUG,'------ change menu sizer ------',ms )
-      env:Config_set('menu/page_size', ms)
-      env.engine.active_engine:apply_schema(env.engine.schema)
-    end
- --]]
   end)
+
   do
     ( List()
     + "---- submodules ----"
@@ -244,7 +196,7 @@ function M.fini(env)
   -- modules fini
   env.modules:each(function(elm) elm=nil end)
   env.opt_update_notifier:disconnect()
-  
+
   -- self finit --
 end
 
@@ -264,23 +216,26 @@ function M.func(key,env)
     return Accepted
   -- commit_text key:repr()
   elseif status.has_menu and key:eq(env.keys.prtscr) then
-    F["screen_print"](env)
+    commit_text(env,FS["screen_print"](env))
     return Accepted
   end
   -- self func
   -- /ver /modules /comps /cal /cowsay
-  local active_input= context.input:match("^/(.+)$")
-  if key:repr() == 'space' and active_input and active_input:match('menusize%d') then
-    local nfunc, ssize = active_input:match("(.+)(%d)")
-    Log(DEBUG,'active_input',active_input,F[nfunc],nfunc,ssize)
-    return F[nfunc](env,tonumber(ssize))
-  end
-
-  if key:repr() == "space" and  F[active_input] then
-    F[active_input](env)
-    context:clear()
+  local ascii_char = key.keycode >0x20 and key.keycode <=0x7f and string.char(key.keycode) or ""
+  local active_input = context.input:match('^/(%a+)$')
+  -- /menusize  + 1-9
+  if active_input == "pgsize" and ascii_char:match('%d') then
+    return F[active_input](env,tonumber(ascii_char))
+  --/reload + " "
+  elseif active_input == "reload" and key:repr() == 'space' then
+    return F[active_input](env)
+  --/func_name + ' '
+  elseif FS[active_input] and key:repr() =='space' then
+    commit_text( env, FS[active_input](env) )
+    env:Context():clear()
     return Accepted
   end
+
   -- sub_module func
   local res = env.modules:each(function(elm,res)
     local res =elm.comp:process_key_event(key)
