@@ -111,7 +111,7 @@ function T.func(inp,seg,env)
   if not ( seg:has_tag(env.tag) or env:Get_option(English) )  then return end
 
   local input = inp:sub(seg.start+1,seg._end)
-  input = input:match("^[%a][%a_.'/*:%-]*$") and input or ""
+  input = input:match("^[%a][%a_.'/*:%- ]*$") and input or ""
   if #input==0 then return end
 
 
