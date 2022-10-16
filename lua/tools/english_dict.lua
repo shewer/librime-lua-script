@@ -271,6 +271,7 @@ end
 local LuaDict=class() --setmetatable({},MT)
 --LuaDict.__index = LuaDict
 LuaDict.__name = 'LuaDict'
+LuaDict._db={}
 function LuaDict:_initialize(full_path,level)
   level = level and level>1 and level  or 3
   if T03 and GD then GD() end
@@ -340,38 +341,44 @@ end
 -- iter(text) return iter function for match text pattern
 -- get(word) return
 -- LevelDict
---
-local  LevelDict=class() --setmetatable({},MT)
---LevelDict.__index = LevelDict
-LevelDict.__name = 'LewelDict'
+
+local  LevelDict= LevelDb and class() --setmetatable({},MT)
+if LevelDict then
 
 
-function LevelDict:_initialize(full_path)
-  self._db = rime_api.LevelDb.open(full_path)
-  return self._db and self
-end
+  --LevelDict.__index = LevelDict
+  LevelDict.__name = 'LewelDict'
 
-function LevelDict:iter(text, case_match)
-  --local pw,ww,pn = conv_pattern(text)
-  local pw,ww,pn = split_str(text)
-  local dbacc = self._db:query(pw:lower())
-  return  coroutine.wrap(function()
-    for k,v in dbacc:iter() do
-      local w = Word.Parse_chunk(v)
-      if w and w:match(text,case_match) then
-        coroutine.yield(w)
-      end
+  function LevelDict:_initialize(full_path)
+    if rime_api.LevelDb.open(full_path) then
+      self._dbname=full_path
+      return  self
     end
-  end)
-end
+  end
+  function LevelDict:_getdict()
+    return rime_api.LevelDb.get_db(self._dbname)
+  end
 
-function LevelDict:get(word)
-  --  have upcae word  ex   Abort   abort\tAbort
-  word = word:match("%u") and string.format("%s\t%s",word:lower(),word) or word
-  local chk_str = self._db:fetch(word)
-  return chk_str and Word.Parse_chunk(chk_str)
+  function LevelDict:iter(text, case_match)
+    --local pw,ww,pn = conv_pattern(text)
+    local pw,ww,pn = split_str(text)
+    local dbacc = self:_getdict():query(pw:lower())
+    return  coroutine.wrap(function()
+      for k,v in dbacc:iter() do
+        local w = Word.Parse_chunk(v)
+        if w and w:match(text,case_match) then
+          coroutine.yield(w)
+        end
+      end
+    end)
+  end
+  function LevelDict:get(word)
+    --  have upcae word  ex   Abort   abort\tAbort
+    word = word:match("%u") and string.format("%s\t%s",word:lower(),word) or word
+    local chk_str = self:_getdict():fetch(word)
+    return chk_str and Word.Parse_chunk(chk_str)
+  end
 end
-
 -- English(dict_name)
 -- instance method
 -- iter(text)  return Word  for w in e:iter(text) do  ... end
@@ -400,37 +407,24 @@ function English:_initialize(dict_name,reload)
 
   return self:_getdict() and self or nil
 end
-function English:_find_file(ftype)
-  local fmt = ftype == "dir" and "%s%s" or "%s%s.txtl"
-  local func = ftype == "dir" and isDir or isFile
-  local slash = package.config:sub(1,1)
-  -- userdata
-  local path = rime_api.get_user_data_dir() .. slash
-  path = (fmt):format( path, self._dict_name)
-  --Log(DEBUG,'--user---_find_file : ---', ftype, fmt,path,"--res --",func(pathh) )
-  if func(path) then return path end 
-  -- shared
-  local path = rime_api.get_shared_data_dir() .. slash
-  path = (fmt):format( path, self._dict_name)
-  --Log(DEBUG,'--shared---_find_file : ---', ftype, fmt,path,"--res --",func(pathh) )
-  if func(path) then return path end 
-end
 
 function English:reload(force)
-    local dict_name = self._dict_name
-    local ph= rime_api.get_user_data_dir()
-    local dp = self:_find_file("dir")
-    local fp = self:_find_file("file")
-    self._dicts[dict_name] = (LevelDb and dp and LevelDict(dp)) 
-      or (fp and LuaDict(fp) ) or nil
-    --if LevelDb and dp  then
-      --self._dicts[dict_name]=  LevelDict( dp)
-    --elseif fp then
-      --self._dicts[dict_name] = LuaDict(fp)
-    --end
-    
-    return  self:_getdict() and true or false
+  local dict_name = self._dict_name
+  local full_path = get_full_path(dict_name)
+  -- 1 try LevelDict
+  if LevelDict and full_path and isDir(full_path) then
+    self._dicts[self._dict_name] = LevelDict(full_path)
+    return self._dicts[self._dict_name]  and true or false
+  end
+  -- 2 try LuaDict
+  full_path= get_full_path(dict_name .. ".txtl")
+  if LuaDict and full_path and isFile(full_path) then
+    self._dicts[self._dict_name] = luaDict(full_path)
+    return self._dicts[self._dict_name] and true or false
+  end
+  Log(ERROR, "English_dict " .. dict_name .. ' not find ')
 end
+
 
 function English:iter(org_text,case_match)
   return self:_getdict():iter(org_text,case_match)
