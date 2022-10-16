@@ -19,7 +19,7 @@ local _chk_type={"number","nil","string","boolean","function"}
 function print_type(value,tab)
 
 	tab = tab or ""
-   
+
 
 --	print("==" .. tab .. " : " .. strvalue .. " ::( " .. type(value) .. " )", "match:char: " ,vars_v,  obj, obj )
 	if _chk_type[ type(value) ] then return end

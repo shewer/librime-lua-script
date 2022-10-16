@@ -18,7 +18,7 @@ M.private = {}
 M.VERSION='3.2'
 M._VERSION=M.VERSION -- For LuaUnit v2 compatibility
 
---[[ Some people like assertEquals( actual, expected ) and some people prefer 
+--[[ Some people like assertEquals( actual, expected ) and some people prefer
 assertEquals( expected, actual ).
 ]]--
 M.ORDER_ACTUAL_EXPECTED = true
@@ -1250,7 +1250,7 @@ then OK or FAILED (failures=1, error=1)
 Started
  .
  Finished in 0.002695 seconds.
- 
+
  1 tests, 2 assertions, 0 failures, 0 errors
 
 -- Ruby:
@@ -1259,13 +1259,13 @@ Loaded suite tc_simple_number2
 Started
 F..
 Finished in 0.038617 seconds.
- 
+
   1) Failure:
 test_failure(TestSimpleNumber) [tc_simple_number2.rb:16]:
 Adding doesn't work.
 <3> expected but was
 <4>.
- 
+
 3 tests, 4 assertions, 1 failures, 0 errors
 
 -- Java Junit
@@ -1289,18 +1289,18 @@ Tests run: 8,  Failures: 1,  Errors: 0
  T E S T S
 -------------------------------------------------------
 Running math.AdditionTest
-Tests run: 2, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 
+Tests run: 2, Failures: 1, Errors: 0, Skipped: 0, Time elapsed:
 0.03 sec <<< FAILURE!
 
 Results :
 
-Failed tests: 
+Failed tests:
   testLireSymbole(math.AdditionTest)
 
 Tests run: 2, Failures: 1, Errors: 0, Skipped: 0
 
 
--- LuaUnit 
+-- LuaUnit
 ---- non verbose
 * display . or F or E when running tests
 ---- verbose

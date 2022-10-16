@@ -70,8 +70,14 @@ require 'tools/string'
 if not rime_api then
   require 'test/fake/rime_api'
 end
-
-
+--[[
+rime_api.get_user_data_dir=function()
+  return io.popen('pwd'):read()
+end
+rime_api.get_shared_data_dir= function()
+  return '/usr/shared/rime-data'
+end
+--]]
 local function Version()
   local ver
   if Opencc and Opencc('s2t.json').convert_word then

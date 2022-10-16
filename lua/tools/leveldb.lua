@@ -14,7 +14,8 @@ require 'tools/_file'
 
 local function find_path(fn)
   local full_path = get_full_path(fn)
-  return full_path and isDir(full_path) and full_path or rime_api.get_user_data_dir() .. "/" .. fn
+  --return full_path and isDir(full_path) and full_path or rime_api.get_user_data_dir() .. "/" .. fn
+  return fn
 end
 
 function opendb(fn,dbname)
@@ -43,8 +44,12 @@ function M.pool_status()
   end
   return tab
 end
+function M.get_db(fn)
+  return M._db_pool[fn]
+end
 -- M.open(fn,dbname) -- return db
 -- M.pool_status() -- return status of table
+-- M.get_db(fn) -- return db or nil
 return M
 
 

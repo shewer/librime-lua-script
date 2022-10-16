@@ -55,9 +55,9 @@ I strongly recommend "time" mode, and it is now the default.
 == History ==
 
 2021-01-04 - Larry Deaton ( larry.deaton@dynetics.com )
-  Modified the profiling by "call" operation to ignore internal LUA functions 
+  Modified the profiling by "call" operation to ignore internal LUA functions
   since LUA only provides debug hooks for the calling of the function and not
-  the return of the function.  Without this change, the call stack is 
+  the return of the function.  Without this change, the call stack is
   continually growing.
 
 2008-09-16 - Time-based profiling and conversion to Lua 5.1
@@ -65,7 +65,7 @@ I strongly recommend "time" mode, and it is now the default.
   Added the ability to optionally choose profiling methods, along with a new
   profiling method.
 
-Converted to Lua 5, a few improvements, and 
+Converted to Lua 5, a few improvements, and
 additional documentation by Tom Spilman ( tom@sickheadgames.com )
 
 Additional corrections and tidying by original author
@@ -116,8 +116,8 @@ if not table.getn then
   end
 end
 --
--- newProfiler() creates a new profiler object for managing 
--- the profiler and storing state.  Note that only one profiler 
+-- newProfiler() creates a new profiler object for managing
+-- the profiler and storing state.  Note that only one profiler
 -- object can be executing at one time.
 --
 function newProfiler(variant, sampledelay)
@@ -132,7 +132,7 @@ function newProfiler(variant, sampledelay)
     print("Profiler method must be 'time' or 'call'.")
     return
   end
-  
+
   local newprof = {}
   for k,v in pairs(_profiler) do
     newprof[k] = v
@@ -168,8 +168,8 @@ end
 
 
 --
--- This function stops the profiler.  It will do nothing 
--- if a profiler is not running, and nothing if it isn't 
+-- This function stops the profiler.  It will do nothing
+-- if a profiler is not running, and nothing if it isn't
 -- the currently running profiler.
 --
 function _profiler.stop(self)
@@ -212,9 +212,9 @@ function _profiler._internal_profile_by_call(self,action)
     print "No caller_info"
     return
   end
-  
+
   if caller_info.short_src == "[C]" then
-    -- LMD -- These are builtin functions and for some reason the 
+    -- LMD -- These are builtin functions and for some reason the
     --        debug hook does not catch the return of these functions.
     --        So, for now, we are just going to skip them.
      return
@@ -227,7 +227,7 @@ function _profiler._internal_profile_by_call(self,action)
   if table.getn(self.callstack) > 0 then
     latest_ar = self.callstack[table.getn(self.callstack)]
   end
-  
+
   -- Are we allowed to profile this function?
   local should_not_profile = 0
   for k,v in pairs(self.prevented_functions) do
@@ -310,7 +310,7 @@ end
 function _profiler._internal_profile_by_time(self,action)
   -- we do this first so we add the minimum amount of extra time to this call
   local timetaken = os.clock() - self.lastclock
-  
+
   local depth = 3
   local at_top = true
   local last_caller
@@ -338,13 +338,13 @@ function _profiler._internal_profile_by_time(self,action)
     last_caller = caller
     caller = debug.getinfo(depth)
   end
-  
+
   self.lastclock = os.clock()
 end
 
 
 --
--- This returns a (possibly empty) function record for 
+-- This returns a (possibly empty) function record for
 -- the specified function. It is for internal profiler use.
 --
 function _profiler._get_func_rec(self,func,force,info)
@@ -395,7 +395,7 @@ function _profiler.report( self, outfile, sort_by_total_time )
   else
     assert(false)
   end
-  
+
   local total_time = 0
   local ordering = {}
   for func,record in pairs(self.rawstats) do
@@ -403,13 +403,13 @@ function _profiler.report( self, outfile, sort_by_total_time )
   end
 
   if sort_by_total_time then
-    table.sort( ordering, 
+    table.sort( ordering,
       function(a,b) return self.rawstats[a].time > self.rawstats[b].time end
     )
   else
-    table.sort( ordering, 
+    table.sort( ordering,
       function(a,b)
-        local arec = self.rawstats[a] 
+        local arec = self.rawstats[a]
         local brec = self.rawstats[b]
         local atime = arec.time - (arec.anon_child_time + arec.name_child_time)
         local btime = brec.time - (brec.anon_child_time + brec.name_child_time)
@@ -485,7 +485,7 @@ end
 
 
 --
--- This writes the profile to the output file object as 
+-- This writes the profile to the output file object as
 -- loadable Lua source.
 --
 function _profiler.lua_report(self,outfile)
@@ -577,7 +577,7 @@ function _profiler._pretty_name(self,func)
   if info.what == "main" then
     name = " :"
   end
-  
+
   if info.name == nil then
     name = name .. "<"..tostring(func) .. ">"
   else

@@ -7,12 +7,12 @@
 --
 
 local class = require 'tools/class'
-if TEST and not Candidate then 
+if TEST and not Candidate then
   Candidate = require 'test/fake/Candidate'
 end
 -- warp ShadowCandidate
-if ShadowCandidate then 
-  return 
+if ShadowCandidate then
+  return
 end
 -- not work  not a  an<Candidate> userdata
 ShadowCandidate= class({
@@ -29,7 +29,7 @@ ShadowCandidate= class({
 })
 local hook_tab={}
 
--- for old versino  
+-- for old versino
 local function fake_SCandidate( cand, _type, text, comment)
   _type = _type or cand.type
   text = text or cand.text

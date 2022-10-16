@@ -55,7 +55,7 @@ local function comm_fini(self)
   local fini = self._module.fini
   if type(fini) == "function" then
     local ok,res = pcall( fini, self._env)
-    if not ok then 
+    if not ok then
       return self.module.fini and self.module.fini(self.env)
     end
   end
@@ -64,9 +64,9 @@ end
 local function get_module(mod_name)
   local mod = _ENV[mod_name]
   local tp = type(mod)
-  if tp == "function" then 
+  if tp == "function" then
     return {func=mod}
-  elseif tp == "table" then 
+  elseif tp == "table" then
     return mod
   else
     Log(ERROR, "require module failed ", mod_name )
@@ -86,8 +86,8 @@ local function _initialize(self,ticket)
     engine = ticket.engine,
     name_space= tk.name_space,
   }
-  -- call module.init(env) 
-  if self._module.init then 
+  -- call module.init(env)
+  if self._module.init then
     local ok,res =pcall( self._module.init, self._env)
     if not ok then
       Log(ERROR,

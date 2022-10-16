@@ -190,7 +190,7 @@ end
 function M:reverse()
   return self:reduce(function(elm,org)
     return org:unshift(elm)
-  end,M()) 
+  end,M())
 end
 function M:size()
   return #self
@@ -213,7 +213,7 @@ end
 function M:insert_at(index, elm)
   --assert(index , --and elm,
     --("args error: %s, index: %d , elm: %s"):format( "List:insert_at(index,elm) ", index,elm) )
-  index = ( index < 1) and  1 
+  index = ( index < 1) and  1
   or index >#self and #self +1  or index
   table.insert(self,index,elm)
   return self

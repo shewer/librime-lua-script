@@ -44,17 +44,17 @@ cows.cat= [[
 %s
 %s
 
-                          / )      
-                         / /       
-      //|                \\ \\       
-   .-`^ \\   .-`````-.     \\ \\      
- o` {|}  \\_/         \\    / /      
- '--,  _ //   .---.   \\  / /       
-   ^^^` )/  ,/     \\   \\/ /        
-        (  /)      /\\/   /         
-        / / (     / (   /          
-    ___/ /) (  __/ __\\ (           
-   (((__)((__)((__(((___)          
+                          / )
+                         / /
+      //|                \\ \\
+   .-`^ \\   .-`````-.     \\ \\
+ o` {|}  \\_/         \\    / /
+ '--,  _ //   .---.   \\  / /
+   ^^^` )/  ,/     \\   \\/ /
+        (  /)      /\\/   /
+        / / (     / (   /
+    ___/ /) (  __/ __\\ (
+   (((__)((__)((__(((___)
 ]]
 
 cows.cat2 = [[
@@ -63,15 +63,15 @@ cows.cat2 = [[
 %s
 
           |\\___/|
-         =) .  . |   
+         =) .  . |
           \\  ^  /
-           )=*=(       
+           )=*=(
           /     \\
           |     |
          /| | | |\\
          \\| | |_|/\\
          //_// ___/
-             \\_) 
+             \\_)
 ]]
 
 cows.eye= [[
@@ -156,14 +156,14 @@ local function cgumirs(y)
 end
 
 local cowsay_list={}
-for k,v in next,cows do table.insert(cowsay_list,k) end 
+for k,v in next,cows do table.insert(cowsay_list,k) end
 
 local mday={31,28,31,30,31,30,31,31,30,31,30,31}
 
 local function cal(date_str)
    date_str = str or os.date("%Y-%m-%d")
    local y,m,d = date_str:split("-"):unpack()
-   local mdays = mday[tonumber(m)] + (m == 2 and cgumirs(y) and 1 or 0) 
+   local mdays = mday[tonumber(m)] + (m == 2 and cgumirs(y) and 1 or 0)
    local first_index = os.date("%w",os.time({year= y,month =m ,day=1}))
    local str = ""
    for i= 1 ,mdays do
@@ -194,4 +194,4 @@ local function cowsay(str)
 end
 
 return  cowsay
-   
+

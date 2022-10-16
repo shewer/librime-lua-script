@@ -11,10 +11,10 @@
 -- Log(DEBUG, ...)
 -- Log(CONSOLE, ...)
 --
--- Log_data(tag, obj, msg) -- 
+-- Log_data(tag, obj, msg) --
 --
 -- fake log
-if not log then 
+if not log then
   log={
     info= function(msg) io.stdout:write(msg) end,
     warning= function(msg) io.stdout:write(msg) end,
@@ -39,16 +39,16 @@ function Log( tag , ...)
   local info= debug.getinfo(2,'Sln')
   info.short_src = info.short_src:match("lua/(.*.lua)$")
   local tab= {...}
-  for i=1,#tab  do 
+  for i=1,#tab  do
     tab[i]=tostring( tab[i])
   end
   local tab_str = table.concat(tab, " : ")
   local head_str = string.format( "%s [%s:%s:%s] : ",
    tag, info.short_src, info.name, info.currentline)
-  
+
   local func= (log_type_func[tag] or print)
   func(head_str .. tab_str)
-end 
+end
 
 local function tab_to_s(tab,str,depth)
   str = str or ""
@@ -57,12 +57,12 @@ local function tab_to_s(tab,str,depth)
   local CT = "\t"
   local RN= "\n"
   local ot = type(tab)
-  if ot == "table" then 
+  if ot == "table" then
     str = str .. "{\n"
-    for k,v in next, tab do 
-      if v ~= _G and  v ~= _ENV then 
+    for k,v in next, tab do
+      if v ~= _G and  v ~= _ENV then
         str = ("%s%s%s : "):format(str,CT:rep(depth+1),k)
-        str= tab_to_s(v,str, depth +1 ) 
+        str= tab_to_s(v,str, depth +1 )
       end
     end
     return str .. CT:rep(depth) .. "}\n"
@@ -76,23 +76,23 @@ function Log_data(tag,obj,msg,enab_mt)
 
   info_str=("%s [%s:%s:%s] : ---inspect: %s--- : %s"):format(tag,info.short_src,info.name,info.currentline, msg or "", obj)
   local str = ""
-  if type(obj)== "table" then 
+  if type(obj)== "table" then
     str = str .. "\n"
-    for k,v in next,obj do 
+    for k,v in next,obj do
       str = ("%s\t %s : %s \n"):format(str, k,v )
     end
   end
-  if enab_mt then 
+  if enab_mt then
     local mt = getmetatable(obj)
-    if mt then 
+    if mt then
       str = str .. "\n metatable :\n"
-      for k,v in next, mt do 
+      for k,v in next, mt do
         str = ("%s\t %s : %s \n"):format(str, k,v )
       end
     end
   end
 
-    
+
   local log_func = log_type_func[tag] or print
   log_func(info_str .. str )
 end

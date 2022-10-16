@@ -62,7 +62,7 @@ function M:_dict()
   return pool[self.filename]
 end
 function M:_load_dict()
-  if not self:_dict() then 
+  if not self:_dict() then
     pool[self.filename] = load_essay(self.path .."/".. self.filename)
   end
 end
@@ -106,7 +106,7 @@ function M:word_iter(word)
 end
 function M:find_word(word)
   local l= List()
-  for w in self:word_iter(word) do 
+  for w in self:word_iter(word) do
     l:push(w)
   end
   return l

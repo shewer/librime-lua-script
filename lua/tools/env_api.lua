@@ -72,17 +72,17 @@ local function to_list_with_path(obj,path,tab,loopchk)
   path  = path or ""
   local tp = type(obj)
   local base_type = tp == "number" or tp == "string" or tp == "boolean"
-  if loopchk[obj] or base_type then 
+  if loopchk[obj] or base_type then
     table.insert(tab , {path = path, value=obj})
     return tab
   end
   loopchk[obj] = true
-  if type(obj) == "table" then 
+  if type(obj) == "table" then
     local is_list = #obj > 0
     local lpath = #path > 0 and path .. "/" or path
     lpath = is_list and lpath .. "@" or lpath
 
-    for k,v in  (is_list and ipairs or pairs)(obj) do 
+    for k,v in  (is_list and ipairs or pairs)(obj) do
       to_list_with_path(v, lpath .. k , tab,loopchk)
     end
     return tab
@@ -95,17 +95,17 @@ function E:Config_get_with_path(path,tpath)
 end
 local function chk_pdata(path,obj)
   if not obj then return false end
-  path:each(function(elm) 
+  path:each(function(elm)
     local ok = elm:match("^[%a_]+$") and elm:match("^@%d+$")
     if not ok then return false end
   end)
   return true
 end
 function E:Config_set_with_path(pdata)
-  for i,v in ipairs(pdata) do 
+  for i,v in ipairs(pdata) do
     if chk_pdata(v.path,v.obj) then
       self:Config_set(v.path,v.obj)
-    else 
+    else
       Log(WARN,"config set error", v.path,v.obj)
     end
   end

@@ -9,7 +9,7 @@
 -- 增加 Component.Require(...) 以 component_name 自動區別 processor segmentor translator filter
 --
 
-local processors= Set{ 
+local processors= Set{
  "lua_processor",
 "ascii_composer",
 "chord_composer",
@@ -71,27 +71,27 @@ local function get_comp_name(comp_name)
   end
 end
 
--- ver > 176 Component  add Require 
+-- ver > 176 Component  add Require
 -- ver <= 176 Fake Component
-if not LevelDb or not Component then 
+if not LevelDb or not Component then
   print(' fake component wrap- require')
-  Component = require 'tools._luacomponent' 
+  Component = require 'tools._luacomponent'
 end
 
 local function _delegate_func(comp_tab)
   --clone tab
   local m ={}
-  for k,v in next, comp_tab do 
-    m[k] = v 
+  for k,v in next, comp_tab do
+    m[k] = v
   end
-  for k,v in next,m do 
+  for k,v in next,m do
     -- add  component to  _component ...
     comp_tab["_"..k]= m[k]
-    --  replace and delegate 
+    --  replace and delegate
     comp_tab[k]= function(...)
       local t = Ticket(...)
-      if t and t.klass:match("^lua_") then 
-        rrequire( t.name_space:split("@")[1]) 
+      if t and t.klass:match("^lua_") then
+        rrequire( t.name_space:split("@")[1])
       end
       return comp_tab["_"..k](...)
     end

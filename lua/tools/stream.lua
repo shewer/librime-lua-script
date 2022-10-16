@@ -1,13 +1,13 @@
 
-    -- 
+    --
     -- Basic Streams: Strings, Files, Pipes and Sockets
     --
     -- Copyright (c) 2011-2012 iNTERFACEWARE Inc.
     --
-     
+
     -- How much data to buffer between reads.
     local buffer_size = 64*1024
-     
+
     -- Throw errors reported by io.open().
     local function open(path, mode)
        local file, err = io.open(path, mode)
@@ -16,7 +16,7 @@
        end
        return file
     end
-     
+
     -- Throw errors reported by io.popen().
     local function popen(cmd, mode)
        local file, err = io.popen(cmd, mode)
@@ -25,7 +25,7 @@
        end
        return file
     end
-     
+
     -- Stream from some open file (see fromFile, fromPipe).
     local function fromFile(file)
        return function()
@@ -40,7 +40,7 @@
           return out
        end
     end
-     
+
     -- Stream to some open file (see toFile, toPipe).
     local function toFile(file, from, ...)
        local chunk
@@ -52,13 +52,13 @@
        until not chunk
        file:close()
     end
-     
+
     --
     -- Public API
     --
-     
+
     stream = {}
-     
+
     -- stream.fromString(s)
     --
     -- Create a stream from a string.
@@ -76,7 +76,7 @@
           return out
        end
     end
-     
+
     -- stream.toString(from, ...)
     --
     -- Write a stream to a string.
@@ -94,7 +94,7 @@
        until not chunk
        return table.concat(out)
     end
-     
+
     -- stream.fromFile(path [,mode])
     --
     -- Create a stream from a file.
@@ -107,7 +107,7 @@
        local file = open(path, mode or 'rb')
        return fromFile(file)
     end
-     
+
     -- stream.toFile(path, from, ...)
     -- stream.toFile(path, mode, from, ...)
     --
@@ -125,7 +125,7 @@
        local file = open(path, mode)
        return toFile(file, from, ...)
     end
-     
+
     -- stream.fromPipe(cmd)
     --
     -- Create a stream from an external process.
@@ -137,7 +137,7 @@
        local file = popen(cmd, 'r')
        return fromFile(file)
     end
-     
+
     -- stream.toPipe(cmd, from, ...)
     --
     -- Write a stream to an external process.
@@ -151,7 +151,7 @@
        local file = popen(cmd, 'w')
        return toFile(file, from, ...)
     end
-     
+
     -- stream.fromSocket(sock)
     --
     -- Create a stream from a TCP/IP connection.
@@ -165,7 +165,7 @@
           return sock:recv()
        end
     end
-     
+
     -- stream.toSocket(sock, from, ...)
     --
     -- Write a stream to a TCP/IP connection.
@@ -182,7 +182,7 @@
           sock:send(chunk)
        end
     end
-     
+
     -- stream.filter(from, f)
     --
     -- Create a stream by attaching a filter to another stream.
@@ -206,5 +206,5 @@
           return f(out, ...)
        end
     end
- 
+
     return stream

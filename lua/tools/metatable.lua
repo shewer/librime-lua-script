@@ -1,31 +1,31 @@
--- create metatable 
+-- create metatable
 orgtype=type
 
 function type(obj)
   local _type=orgtype(obj)
-  if "table" == _type and obj._cname then 
+  if "table" == _type and obj._cname then
     return obj._cname
-  end 
+  end
   return _type
-end 
+end
 
 
 
 function metatable(...)
-  if ... and type(...) == "table" then 
+  if ... and type(...) == "table" then
     return setmetatable( ... , {__index=table})
-  else 
+  else
     return setmetatable( {...} , {__index=table})
-  end 
-end 
+  end
+end
 -- chech metatble
 function metatable_chk(tab)
-  if "table" == type(tab) 
-  then return   (tab.each and tab)  or metatable(tab) 
-  else 
-    return tab 
+  if "table" == type(tab)
+  then return   (tab.each and tab)  or metatable(tab)
+  else
+    return tab
   end
-end 
+end
 
 table.eachi=function(tab,func)
   for i=1,#tab   do
@@ -36,46 +36,46 @@ end
 table.eacha=function(tab,func)
   for i,v in ipairs(tab) do
     func(v,i)
-  end 
+  end
   return tab
-end 
+end
 table.each=function(tab,func)
   for k,v in pairs(tab) do
     func(v,k)
   end
   return tab
 end
-table.find_index=function(tab,elm, ...) 
+table.find_index=function(tab,elm, ...)
   local _ ,i =table.find(tab,elm,...)
   return i
-end 
+end
 table.find=function(tab,elm,func)
   for i,v in ipairs(tab) do
-    if elm == v then 
+    if elm == v then
       return v,i
-    end 
-  end 
-end 
+    end
+  end
+end
 
 table.find_with_func=function(tab,elm,...)
-  local i,v = table.find(tab,elm) 
-end 
+  local i,v = table.find(tab,elm)
+end
 table.delete= function(tab,elm, ...)
   local index=table.find_index(tab,elm)
-  return  index and table.remove(tab,index) 
-end 
+  return  index and table.remove(tab,index)
+end
 
 table.find_all=function(tab,elm,...)
   local tmptab=setmetatable({} , {__index=table} )
-  local _func=  (type(elm) == "function" and elm ) or  function(v,k, ... ) return  v == elm  end 
-  for k,v in pairs(tab) do 
-    if _func(v,k,...) then 
+  local _func=  (type(elm) == "function" and elm ) or  function(v,k, ... ) return  v == elm  end
+  for k,v in pairs(tab) do
+    if _func(v,k,...) then
       tmptab:insert(v)
-    end 
-  end 
+    end
+  end
   return tmptab
-end 
-table.select= table.find_all  
+end
+table.select= table.find_all
 
 table.reduce=function(tab,func,arg)
   local new,old=arg,arg
@@ -83,28 +83,28 @@ table.reduce=function(tab,func,arg)
     new,old= func(v,new)
   end
   return new ,arg
-end 
+end
 
 table.map=function(tab,func)
-  local newtab=setmetatable({} , {__index=table}) 
-  func= func or function(v,i) return v,i end 
+  local newtab=setmetatable({} , {__index=table})
+  func= func or function(v,i) return v,i end
   for i,v in ipairs(tab) do
     newtab[i]= func(v,i)
-  end 
+  end
   return newtab
-end 
-table.map_hash=function(tab,func) --  table to   list of array  { key, v} 
-  local newtab=setmetatable({} , {__index=table}) 
-  func= func or function(k,v) return {k, v} end 
+end
+table.map_hash=function(tab,func) --  table to   list of array  { key, v}
+  local newtab=setmetatable({} , {__index=table})
+  func= func or function(k,v) return {k, v} end
   for k,v in pairs(tab) do
     newtab:insert( func(k,v) )
-  end 
+  end
   return newtab
-end 
+end
 function table:push(elm)
   self:insert(elm)
 end
-table.append = table.push 
+table.append = table.push
 function table:pop()
   return self:remove(#self)
 end
