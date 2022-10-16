@@ -75,6 +75,7 @@ function P.init(env)
   env.keys= env:get_keybinds()
   env.keys.completion= KeyEvent("Tab")
   env.keys.completion_back= KeyEvent("Shift+Tab")
+  env.keys.completion_back1= KeyEvent("Shift+ISO_Left_Tab")
 
   --env.comp_key= KeyEvent("Tab")
   --env.uncomp_key= KeyEvent("Shift+ISO_Left_Tab")
@@ -94,7 +95,7 @@ function P.init(env)
           env.save_ascii_punct= true
         end
       else
-        if env.save_ascii_punct then 
+        if env.save_ascii_punct then
           ctx:set_option(ASCII_PUNCT,false)
         end
       end
@@ -109,38 +110,46 @@ end
 function P.func(key,env)
   local Rejected,Accepted,Noop=0,1,2
   -- 過濾 release ctrl alt key 避免 key_char 重複加入input
-  if key:release() or key:ctrl() or key:alt() then return Noop end
   local context=env.engine.context
   local status=env:get_status()
   local key_char= key.keycode >= 0x20 and key.keycode < 128 and string.char( key.keycode) or ""
 
-  -- reject
-  -- match env.pattern
-  -- english mode  and key ==  a
-  local active_inp= context.input .. key_char 
-  if context:get_option(English)  then
-    if  active_inp:match("^[%a][%a'.?*/:_%-]*$") then --context:is_composing() and key_char:match("^[%a'.?*/:_%-]$") or  key_char:match("^[%a]$") then
-      context:push_input(key_char)
-      return Accepted
-    elseif context:is_composing() and key_char:match("^[ ,]")  then
-      context:commit()
-      return Rejected
-    end
-  end
-
-  -- 反回上一次 input text
-  if key:eq(env.keys.completion_back) and #env.history > 0  then
-    context.input = env.history:pop()
-    return Accepted
-  end
   -- enable English mode
   if key:eq(env.keys.toggle) then
     env:Toggle_option(English)
     context:refresh_non_confirmed_composition()
     return Accepted
-  elseif key:eq(env.keys.mode) then
+  end
+  if key:release() or key:ctrl() or key:alt() then return Noop end
+  if not context:get_option(English) then return Noop end
+
+  -- reject
+  -- match env.pattern
+  -- english mode  and key ==  a
+  if #key_char == 1  then
+  local active_inp= context.input .. key_char
+    if context:is_composing() and key_char:match("^[ ,]")  then
+      context:commit()
+      return Rejected
+    elseif  active_inp:match("^[%a][%a'.?*/:_%- ]*$") then --context:is_composing() and key_char:match("^[%a'.?*/:_%-]$") or  key_char:match("^[%a]$") then
+      context:push_input(key_char)
+      return Accepted
+    end
+  end
+  -- comment mode
+  if key:eq(env.keys.mode) then
     env:Toggle_option("english_info_mode")
     return Accepted
+  end
+
+  -- 反回上一次 input text
+  if key:eq(env.keys.completion_back) or key:eq(env.keys.completion_back1) then
+    if #env.history >0 then
+      context.input = env.history:pop()
+      return Accepted
+    else
+      return Noop
+    end
   end
   -- 補齊input   以cand.type "ninja" 替換部分字段 "english" 替換全字母串
   if status.has_menu  then
