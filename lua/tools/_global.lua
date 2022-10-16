@@ -6,26 +6,30 @@
 -- Distributed under terms of the MIT license.
 --
 --  File tools
---  rpath() return current path, file 
+--  rpath() return current path, file
 --  exists(path) return bool
 --  isFile(path) return bool
 --  isDir(path) return bool
 --
--- trace 
+-- trace
 
 
---- global init 
+--- global init
 -- append string.methods   split utf8_len utf8_split
 require 'tools/string' -- 加入 utf8_len utf8_sub split function
-require 'tools/_log'  --  _G 加入 Log(type,args.....) 
+require 'tools/_log'  --  _G 加入 Log(type,args.....)
 require 'tools/_file' -- _G 加入 rpath() get_full_path(filename) isDir(path) isFile(path)
 require 'tools/_req_api' -- _G 加入 rrequire(mod:string [gtab=_ENG [,mod_name=mod]])
 -- bind  split  utf8_sub utf8_sub utf8_split
-require 'tools/_ticket' -- _G 加入類 Ticket(eng,ns,prescription) 
+require 'tools/_ticket' -- _G 加入類 Ticket(eng,ns,prescription)
 require 'tools/rime_api' -- 擴充 rime_api 及常數 (見 rime_api.lua)
+-- prerequire for save to __PKG_LOADED
+require 'tools/english_dict'
+if LevelDb then
+  require 'tools/leveldb'
+end
 
-
-if rime_api.Version() < 150 then 
+if rime_api.Version() < 150 then
   require 'tools/_shadowcandidate'
 end
 -- append utf8.methods utf8.split
@@ -82,9 +86,11 @@ end
 
 -- init_path
 do
+  __PKG_LOADED = {}
+  for k,v in next, package.loaded do __PKG_LOADED[k] = v end
   append_path((rime_api.get_user_data_dir() or ".") .. "/lua/component")
   append_cpath((rime_api.get_user_data_dir() or ".") .. "/lua/plugins")
-  -- _G 加入 Rescue 
+  -- _G 加入 Rescue
   if ENABLE_RESCUE then rrequire('Rescue') end
 
   -- ENABLE trace
@@ -93,12 +99,13 @@ do
     TRACE = TRACE or T00 or T01 or T02 or T03 or T04
   end
 
-  if ENABLE_DEBUG or TRACE then 
+  if ENABLE_DEBUG or TRACE then
     require 'tools/debugtool'
   end
-  -- pretest 在無關 engine 時測試 library 
+  -- pretest 在無關 engine 時測試 library
   if PRETEST then require('test/init')() end
 
 
   if T00 and GD then GD() end
+
 end
