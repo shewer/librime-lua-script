@@ -43,7 +43,8 @@ function FS.modules(env)
 end
 
 function FS.comps(env)
-  return env:components_str():concat(_NR)
+  return env:components_str():map(function(elm)
+    return elm:gsub('engine/','') end):concat(_NR)
 end
 
 function FS.cal(env)
@@ -81,6 +82,10 @@ end
 --execute function
 local F={}
 function F.reload(env)
+  -- reset package.loaded
+  package.loaded={}
+  for k,v in next, __PKG_LOADED do package.loaded[k] = v end
+
   if rime_api.Version() < 139 then
     env.engine:process_key(env.keys.reload)
   else
@@ -112,7 +117,7 @@ local function auto_load(env, tab_G)
   List("processors","segmentors","translators","filters")
   :map(function(elm) return "engine/" .. elm end)
   :reduce(function(elm,org) return org + env:Config_get(elm) end,List())
-  :select_match("^lua_")
+  :select_match("^lua_%a+@%a[%a%._]")
   :each(function(elm)
     local mod_name = elm:split("@")[2]
     if not rrequire(mod_name) then
@@ -181,10 +186,10 @@ function M.init(env)
   env.opt_update_notifier=env:Context().option_update_notifier:connect(function(ctx,name)
   end)
   env.commit_notifier=env:Context().commit_notifier:connect(function(ctx)
-    local bf=collectgarbage('count')
-    collectgarbage()
-    local ff=collectgarbage('count')
-    Log(DEBUG,'-----mem',bf,ff,bf-ff)
+    --local bf=collectgarbage('count')
+    --collectgarbage()
+    --local ff=collectgarbage('count')
+    --Log(DEBUG,'-----mem',bf,ff,bf-ff)
   end)
 
   do
@@ -249,7 +254,10 @@ function M.func(key,env)
   -- sub_module func
   local res = env.modules:each(function(elm,res)
     local res =elm.comp:process_key_event(key)
-    if res < 2 then return res end
+    if res < 2 then
+      --Log(DEBUG, '-----return key ------',elm.name,res,key:repr())
+      return res
+    end
   end) or Noop
 
   return  res or Noop
