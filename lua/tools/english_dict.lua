@@ -419,7 +419,7 @@ function English:reload(force)
   -- 2 try LuaDict
   full_path= get_full_path(dict_name .. ".txtl")
   if LuaDict and full_path and isFile(full_path) then
-    self._dicts[self._dict_name] = luaDict(full_path)
+    self._dicts[self._dict_name] = LuaDict(full_path)
     return self._dicts[self._dict_name] and true or false
   end
   Log(ERROR, "English_dict " .. dict_name .. ' not find ')

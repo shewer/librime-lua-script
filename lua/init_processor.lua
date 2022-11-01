@@ -32,7 +32,7 @@ function FS.screen_print(env)
   local strlist= List.Range(st,st+page_size-1):map(function(elm)
     local c=seg:get_candidate_at(elm)
     local head = elm == s_index and '-->' or '   '
-    return ("%s%s:\t%s%s"):format(head, c.text, c.comment,_NR)
+    return c and ("%s%s:\t%s%s"):format(head, c.text, c.comment,_NR) or nil
   end):concat()
   return (str_head .. strlist)
 end
@@ -222,6 +222,7 @@ function M.func(key,env)
   local context=env.engine.context
   local status=env:get_status()
 
+  --Log(DEBUG,'in process------->', env.name_space,key:repr(),context.input)
   local debug_mode = context:get_option('_debug')
   if debug_mode and key:eq(env.keys.prtkey) then
     env:Toggle_option("prtkey")
