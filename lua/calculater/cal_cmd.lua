@@ -40,35 +40,35 @@ local function cmd(str,reset)
   elseif str:match("^%s*=") then --reset res
     str = 'res ' .. str
     rstr = str .. TRET
-  elseif str:match("%s*%a*=") then -- set ather 
+  elseif str:match("%s*%a*=") then -- set ather
     rstr = str .. TRET
   elseif str:match("^%s*[+-/*]") then -- (res) .. str
-    str = "(" ..ENV.res..")" .. str 
-    rstr = HRET .. str 
-  else 
+    str = "(" ..ENV.res..")" .. str
+    rstr = HRET .. str
+  else
     rstr= HRET .. str
   end
 
-  
+
   local func= load( rstr,'cal','bt',ENV ) -- keep _ENV
   local ok,res  = pcall(func )
-  if ok then 
-    ENV.res= res -- save res 
-    RES=ENV.res
-    return res, str
-  else 
+  if ok then
+    ENV.res= res or ENV.res-- save res
+    return tostring(ENV.res), str
+  else
+    return "", str
   end
-  
+
 end
 
 
 
 
--- test    
+-- test
 local function test()
   local passed="...........pass"
   local faild="...........Faild"
-  str = [[3+3]] 
+  str = [[3+3]]
   print( str , "--> res = 3+3", cmd(str),RES, RES==6 and passed or faild )
   str = [[res + 5]]
   print(str , "--> res = res + 5",cmd(str),RES, RES==11 and passed or faild )
@@ -96,5 +96,5 @@ local function test()
   print(str , "--> res = a (nil)",cmd(str,true),RES, RES==nil and passed or faild )
 end
 local TEST = false --true
-if TEST then test() end 
+if TEST then test() end
 return cmd
