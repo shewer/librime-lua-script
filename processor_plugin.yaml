@@ -18,6 +18,7 @@ patch:
   module:
     modules:
       - { prescription: "lua_processor@command.proc@command" } # lua/command/proc.lua namespace: command
+      - { prescription: "lua_processor@calculater.proc@cal_cmd" } # lua/command/proc.lua namespace: command
       - { prescription: "lua_processor@select_character.proc" } # lua/select_character/proc.lua  namespace: translator(default)
       - { prescription: "lua_processor@english.proc@english" } # lua/english/proc.lua namespace: english
       - { prescription: "lua_processor@conjunctive.proc@conjunctive"} # conjunctive/prac.lua namespace: conjunctive
