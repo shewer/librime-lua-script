@@ -35,7 +35,7 @@ end
 
 -- 沒有 tools/list 的版本
 function T.func1(input, seg, env)
-  if not seg:has_tag("cal_cmd") and input:len() < 2 then return end
+  if not seg:has_tag("cal_cmd") then return end
   -- reset res = 0
   cmd('0',true)
   local tab={}
