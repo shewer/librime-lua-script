@@ -15,6 +15,7 @@
 
 
 --- global init
+require 'tools/ver_env'
 -- append string.methods   split utf8_len utf8_split
 require 'tools/string' -- 加入 utf8_len utf8_sub split function
 require 'tools/_log'  --  _G 加入 Log(type,args.....)
