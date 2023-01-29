@@ -5,7 +5,6 @@
 --
 -- Distributed under terms of the MIT license.
 --
-
 local lu=require'tools/luaunit'
 assert(lu)
 assert(lu.LuaUnit)
@@ -414,7 +413,7 @@ function TestList:test_select_match()
 end
 
 
-assert(  lu.LuaUnit )
-assert(  lu.LuaUnit.run)
+--assert(  lu.LuaUnit )
+--assert(  lu.LuaUnit.run)
 --os.exit( lu.LuaUnit.run() )
 return TestList

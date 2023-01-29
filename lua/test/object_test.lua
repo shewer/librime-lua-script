@@ -8,7 +8,6 @@
 
 require 'tools/object_new'
 lu= require 'tools/luaunit'
-
 local List = Class("List")
 function List:each(func)
   for i,v in pairs(self) do 
@@ -94,6 +93,5 @@ function T:test_super()
   lu.assertEquals(m, {11,12,13,13})
 end 
 
-Test=T
 --os.exit( lu.LuaUnit.run() ) 
 return T
