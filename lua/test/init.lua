@@ -134,9 +134,7 @@ function P.init(env)
   local var={
     env=env,
   }
-  if GD and T03 then GD() end
   local res=Helper:test(path,func_name,setmetatable(var,{__index=_ENV}),format, _exit )
-  print("--------------------------res ------------",res )
 end
 
 function P.fini(env)
