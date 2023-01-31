@@ -14,19 +14,25 @@
 -- PRETEST 在無 engine 環境測試 library
 -- ENGINE_TEST 在init_processor 中取得 engine 啓動 測試
 ------------- start ------------------------
-
-Opencc=function(fs)
-  return  {
-    convert= function(self,text) return text end,
-    convert_text = function(self,text) return text end,
-    convert_word= function(self,text) return end,
-    random_convert_text = function(self,text) return text end,
-  }
-end
-
+-- Opencc memory leakage issue
+--Opencc=function(fs)
+  --return  {
+    --convert= function(self,text) return text end,
+    --convert_text = function(self,text) return text end,
+    --convert_word= function(self,text) return end,
+    --random_convert_text = function(self,text) return text end,
+  --}
+--end
 require 'tools._global'
--- add module
 
---init_processor = require 'init_processor'
-Log(INFO,'loaded rime.lua ')
+if _TEST then
+  -- add luatest_proc@luatest_proc@luatest
+  luatest_proc= require 'test'
+end
+-- add module
+--if GD and T00 then GD() end
+init_processor = require 'init_processor'
+log.info('------->loaded rime.lua ')
+circular_filter = require 'circular_filter'
+--debug_filter = require 'debug_filter'
 
