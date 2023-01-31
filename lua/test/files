@@ -1,0 +1,8 @@
+global/projection_test.lua
+global/config_test.lua
+pattern_test.lua
+list_test.lua
+#proc/commit_history_init_test.lua
+multiswitch_test.lua
+#proc/translator_init_test.lua
+object_test.lua
