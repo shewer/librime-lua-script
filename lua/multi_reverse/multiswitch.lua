@@ -38,7 +38,7 @@ function M:off()
 end
 function M:index(i)
   if type(i) == "number" then
-    self._index = i % #self
+    self._index = #self == 0 and 0 or i % #self
   end
   return self._index
 end
@@ -52,12 +52,56 @@ function M:prev(i)
   return self:status()
 end
 M.__index = M
+function M:__tostring()
+  return self:status()
+end
+M.__tostring= M.status
 
-
-local function ms(tab)
+function M:__concat(other)
+  return self:status() .. other
+end
+local function gen_args(...)
+  local tab= {...}
+  if #tab == 1 and type(tab[1])=="table" then
+    tab = tab[1]
+  end 
+  return tab
+end
+function M:reset(...)
+  local tab = gen_args(...)
+  for i=1,#self do
+    self[i] =  i <=#tab and tab[i] or nil
+  end
+  tab._index=0
+  tab._status=true
+end
+function M:clear()
+  self:reset()
+end
+M.concat= table.concat
+local function ms(...)
+  local tab = gen_args(...)
   tab._index = 0
   tab._status= true
   return setmetatable(tab,M)
 end
+function M:push(obj)
+  table.insert(self,obj)
+  return self
+end
+function M:insert_at(obj,index)
+  if index then
+    table.insert(self,index+1, obj)
+  else
+    self:push(obj)
+  end
+  return self
+end
+function M:pop()
+  local temp= self[#self]
+  self[#self]= nil
+  return temp,self
+end
+M.New= ms
 return ms
 
