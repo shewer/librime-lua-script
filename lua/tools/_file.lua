@@ -34,12 +34,6 @@ function isDir(path)
 end
 -- return full_path
 
-function get_full_path(filename)
-  local fpath = udir .. "/" .. filename
-  if file_exists(fpath) then return fpath,udir,filename end
-  fpath = sdir .. "/" .. filename
-  if file_exists(fpath) then return fpath,sdir,filename end
-end
 
 -- return require_path,source_file
 -- example:    package.path= "xxxxxx/xxxxxx/lua/?.lua;xxxxxx/xxxxxx/lua/?/init.lua"

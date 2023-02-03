@@ -33,8 +33,9 @@ end
 if rime_api.Version() < 150 then
   require 'tools/_shadowcandidate'
 end
+-- clone from rime_api metatable
+get_full_path=rime_api.get_full_path --
 -- append utf8.methods utf8.split
-
 --append_path(...)  paths   + "/?.lua" paths + /?/init.lua
 function append_path(...)
   local slash = package.config:sub(1,1)
