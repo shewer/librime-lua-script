@@ -104,7 +104,9 @@ do
     require 'tools/debugtool'
   end
   -- pretest 在無關 engine 時測試 library
-  if PRETEST then require('test/init')() end
+  if _TEST then
+    luatest_proc= require 'test'
+  end
 
 
   if T00 and GD then GD() end

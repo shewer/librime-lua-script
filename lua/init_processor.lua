@@ -169,7 +169,7 @@ function M.init(env)
   if rime_api.Version() < 139 then
     local ckeyb= env:Config_get('key_binder/bindings/@0')
     local reload_keyb = {
-      when='always',
+      ['when']='always',
       accept= env.keys.reload:repr(),
       select= env.engine.schema.schema_id,
     }

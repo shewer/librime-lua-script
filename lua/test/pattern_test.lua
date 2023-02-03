@@ -5,7 +5,7 @@
 --
 -- Distributed under terms of the MIT license.
 --
-local lu=require 'tools/luaunit'
+local lu=require 'test/luaunit'
 local pattern_func=require 'tools/pattern'
 
 local TestPattern={}

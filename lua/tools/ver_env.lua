@@ -23,21 +23,23 @@ end
 local Ver = _VERSION:match("%d.%d$")
 Ver = Ver and Ver or "5.1"
 Ver = Ver == "5.1" and jit and "jit" or Ver
+print("****************", Ver)
 local M={}
 M['5.1'] =function()
   _G['_ENV']= _G
   _G['warn']=warn
 end
-M['5.2'] =function ()
+M['5.2'] =function()
   _G['warn']=warn
 end
-M['5.3'] =function ()
+M['5.3'] =function()
   _G['warn']=warn
 end
-M['jit'] =function ()
+M['jit'] =function()
   _G['_ENV']= _G
   _G['warn']=warn
 end
+M['5.4'] = function() end
 M[Ver]()
 
 return true

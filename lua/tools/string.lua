@@ -24,20 +24,32 @@ function string.split( str, sp,sp1)
 end
 
 function utf8.sub(str,si,ei)
-  local function index(ustr,i)
-    return i>=0 and ( utf8.offset(ustr,i) or ustr:len() +1 )
-    or ( utf8.offset(ustr,i) or 1 )
+  local si_type= type(si)
+  if si_type ~= "number" then
+    local info=debug.getinfo(2,'Sln')
+    local error_msg= string.format("%s:%s bad argument #1 (number expected, get %s)",
+    info.short_src, info.currentline, si_type)
+    assert(nil, error_msg)
   end
 
-  local u_si= index(str,si)
-  ei = ei or utf8.len(str)
-  ei = ei >=0
-  and ei + 1
-  or ei
-  local u_ei= index(str, ei ) -1
+  local len= utf8.len(str)
+  if si <0 then
+    si = si < -len and 1 or len + si + 1
+  end
+
+  ei = (not ei or ei >len ) and len or ei
+  if ei < 0 then
+    ei = ei < -len and 0 or len + ei +1
+  end
+  if si > ei then return "" end
+
+  local u_si= utf8.offset(str,si)
+  local u_ei= utf8.offset(str,ei+1) - 1
   return str:sub(u_si,u_ei)
 end
+
 string.utf8_len= utf8.len
 string.utf8_offset=utf8.offset
 string.utf8_sub= utf8.sub
+
 return true

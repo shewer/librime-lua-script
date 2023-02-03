@@ -12,9 +12,14 @@ local Helper=require 'test/helper'
 --[[
 測試檔案 files from ./test/**/*_test.lua
 可以使用 # remark test
+測試項目可區分 純 lua 環境 lua/test/*_test.lua
+librime-lua 全域變數 環境  lua/test/global/*_test.lua
+librime-lua engine component 環境, lua/test/[proc|segm|tran|filter]/*_[func name]_test.lua
+註: 大部份test 在 test/proc/*_init_test.lua 即可測試
+測試框架己架設完，只要把測試檔案 放置到環境路逕下，井更新 test/files中國
 
 lua/test/*_test.lua -- pure lua test
-lua/global/*_test.lua -- librime-lua test 
+lua/global/*_test.lua -- librime-lua test
 lua/proc/*_[func_name]_test.lua -- lua_processor [init,fini,func] test
 lua/segm/*_[func_name]_test.lua -- lua_segmentor [init,fini,func] test
 lua/tran/*_[func_name]_test.lua -- lua_translator [init,fini,func] test
@@ -157,8 +162,12 @@ function P.func(key,env)
   return 2
 end
 local format = 'tap' -- 'tap' 'text'
-local _exit = nil  -- bool 
+local _exit = nil  -- bool
 Helper:reset()
-Helper:test('global','',_ENV,format,_exti)
+-- pure lua env test
 Helper:test('','',_ENV,format, _exit)
+-- librime-lua env test
+if rime_api and Segment then
+  Helper:test('global','',_ENV,format,_exti)
+end
 return P

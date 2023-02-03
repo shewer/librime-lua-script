@@ -34,8 +34,6 @@ function isDir(path)
 end
 -- return full_path
 
-local udir=rime_api and rime_api.get_user_data_dir() or "."
-local sdir=rime_api and rime_api.get_shared_data_dir() or "."
 function get_full_path(filename)
   local fpath = udir .. "/" .. filename
   if file_exists(fpath) then return fpath,udir,filename end
@@ -43,10 +41,14 @@ function get_full_path(filename)
   if file_exists(fpath) then return fpath,sdir,filename end
 end
 
+-- return require_path,source_file
+-- example:    package.path= "xxxxxx/xxxxxx/lua/?.lua;xxxxxx/xxxxxx/lua/?/init.lua"
+-- current file =xxxxxx/xxxxx/lua/tools/_file.lua
+-- path,file, full_path= rpath() -- return  "tools", "_file.lua" , xxxxx/xxxxx
 function rpath(n)
   n= n or 2
   local source_file =  debug.getinfo(n,'S').short_src
   local path ,file= source_file:match("^(.+)/(.*.lua)$")
   path = path and path:match("/lua/(.+)$")
-  return path,file
+  return path,file,source_file
 end
