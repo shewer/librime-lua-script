@@ -172,6 +172,16 @@ local function Ver_info()
   return msg1 .. msg2
 end
 
+-- librime-lua ver >=9
+local udir=rime_api and rime_api.get_user_data_dir() or "."
+local sdir=rime_api and rime_api.get_shared_data_dir() or "."
+local function get_full_path(filename)
+  local fpath = udir .. "/" .. filename
+  if file_exists(fpath) then return fpath,udir,filename end
+  fpath = sdir .. "/" .. filename
+  if file_exists(fpath) then return fpath,sdir,filename end
+end
+
 local function load_reversedb(dict_name)
   -- loaded  ReverseDb from ReverseLookup or ReverseDb
   local reversedb = ReverseLookup and ReverseLookup(dict_name)
@@ -197,5 +207,6 @@ M.USER_DIR = rime_api.get_user_data_dir() or "."
 M.SHARED_DIR = rime_api.get_shared_data_dir() or "."
 --Component = Version() >= 177  and Component or require('tools/_component')
 M.LevelDb = LevelDb and require('tools/leveldb')
+M.get_full_path= get_full_path
 setmetatable(rime_api,M)
 return rime_api
