@@ -88,30 +88,37 @@ local function _conv_ltype(cobj)
   and cobj:get_string()
   or tp
 end
+
 local function item_to_obj(config_item,level)
     level = level or 99
-
     if level <1 then return config_item end
+
+    local ct=ctype(config_item)
+    if ct > _type['configitem'] and ct<=_type['configmap'] then
+        config_item= config_item.element
+    elseif ct ~= _type['configitem'] then
+        return config_item
+    end
+
     if config_item.type == "kScalar" then
-      return _conv_ltype( config_item:get_value() )
+        return _conv_ltype( config_item:get_value() )
+
     elseif config_item.type == "kList" then
-      local cl= config_item:get_list()
-      local tab={}
-      for k=1,cl.size do
-        local kkk=cl:get_at(k-1)
-        local oo= item_to_obj( cl:get_at(k-1), level -1)
-        tab[k]= oo
-        --table.insert(tab, item_to_obj( cl:get_at(i), level -1 ))
-      end
-      return tab
+        local cl= config_item:get_list()
+        local tab={}
+        for k=0,cl.size-1 do
+            table.insert(tab, item_to_obj(cl:get_at(k),level -1) )
+        end
+        return tab
+
     elseif config_item.type == "kMap" then
-      local cm = config_item:get_map()
-      local tab={}
-      for i,k in next,cm:keys() do
-        tab[k] = item_to_obj( cm:get(k), level -1)
-      end
-      return tab
-    else return nil end
+        local cm = config_item:get_map()
+        local tab={}
+        for i,k in next,cm:keys() do
+            tab[k] = item_to_obj( cm:get(k), level -1)
+        end
+        return tab
+    end
 end
 
 
