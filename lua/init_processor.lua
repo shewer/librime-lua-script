@@ -56,7 +56,7 @@ function FS.cowsay(env)
   return ( "```\n" .. io.popen('cal | cowsay -n'):read() .. "\n```\n"):gsub('\n',_NR)
 end
 function FS.ver(env)
-  return rime_api.Ver_info()
+  return rime_api.Ver_info(env)
 end
 function FS.udir(env)
   return rime_api.USER_DIR
