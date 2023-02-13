@@ -78,7 +78,12 @@ rime_api.get_shared_data_dir= function()
   return '/usr/shared/rime-data'
 end
 --]]
-local function Version()
+local function Version(env)
+  if type(env) == "table" and env.engine then
+    if env.engine.context.composition:toSegmentation().get_segments then
+      return 215
+    end
+  end
   local ver
   if Opencc and Opencc('s2t.json').convert_word then
     return 200
@@ -159,7 +164,7 @@ end
 
 ----- rime_api tools
 
-local function Ver_info()
+local function Ver_info(env)
   local msg1 = rime_api.get_user_id and string.format(" %s %s %s (id:%s) ",
   rime_api.get_distribution_name(),
   rime_api.get_distribution_code_name(),
@@ -167,7 +172,7 @@ local function Ver_info()
   rime_api.get_user_id()) or ""
 
   local msg2 = string.format(" Ver: librime %s librime-lua %s lua %s",
-  rime_api.get_rime_version() , Version() ,_VERSION )
+  rime_api.get_rime_version() , Version(env) ,_VERSION )
 
   return msg1 .. msg2
 end

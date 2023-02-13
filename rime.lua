@@ -15,14 +15,16 @@
 -- ENGINE_TEST 在init_processor 中取得 engine 啓動 測試
 ------------- start ------------------------
 -- Opencc memory leakage issue
---Opencc=function(fs)
-  --return  {
-    --convert= function(self,text) return text end,
-    --convert_text = function(self,text) return text end,
-    --convert_word= function(self,text) return end,
-    --random_convert_text = function(self,text) return text end,
-  --}
---end
+if Opencc then
+  Opencc=function(fs)
+    return  {
+      convert= function(self,text) return text end,
+      convert_text = function(self,text) return text end,
+      convert_word= function(self,text) return end,
+      random_convert_text = function(self,text) return text end,
+    }
+  end
+end
 require 'tools._global'
 
 if _TEST then
@@ -33,6 +35,6 @@ end
 --if GD and T00 then GD() end
 init_processor = require 'init_processor'
 log.info('------->loaded rime.lua ')
-circular_filter = require 'circular_filter'
+
 --debug_filter = require 'debug_filter'
 
