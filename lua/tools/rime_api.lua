@@ -78,44 +78,15 @@ rime_api.get_shared_data_dir= function()
   return '/usr/shared/rime-data'
 end
 --]]
-local function Version(env)
-  if type(env) == "table" and env.engine then
-    if env.engine.context.composition:toSegmentation().get_segments then
-      return 215
-    end
-  end
-  local ver
-  if Opencc and Opencc('s2t.json').convert_word then
-    return 200
-  elseif rime_api.regex_match then
-    return 197
-  elseif rime_api.get_distribution_name then
-    return 185
-  elseif LevelDb then
-    return 177
-  elseif Opencc then
-    return 147
-  elseif KeySequence and KeySequence().repr then
-    return 139
-  elseif  ConfigMap and ConfigMap().keys then
-    return 127
-  elseif Projection then
-    return 102
-  elseif KeyEvent then
-    return 100
-  elseif Memory then
-    return 80
-  elseif rime_api.get_user_data_dir then
-    return 9
-  elseif log then
-    return 9
-  else
-    return 0
-  end
-end
 
 
 
+
+local M = {}
+M.__index=M
+M.__newindex=function(tab,key,value) end
+M.Version=function() return _G["_RL_Version"] end
+setmetatable(rime_api,M)
 
 
 
@@ -141,7 +112,7 @@ end
 
 local function Init_projection( config, path)
   --  old version
-  if Version() < 102 then
+  if rime_api.Version() < 102 then
     return old_Init_projection(config,path)
   end
   local patterns= config:get_list( path )
@@ -164,7 +135,7 @@ end
 
 ----- rime_api tools
 
-local function Ver_info(env)
+local function Ver_info()
   local msg1 = rime_api.get_user_id and string.format(" %s %s %s (id:%s) ",
   rime_api.get_distribution_name(),
   rime_api.get_distribution_code_name(),
@@ -172,7 +143,7 @@ local function Ver_info(env)
   rime_api.get_user_id()) or ""
 
   local msg2 = string.format(" Ver: librime %s librime-lua %s lua %s",
-  rime_api.get_rime_version() , Version(env) ,_VERSION )
+  rime_api.get_rime_version(), _RL_VERSION, _VERSION )
 
   return msg1 .. msg2
 end
@@ -196,22 +167,23 @@ local function load_reversedb(dict_name)
   log.warning( env.name_space .. ": can't load  Reversedb : " .. reverse_filename )
 end
 
-local M = {}
-M.__index=M
-M.__newindex=function(tab,key,value)
-end
+--warp LevelDb with db_pool，避免重覆開啓異常
+M.UserDb= _RL_VERSION >=177 and require 'tools/userdb' or nil
 
-M.Version=Version
-M.Ver_info=Ver_info
-M.Projection= Init_projection
-M.ReverseDb= load_reversedb
+M.Ver_info=function() return M.VER_INFO end
+M.Version = function() return _RL_VERSION end
+M.Projection= Init_projection -- warp Projection()
+M.ReverseDb= load_reversedb -- warp ReverseDb()
+M.get_librime_lua_version = rime_api.Version
+M.get_full_path= get_full_path
+-- const var
 M.VER_INFO= Ver_info()
-M.LIBRIME_LUA_VER= Version()
+M.LIBRIME_LUA_VER= _RL_VERSION
 M.LIBRIME_VER = rime_api.get_rime_version()
 M.USER_DIR = rime_api.get_user_data_dir() or "."
 M.SHARED_DIR = rime_api.get_shared_data_dir() or "."
+-- 棄用 warp Comonent
 --Component = Version() >= 177  and Component or require('tools/_component')
-M.LevelDb = LevelDb and require('tools/leveldb')
-M.get_full_path= get_full_path
-setmetatable(rime_api,M)
+
+
 return rime_api

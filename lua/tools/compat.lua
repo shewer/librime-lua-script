@@ -5,7 +5,10 @@
 --
 -- Distributed under terms of the MIT license.
 --
-
+-- wrap  function warn()
+-- compat lua 5.1 5.2 5.3 jit :  wran
+-- compat lua 5.1 jit :  _G = _ENV
+--
 local _warn_enable=false
 local function warn(...)
   local msgs= {...}
@@ -20,27 +23,8 @@ local function warn(...)
   end
 end
 
-local Ver = _VERSION:match("%d.%d$")
-Ver = Ver and Ver or "5.1"
-Ver = Ver == "5.1" and jit and "jit" or Ver
-print("****************", Ver)
-local M={}
-M['5.1'] =function()
-  _G['_ENV']= _G
-  _G['warn']=warn
-end
-M['5.2'] =function()
-  _G['warn']=warn
-end
-M['5.3'] =function()
-  _G['warn']=warn
-end
-M['jit'] =function()
-  _G['_ENV']= _G
-  _G['warn']=warn
-end
-M['5.4'] = function() end
-M[Ver]()
+_G['warn'] = _G['warn'] or warn
+_G['_ENV'] = _G['_ENV'] or _G
 
 return true
 

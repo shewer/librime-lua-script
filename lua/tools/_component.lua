@@ -105,4 +105,4 @@ function Component.Require(...)
   return Component[ gmod_name ](...)
 end
 
-return Compoment
+return Component
