@@ -110,9 +110,8 @@ local function __FILE__(n) n=n or 2 return debug.getinfo(n,'S').short_src end
 
 local function append_txt(tab, ffile)
    if ffile:match("lua$") then
-      print(ffile, "loadfile --",#tab)
       local ltab = loadfile(ffile)()
-      for _,w in ipairs(ltab) do
+      for _,w in ipairs(tab) do
 	 table.insert(tab,w)
       end
    else
@@ -123,7 +122,6 @@ local function append_txt(tab, ffile)
       end
       fp:close()
    end
-      print(ffile, "loadfile --",#tab)
 end
 
 local function load_from_self(tab, ffile)
