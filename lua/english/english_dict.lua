@@ -154,7 +154,8 @@ function Word:__eq(obj)
 end
 --]]
 --
-
+local is_unix = package.config:sub(1,1) == "\\"
+local NR = is_unix and "\n" or "\r"
 local Word = class()--{}
 Word.__name="Word"
 function Word:_initialize(tab)
@@ -187,11 +188,10 @@ function Word.Parse_text(line)
   return Word(tab)
 end
 function Word.Parse_chunk(str,replace)
-  if type(str) == "string" then
-    str = replace and str:gsub("\\n","\\n"):gsub("\\r","\r") or str
-    local tab=load("return " .. str )()
-    return Word(tab)
-  end
+   if type(str) ~=  "string" then return end
+   --str = replace and str:gsub("\\n","\\n"):gsub("\\r","\r") or str
+   local tab=load("return " .. str )()
+   return Word(tab)
 end
 
 function Word:to_s()
@@ -210,22 +210,29 @@ function Word:get_info(mode)
   mode= mode and mode % 7 or 0
 
   if mode == 1 then
-    return (info.phonetic .. " " .. info.translation):gsub("\\n",NR)
+    return info.phonetic .. " " .. info.translation:gsub("\n",NR)
   elseif mode == 2  then
-    return info.translation:gsub("\\n", " ")
+     return (info.translation):gsub("\n", " ")
   elseif mode == 3 then
-    return info.translation:gsub("\\n", NR)
+     return (info.translation):gsub("\n", NR)
   elseif mode == 4 then
-    return info.phonetic
+     return (info.phonetic)
   elseif mode == 5 then
-    return info.word
+     return (info.word)
   elseif mode== 6 then
     return ""
   else
-
-    return (info.phonetic .. " " .. info.translation):gsub("\\n"," ")
+    return (info.phonetic .. " " .. info.translation):gsub("\n"," ")
   end
 end
+function Word:to_cand(mode,s,e,q)   
+   local cand = Candidate("english",s,e,self.word, self:get_info(mode))
+   if q then
+      cand.quality = q
+   end
+   return cand
+end
+
 function Word:prefix_match(prefix, case_match )
   if case_match then
     return self.word:find( prefix) == 1
@@ -250,135 +257,54 @@ Word.is_match= Word.match
 
 --local class = require 'tools/class'
 --return class(Word)
---local MT={}
---MT.__index=MT
---MT.__call=New
--- Dict  instance method
--- iter(text) return iter function for match text pattern
--- get(word) return
--- LuaDict
-
-local function init_tree(tree_tab, index, word,level)
-  local prefix=word:sub(1,level):lower()
-  for i= #prefix, 1,-1 do
-    local  w = prefix:sub(1,i)
-    if tree_tab[w] then break end
-    tree_tab[w] = index
-    init_tree(tree_tab, index, word, level -1)
-  end
-end
-
-local LuaDict=class() --setmetatable({},MT)
---LuaDict.__index = LuaDict
-LuaDict.__name = 'LuaDict'
-LuaDict._db={}
-function LuaDict:_initialize(full_path,level)
-  level = level and level>1 and level  or 3
-  if T03 and GD then GD() end
-  if not isFile(full_path) then return end
-  --self._db = loadfile(full_path)()
-  self._db = dofile(full_path)
-  self._tree = {}
-  self._words = {}
-  for i,v in next,self._db do
-    local w = Word(v)
-    self._db[i] = w
-    self._words[v.word] = i
-    init_tree(self._tree,i,w.word,level)
-  end
-  return self
-end
-function LuaDict:_prefix_index(pw)
-  --local pw,ww,pn = conv_pattern(text)
-  local index = 1
-  if #pw <1 then return index end
-
-  -- 找最近的index
-  for i= #pw,1,-1 do
-    local tree_index= self._tree[ pw:sub(1,i) ]
-    if tree_index  then
-      index = tree_index
-      break
-    end
-  end
-  -- 找 prefix word index
-  local count = 0
-  repeat
-    local ww = self._db[index]
-    if self._db[index]:prefix_match(pw) then
-      -- 找到索引 如果count > 200  增加 pw 索引
-      if count > 200 then
-        self._tree[pw] = index
-      end
-      break
-    end
-    count = count +1
-    index = index+1
-  until index > #self._db
-  return index
-end
-
-function LuaDict:iter(text)
-  local pw,ww,pn = split_str(text)
-  --if not index then GD() end
-  return coroutine.wrap(function()
-    local index = self:_prefix_index(pw)
-    while self._db[index] and  self._db[index]:prefix_match(pw) do
-      if self._db[index]:match(text) then
-        coroutine.yield(self._db[index])
-      end
-      index = index +1
-    end
-  end)
-end
-
-function LuaDict:get(word)
-  local index = self._words[word]
-  return self._db[index]
-end
-
 -- Dict  instance method
 -- iter(text) return iter function for match text pattern
 -- get(word) return
 -- LevelDict
 
-local  LevelDict= LevelDb and class() --setmetatable({},MT)
-if LevelDict then
+local LevelDict= LevelDb and class() --setmetatable({},MT)
+--local levelDict = {}
+--LevelDict.__index = LevelDict
+LevelDict.__name = 'LewelDict'
 
-
-  --LevelDict.__index = LevelDict
-  LevelDict.__name = 'LewelDict'
-
-  function LevelDict:_initialize(full_path)
-    if rime_api.LevelDb.open(full_path) then
-      self._dbname=full_path
+function LevelDict:_initialize(dbname)
+   if rime_api.UserDb:LevelDb(dbname) then
+      self._dbname=dbname
       return  self
-    end
-  end
-  function LevelDict:_getdict()
-    return rime_api.LevelDb.get_db(self._dbname)
-  end
-
-  function LevelDict:iter(text, case_match)
-    --local pw,ww,pn = conv_pattern(text)
-    local pw,ww,pn = split_str(text)
-    local dbacc = self:_getdict():query(pw:lower())
-    return  coroutine.wrap(function()
-      for k,v in dbacc:iter() do
-        local w = Word.Parse_chunk(v)
-        if w and w:match(text,case_match) then
-          coroutine.yield(w)
-        end
-      end
-    end)
-  end
-  function LevelDict:get(word)
-    --  have upcae word  ex   Abort   abort\tAbort
-    word = word:match("%u") and string.format("%s\t%s",word:lower(),word) or word
-    local chk_str = self:_getdict():fetch(word)
-    return chk_str and Word.Parse_chunk(chk_str)
-  end
+   end
 end
+function LevelDict:_getdict()
+   return rime_api.UserDb:LevelDb(self._dbname)
+end
+
+function LevelDict:iter(text, case_match)
+   --local pw,ww,pn = conv_pattern(text)
+   local pw,ww,pn = split_str(text)
+   return coroutine.wrap( function()
+	 local pattern = ("%s%s"):format(pw:lower(), case_match and ".*\t" .. pw or "")
+	 for key ,value  in self:_getdict():query(pw:lower()):iter() do
+	    local word = key:match(pattern) and Word.Parse_chunk(value)
+	    if word and word:match(text,case_match) then
+	       coroutine.yield(word)
+	    end
+	 end
+   end)
+end
+function LevelDict:query(text, case_match)
+   local words = List()
+   for w in self:iter(text, case_match) do
+      words:push(w)
+   end
+   return words
+end
+
+function LevelDict:get(word, case_match)
+   --  hav1e upcae word  ex   Abort   abort\tAbort
+   word = word:match("%u") and string.format("%s\t%s",word:lower(),word) or word
+   return  Word.Parse_chunk(self:_getdict():fetch(word))
+end
+
+
 -- English(dict_name)
 -- instance method
 -- iter(text)  return Word  for w in e:iter(text) do  ... end
@@ -388,58 +314,42 @@ end
 local English = class() -- setmetatable({},MT)
 --English.__index=English
 English.__name="English"
-English._dicts={}
-function English:_getdict()
-  return English._dicts[self._dict_name]
-end
+
+
 --[[
 function English:_setdict()
   English._dicts[self._dict_name] = self._dict
 end
 --]]
-function English:_initialize(dict_name,reload)
-  dict_name= dict_name or "english_tw"
-  self._dict_name = dict_name
+function English:_initialize(dict_name)
+  self._dict_name= dict_name or "ecdict"
   --local dictdb = self:_getdb()
-  if reload or not self:_getdict()  then
-    self:reload()
-  end
-
-  return self:_getdict() and self or nil
+  self._dict = LevelDict(dict_name)
+  return self._dict and self or nil
 end
-
-function English:reload(force)
-  local dict_name = self._dict_name
-  local full_path = get_full_path(dict_name)
-  -- 1 try LevelDict
-  if LevelDict and full_path and isDir(full_path) then
-    self._dicts[self._dict_name] = LevelDict(full_path)
-    return self._dicts[self._dict_name]  and true or false
-  end
-  -- 2 try LuaDict
-  full_path= get_full_path(dict_name .. ".txtl")
-  if LuaDict and full_path and isFile(full_path) then
-    self._dicts[self._dict_name] = LuaDict(full_path)
-    return self._dicts[self._dict_name] and true or false
-  end
-  Log(ERROR, "English_dict " .. dict_name .. ' not find ')
-end
-
 
 function English:iter(org_text,case_match)
-  return self:_getdict():iter(org_text,case_match)
+    return self._dict:iter(org_text,case_match)
 end
 
-function English:match(org_text)
+function English:find_words(text,case_match)
   local tab=List()
-  for w in self:iter(org_text) do
+  for w in self._dict:iter(text,case_match) do
     tab:push(w)
   end
   return tab
 end
 
-function English:word(word)
-  return self:_getdict():get(word)
+function English:word(word,case_match)
+  return self._dict:get(word,case_match)
+end
+
+function English:query(text, _start, _end, mode, quality, case_match)
+   return Translation( function()
+	 for word in self:iter(text) do
+	    yield( word:to_cand(mode,_start, _end, quality))
+	 end
+   end)
 end
 
 
@@ -450,9 +360,7 @@ English.Conver_rex=conver_rex --2 ('seteu*?ing:m') 展開/ :  seteu.*.?ing:ment 
 English.Conver_pattern= conv_pattern --3 ('seteu/i/a:m') 字首 ^seteu  ^seteu.*ing.*able%sm[%a%-%.]*%.
 English.Word=Word
 --]]
-English.LevelDict = LevelDict
-English.LuaDict = LuaDict
-
+--English.LevelDict = LevelDict -- for debug
+--English.LuaDict = LuaDict -- for debug
+English.Word = Word
 return English
-
-

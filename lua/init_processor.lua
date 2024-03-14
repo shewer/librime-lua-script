@@ -84,13 +84,17 @@ local F={}
 function F.reload(env)
   -- reset package.loaded
   package.loaded={}
-  for k,v in next, __PKG_LOADED do package.loaded[k] = v end
+  --for k,v in next, __PKG_LOADED do package.loaded[k] = v end
 
   if rime_api.Version() < 139 then
     env.engine:process_key(env.keys.reload)
   else
     env.engine:apply_schema(Schema(env.engine.schema.schema_id))
   end
+  return 1
+end
+function F.reload(env)
+  env.engine:commit_text("暫時停用")
   return 1
 end
 function F.pgsize(env,size)

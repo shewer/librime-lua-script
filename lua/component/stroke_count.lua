@@ -69,6 +69,7 @@ end
 
 function M.func(input,env)
   local context=env.engine.context
+  require("croissant.debugger")()
   for cand in input:iter() do
     cand.comment = cand.comment ..  strock_count_to_str(env.reversedb, cand.text,env.str_fmt)
     yield(cand)

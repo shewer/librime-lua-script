@@ -136,6 +136,7 @@ end
 ----- rime_api tools
 
 local function Ver_info()
+  GD()
   local msg1 = rime_api.get_user_id and string.format(" %s %s %s (id:%s) ",
   rime_api.get_distribution_name(),
   rime_api.get_distribution_code_name(),
@@ -168,7 +169,7 @@ local function load_reversedb(dict_name)
 end
 
 --warp LevelDb with db_pool，避免重覆開啓異常
-M.UserDb= _RL_VERSION >=177 and require 'tools/userdb' or nil
+M.UserDb= _RL_VERSION >=177 and require 'tools/_userdb' or nil
 
 M.Ver_info=function() return M.VER_INFO end
 M.Version = function() return _RL_VERSION end
@@ -177,6 +178,7 @@ M.ReverseDb= load_reversedb -- warp ReverseDb()
 M.get_librime_lua_version = rime_api.Version
 M.get_full_path= get_full_path
 -- const var
+
 M.VER_INFO= Ver_info()
 M.LIBRIME_LUA_VER= _RL_VERSION
 M.LIBRIME_VER = rime_api.get_rime_version()

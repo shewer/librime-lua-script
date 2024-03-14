@@ -62,43 +62,8 @@ local group_components={
   Translator  = translators,
   Filter = filters,
 }
--- return string : 'Processor' 'Segmentor' ...
-local function get_comp_name(comp_name)
-  for group_name, group_mods in next, group_components do
-    if group_mods[comp_name] then
-      return group_name
-    end
-  end
-end
-
--- ver > 176 Component  add Require
--- ver <= 176 Fake Component
-if not LevelDb or not Component then
-  print(' fake component wrap- require')
-  Component = require 'tools._luacomponent'
-end
-
-local function _delegate_func(comp_tab)
-  --clone tab
-  local m ={}
-  for k,v in next, comp_tab do
-    m[k] = v
-  end
-  for k,v in next,m do
-    -- add  component to  _component ...
-    comp_tab["_"..k]= m[k]
-    --  replace and delegate
-    comp_tab[k]= function(...)
-      local t = Ticket(...)
-      if t and t.klass:match("^lua_") then
-        rrequire( t.name_space:split("@")[1])
-      end
-      return comp_tab["_"..k](...)
-    end
-  end
-end
 -- add Component.Require
-_delegate_func(Component)
+
 function Component.Require(...)
   local t = Ticket(...)
   local gmod_name = get_comp_name(Ticket(...).klass)

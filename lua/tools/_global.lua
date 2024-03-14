@@ -12,7 +12,7 @@
 --  isDir(path) return bool
 --
 -- trace
-
+GD=require 'croissant.debugger'
 local function find_ver()
   if UserDb and TableDb then
     return 240
@@ -58,7 +58,7 @@ _G["_RL_VERSION"] = _G["RL_VERSION"] or find_ver()
 require 'tools/string' -- 加入 utf8_len utf8_sub split function
 require 'tools/_log'  --  _G 加入 Log(type,args.....)
 require 'tools/_file' -- _G 加入 rpath() isDir(path) isFile(path)
---require 'tools/_req_api' -- 停用 _G 加入 rrequire(mod:string [gtab=_ENG [,mod_name=mod]])
+require 'tools/_req_api' -- 停用 _G 加入 rrequire(mod:string [gtab=_ENG [,mod_name=mod]])
 -- bind  split  utf8_sub utf8_sub utf8_split
 --require 'tools/_ticket' -- 停用 _G 加入類 Ticket(eng,ns,prescription)
 require 'tools/rime_api' -- 擴充 rime_api 及常數 (見 rime_api.lua)
@@ -116,8 +116,6 @@ function append_cpath(...)
   return #paths >1
 end
 
-require('croissant.debugger')()
-
 
 -- init_path
 do
@@ -146,6 +144,7 @@ do
   end
 
 
-  if T00 and GD then GD() end
+  if T01 and GD then GD() end
 
 end
+return true
